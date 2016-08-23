@@ -6,6 +6,7 @@ const World = sqldb.main.World;
 const Player = sqldb.world.Player;
 const Restaurant = sqldb.world.Restaurant;
 
+let targetWorld = null;
 World.sync()
   .then(() => World.destroy({ where: {} }))
   .then(() => World.create({
@@ -20,8 +21,9 @@ World.sync()
     barbPercent: 0.6,
     timeQouta: 0.4,
     generationArea: 9,
-    currentRing: 1
-  }));
+    currentRing: 1,
+  }))
+  .then(world => targetWorld = world);
 
 Player.sync();
 // Restaurant.sync()
@@ -35,22 +37,27 @@ Player.sync();
 User.sync()
   .then(() => User.destroy({ where: {} }))
   .then(() => User.bulkCreate([{
-      provider: 'local',
-      name: 'Test User',
-      email: 'test@test.com',
-      password: 'test'
-    }, {
-      provider: 'local',
-      role: 'admin',
-      name: 'Admin',
-      email: 'admin@admin.com',
-      password: 'test'
-    }]))
+    provider: 'local',
+    name: 'Test User',
+    email: 'test@test.com',
+    password: 'test',
+  }, {
+    provider: 'local',
+    role: 'admin',
+    name: 'Admin',
+    email: 'admin@admin.com',
+    password: 'test',
+  }]))
   .then(() => User.findAll())
-  .then(us => us.forEach(u => Player.create({ UserId: u._id })))
-  .then(() => {
-    console.log('seeding done')
+  .then(us => {
+    us.forEach(u => {
+      u.addWorld(targetWorld);
+      Player.create({ UserId: u._id });
+    });
   })
+  .then(() => {
+    console.log('seeding done');
+  });
 
   // })
 // UserMain.sync()

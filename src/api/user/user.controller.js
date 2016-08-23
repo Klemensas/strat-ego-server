@@ -1,11 +1,14 @@
-'use strict';
-
 // import passport from 'passport';
 import { generateRestaurant } from '../restaurant/restaurant.controller';
 import config from '../../config/environment';
 import jwt from 'jsonwebtoken';
 import workers from '../../config/game/workers';
-import { User } from '../../sqldb';
+import { main } from '../../sqldb';
+
+const User = main.User;
+const UserWorlds = main.UserWorlds;
+const World = main.World;
+// console.log('aasa', User.getAssociations());
 
 function validationError(res, statusCode) {
   statusCode = statusCode || 422;
@@ -110,9 +113,19 @@ export function changePassword(req, res) {
  * Get my info
  */
 export function me(req, res, next) {
-  var userId = req.user._id;
+  const userId = req.user._id;
 
-  return User.findOne({ where: { _id: userId }}/*, '-salt -password'*/)/*.populate('gameData.restaurants').exec()*/
+  return User.findOne({
+    where: { _id: userId },
+    include: [{
+      model: World,
+      through: {
+        where: { UserId: userId },
+      },
+    }],
+  })
+  // , '-salt -password').populate('gameData.restaurants').exec()
+    // .then(user => user.getWorlds())
     .then(user => { // don't ever give out the password or salt
       if (!user) {
         return res.status(401).end();

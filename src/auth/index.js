@@ -3,7 +3,9 @@
 import express from 'express';
 // import passport from 'passport';
 import config from '../config/environment';
-import { User } from '../sqldb';
+import { main } from '../sqldb';
+
+const User = main.User;
 
 // Passport Configuration
 require('./local/passport').setup(User, config);

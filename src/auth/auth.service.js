@@ -1,11 +1,11 @@
-'use strict';
-
 // import passport from 'passport';
 import config from '../config/environment';
 import jwt from 'jsonwebtoken';
 import expressJwt from 'express-jwt';
 import compose from 'composable-middleware';
-import { User } from'../sqldb';
+import { main } from '../sqldb';
+
+const User = main.User;
 
 const validateJwt = expressJwt({
   secret: config.secrets.session,
@@ -18,7 +18,7 @@ const validateJwt = expressJwt({
 function validate(req, res, next) {
   // allow access_token to be passed through query parameter as well
   if (req.query && req.query.hasOwnProperty('access_token')) {
-    req.headers.authorization = 'Bearer ' + req.query.access_token;
+    req.headers.authorization = `Bearer ${req.query.access_token}`;
   }
   validateJwt(req, res, next);
 }
@@ -29,13 +29,13 @@ export function isAuthenticated() {
     .use(validate)
     // Attach user to request
     .use((req, res, next) => {
-      User.findById(req.user._id)
+      User.findOne({ where: { _id: req.user._id } })
         .then(user => {
           if (!user) {
             return res.status(401).end();
           }
           req.user = user;
-          next();
+          return next();
         })
         .catch(err => next(err));
     });

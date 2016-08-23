@@ -7,7 +7,6 @@ function generateRestaurant(size, currentRim, radius, name = 'Government restaur
   getAvailableCoords(getCoordsInRange(radius, currentRim, size))
     .then(coords => {
       const location = coords[Math.round(Math.random() * coords.length)];
-      console.log(location);
       Restaurant.create({
         name,
         location,

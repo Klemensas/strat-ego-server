@@ -9,7 +9,7 @@ import Sequelize from 'sequelize';
 var db = {
   Sequelize,
   main: { sequelize: new Sequelize(config.sequelize.main, config.sequelize.options) },
-  world: { sequelize: new Sequelize(config.sequelize.world, config.sequelize.options) }
+  world: { sequelize: new Sequelize(config.sequelize.world, config.sequelize.options) },
 };
 
 
@@ -26,9 +26,15 @@ db.world.Restaurant = db.world.sequelize.import('../api/restaurant/restaurant.mo
 db.main.User.hasMany(db.main.Message);
 db.main.Message.belongsTo(db.main.User);
 
+db.main.User.belongsToMany(db.main.World, { through: 'UserWorlds' });
+db.main.World.belongsToMany(db.main.User, { through: 'UserWorlds' });
+
+db.main.UserWorlds = db.main.sequelize.models.UserWorlds;
+
 db.world.Player.hasMany(db.world.Restaurant);
 db.world.Restaurant.belongsTo(db.world.Player);
 
+// console.log(db.main.User, typeof db.main.User)
 // db.world.Player.sync()
 //   .then(u => {
 //     // u.addUser(1);
