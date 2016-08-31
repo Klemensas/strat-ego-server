@@ -14,7 +14,7 @@ module.exports = function (app) {
   app.use('/api/restaurant', require('./api/restaurant'));
   app.use('/api/worker', require('./api/worker'));
   app.use('/api/message', require('./api/message'));
-  app.use('/api/game', require('./api/game'));
+  app.use('/api/world', require('./api/world'));
 
   app.use('/auth', require('./auth'));
 
@@ -25,7 +25,7 @@ module.exports = function (app) {
   // All other routes should redirect to the index.html
   app.route('/*')
     .get((req, res) => {
-      res.sendFile(path.resolve(app.get('appPath') + '/index.html'));
+      res.sendFile(path.resolve(`${app.get('appPath')}/index.html`));
     });
 };
 

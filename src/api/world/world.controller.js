@@ -3,18 +3,17 @@ import { main } from '../../sqldb';
 const World = main.World;
 
 function respondWithResult(res, statusCode) {
-  statusCode = statusCode || 200;
+  const code = statusCode || 200;
   return entity => {
-    console.log(entity)
     if (entity) {
-      res.status(statusCode).json(entity);
+      res.status(code).json(entity);
     }
   };
 }
 
 function handleEntityNotFound(res) {
   return entity => {
-    if (!entity || !entity.length) {
+    if (!entity || (Array.isArray(entity) && !entity.length)) {
       res.status(404).end();
       return null;
     }
@@ -23,10 +22,23 @@ function handleEntityNotFound(res) {
 }
 
 function handleError(res, statusCode) {
-  statusCode = statusCode || 500;
+  const code = statusCode || 500;
   return err => {
-    res.status(statusCode).send(err);
+    res.status(code).send(err);
   };
+}
+
+export function worldData(req, res) {
+  const target = req.params.world;
+  console.log(target);
+  World.findOne({
+    where: {
+      name: target,
+    },
+  })
+    .then(handleEntityNotFound(res))
+    .then(respondWithResult(res))
+    .catch(handleError(res));
 }
 
 export function activeWorlds(req, res) {
