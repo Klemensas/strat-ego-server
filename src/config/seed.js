@@ -51,8 +51,8 @@ User.sync()
   .then(() => User.findAll())
   .then(us => {
     us.forEach(u => {
-      u.addWorld(targetWorld);
-      Player.create({ UserId: u._id });
+      // u.addWorld(targetWorld);
+      // Player.create({ UserId: u._id });
     });
   })
   .then(() => {
