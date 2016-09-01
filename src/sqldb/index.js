@@ -2,11 +2,10 @@
  * Sequelize initialization module
  */
 
-import path from 'path';
 import config from '../config/environment';
 import Sequelize from 'sequelize';
 
-var db = {
+const db = {
   Sequelize,
   main: { sequelize: new Sequelize(config.sequelize.main, config.sequelize.options) },
   world: { sequelize: new Sequelize(config.sequelize.world, config.sequelize.options) },
@@ -26,10 +25,22 @@ db.world.Restaurant = db.world.sequelize.import('../api/restaurant/restaurant.mo
 db.main.User.hasMany(db.main.Message);
 db.main.Message.belongsTo(db.main.User);
 
-db.main.User.belongsToMany(db.main.World, { through: 'UserWorlds' });
-db.main.World.belongsToMany(db.main.User, { through: 'UserWorlds' });
+db.main.UserWorlds = db.main.sequelize.define('UserWorlds', {
+  PlayerId: {
+    type: Sequelize.INTEGER,
+    allowNull: false,
+    primaryKey: true,
+  },
+  WorldId: {
+    type: Sequelize.INTEGER,
+    allowNull: false,
+    primaryKey: true,
+  },
+});
 
-db.main.UserWorlds = db.main.sequelize.models.UserWorlds;
+db.main.User.hasMany(db.main.UserWorlds);
+db.main.UserWorlds.belongsTo(db.main.User);
+// db.main.World.belongsToMany(db.main.User, { through: 'UserWorlds' });
 
 db.world.Player.hasMany(db.world.Restaurant);
 db.world.Restaurant.belongsTo(db.world.Player);

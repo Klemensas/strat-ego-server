@@ -118,10 +118,7 @@ export function me(req, res, next) {
   return User.findOne({
     where: { _id: userId },
     include: [{
-      model: World,
-      through: {
-        where: { UserId: userId },
-      },
+      model: UserWorlds,
     }],
   })
   // , '-salt -password').populate('gameData.restaurants').exec()
