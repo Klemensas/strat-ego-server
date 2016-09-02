@@ -8,7 +8,7 @@ import http from 'http';
 if (config.seedDB) { require('./config/seed'); }
 
 // Setup server
-const app = express();
+export const app = express();
 const server = http.createServer(app);
 // var socketio = require('socket.io')(server, {
 //   serveClient: config.env !== 'production',
@@ -34,6 +34,3 @@ sqldb.main.sequelize.sync()
 
   })
   .catch(err => console.log('Server failed to start due to error: %s', err));
-
-// Expose app
-export default app;

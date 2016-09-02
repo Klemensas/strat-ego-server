@@ -55,7 +55,7 @@ export default function (sequelize, DataTypes) {
     },
     classMethods: {
       getAvailableCoords: allCoords => {
-        Restaurant.findAll({
+        return Restaurant.findAll({
           attributes: ['location'],
           where: {
             location: {
