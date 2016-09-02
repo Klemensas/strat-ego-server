@@ -31,8 +31,8 @@ db.main.UserWorlds = db.main.sequelize.define('UserWorlds', {
     allowNull: false,
     primaryKey: true,
   },
-  WorldId: {
-    type: Sequelize.INTEGER,
+  World: {
+    type: Sequelize.STRING,
     allowNull: false,
     primaryKey: true,
   },

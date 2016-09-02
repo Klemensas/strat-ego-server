@@ -3,6 +3,7 @@ import sqldb from '../sqldb';
 const User = sqldb.main.User;
 const Message = sqldb.main.Message;
 const World = sqldb.main.World;
+const UserWorlds = sqldb.main.UserWorlds;
 const Player = sqldb.world.Player;
 const Restaurant = sqldb.world.Restaurant;
 
@@ -25,7 +26,8 @@ World.sync()
   }))
   .then(world => targetWorld = world);
 
-Player.sync();
+Player.sync().then(() => Player.destroy({ where: {} }));
+UserWorlds.sync().then(() => UserWorlds.destroy({ where: {} }));
 // Restaurant.sync()
 //   .then(() => Restaurant.destroy({ where: {} }))
 //   .then(() => Restaurant.bulkCreate([{
@@ -51,44 +53,19 @@ User.sync()
   .then(() => User.findAll())
   .then(us => {
     us.forEach(u => {
-      // u.addWorld(targetWorld);
-      // Player.create({ UserId: u._id });
+      Player.create({ UserId: u._id })
+        .then(player => {
+          UserWorlds.create({
+            UserId: u._id,
+            PlayerId: player._id,
+            World: 'Megapolis',
+          });
+        });
     });
   })
   .then(() => {
     console.log('seeding done');
   });
-
-  // })
-// UserMain.sync()
-  // .then(() => UserMain.destroy({ where: {} }))
-  // .then(() => {
-  //   console.log('-----pass 2')
-  //   UserMain.bulkCreate([{
-  //     provider: 'local',
-  //     name: 'Test User',
-  //     email: 'test@test.com',
-  //     password: 'test'
-  //   }, {
-  //     provider: 'local',
-  //     role: 'admin',
-  //     name: 'Admin',
-  //     email: 'admin@admin.com',
-  //     password: 'test'
-  //   }])
-  //   .then(() => {
-  //     console.log(UserMain);
-  //     console.log('wut');
-  //     return UserMain.findOne({ where: {} })
-  //   })
-  //   .then(u => {
-  //     console.log('-----pass 3')
-  //     u.addWorld(1);
-  //     console.log('-----pass 4')
-  //     return u._id;
-  //   })
-  //   .then(populateMessages);
-  // });
 
 
 function populateMessages(userId) {

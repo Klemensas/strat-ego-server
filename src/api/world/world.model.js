@@ -1,12 +1,8 @@
 export default function(sequelize, DataTypes) {
   return sequelize.define('World', {
-    _id: {
-      type: DataTypes.INTEGER,
+    name: {
       allowNull: false,
       primaryKey: true,
-      autoIncrement: true
-    },
-    name: {
       type: DataTypes.STRING
     },
     baseProduction: {
