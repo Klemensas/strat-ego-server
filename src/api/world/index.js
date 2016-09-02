@@ -6,6 +6,8 @@ const router = new Router();
 
 router.get('/', controller.activeWorlds);
 router.get('/:world', auth.isAuthenticated(), controller.worldData);
+router.get('/:world/join', auth.isAuthenticated(), controller.joinWorld);
+router.get('/:world/player', auth.isAuthenticated(), controller.playerData);
 // router.delete('/:id', auth.hasRole('admin'), controller.destroy);
 // router.get('/me', auth.isAuthenticated(), controller.me);
 // router.put('/:id/password', auth.isAuthenticated(), controller.changePassword);

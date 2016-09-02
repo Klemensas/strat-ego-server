@@ -30,7 +30,6 @@ function handleError(res, statusCode) {
 
 export function worldData(req, res) {
   const target = req.params.world;
-  console.log(target);
   World.findOne({
     where: {
       name: target,
@@ -46,4 +45,21 @@ export function activeWorlds(req, res) {
     .then(handleEntityNotFound(res))
     .then(respondWithResult(res))
     .catch(handleError(res));
+}
+
+export function joinWorld(req, res) {
+  // Accept only megapolis until multiple worlds implemented
+  const targetWorld = String(req.params.world).toLowerCase();
+  if (targetWorld !== 'megapolis') {
+    return res.status(404).end();
+  }
+  isActive(req.user.UserWorlds, targetWorld);
+}
+
+export function playerData(req, res) {
+}
+
+function isActive(userWorlds, target) {
+  // userWorlds.some(w =>)
+
 }

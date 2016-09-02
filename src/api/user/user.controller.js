@@ -114,7 +114,6 @@ export function changePassword(req, res) {
  */
 export function me(req, res, next) {
   const userId = req.user._id;
-
   return User.findOne({
     where: { _id: userId },
     include: [{
