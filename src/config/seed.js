@@ -7,6 +7,10 @@ const UserWorlds = sqldb.main.UserWorlds;
 const Player = sqldb.world.Player;
 const Restaurant = sqldb.world.Restaurant;
 
+import * as map from '../components/map';
+
+console.log(map);
+
 let targetWorld = null;
 World.sync()
   .then(() => World.destroy({ where: {} }))
@@ -26,15 +30,18 @@ World.sync()
   }))
   .then(world => targetWorld = world);
 
+Restaurant.sync().then(() => Restaurant.getAvailableCoords([[497, 500]]));
+
 Player.sync().then(() => Player.destroy({ where: {} }));
 UserWorlds.sync().then(() => UserWorlds.destroy({ where: {} }));
-// Restaurant.sync()
-//   .then(() => Restaurant.destroy({ where: {} }))
-//   .then(() => Restaurant.bulkCreate([{
-//     name: 'kebab',
-//     location: [497,500]
-//   }]))
-//   .then(() => console.log('restaurant?'));
+// Restaurant.sync().then(() => Restaurant.destroy({ where: {} }));
+Restaurant.sync()
+  .then(() => Restaurant.destroy({ where: {} }))
+  .then(() => Restaurant.bulkCreate([{
+    name: 'kebab',
+    location: [497, 500],
+  }]))
+  .then(() => console.log('restaurant?'));
 
 User.sync()
   .then(() => User.destroy({ where: {} }))
@@ -53,7 +60,7 @@ User.sync()
   .then(() => User.findAll())
   .then(us => {
     us.forEach(u => {
-      Player.create({ UserId: u._id })
+      Player.create({ UserId: u._id, name: u.name })
         .then(player => {
           UserWorlds.create({
             UserId: u._id,
