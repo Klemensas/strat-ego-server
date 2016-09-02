@@ -1,6 +1,8 @@
-import { main } from '../../sqldb';
+import { main, world } from '../../sqldb';
 
 const World = main.World;
+const Player = world.Player;
+const Restaurant = world.Restaurant;
 
 function respondWithResult(res, statusCode) {
   const code = statusCode || 200;
@@ -30,7 +32,7 @@ function handleError(res, statusCode) {
 
 export function worldData(req, res) {
   const target = req.params.world;
-  World.findOne({
+  return World.findOne({
     where: {
       name: target,
     },
@@ -41,25 +43,38 @@ export function worldData(req, res) {
 }
 
 export function activeWorlds(req, res) {
-  World.findAll()
+  return World.findAll()
     .then(handleEntityNotFound(res))
     .then(respondWithResult(res))
     .catch(handleError(res));
 }
 
-export function joinWorld(req, res) {
-  // Accept only megapolis until multiple worlds implemented
-  const targetWorld = String(req.params.world).toLowerCase();
-  if (targetWorld !== 'megapolis') {
-    return res.status(404).end();
-  }
-  isActive(req.user.UserWorlds, targetWorld);
-}
-
 export function playerData(req, res) {
+  const targetWorld = String(req.params.world).toLowerCase();
+  const isActive = req.user.UserWorlds.some(w => w.World.toLowerCase() === targetWorld);
+  if (!isActive) {
+    return res.status(401).end();
+  }
+  return Player.findOne({
+    where: {
+      UserId: req.user._id,
+    },
+    include: {
+      model: Restaurant,
+    },
+  })
+  .then(handleEntityNotFound(res))
+  .then(respondWithResult(res))
+  .catch(handleError(res));
 }
 
-function isActive(userWorlds, target) {
-  // userWorlds.some(w =>)
+export function joinWorld(req, res) {
+  const targetWorld = String(req.params.world).toLowerCase();
+  const isActive = req.user.UserWorlds.some(w => w.World.toLowerCase() === targetWorld);
+  // currently redirects instead of erroring
+  if (isActive) {
+    return playerData(req, res);
+  }
 
 }
+
