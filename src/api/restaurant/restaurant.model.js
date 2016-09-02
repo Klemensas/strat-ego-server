@@ -1,17 +1,17 @@
-export default function(sequelize, DataTypes) {
-  return sequelize.define('Restaurant', {
+export default function (sequelize, DataTypes) {
+  const Restaurant = sequelize.define('Restaurant', {
     _id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       primaryKey: true,
-      autoIncrement: true
+      autoIncrement: true,
     },
     name: {
       type: DataTypes.STRING,
       validate: {
         notEmpty: true,
         len: [1, 50],
-      }
+      },
     },
     location: {
       type: DataTypes.ARRAY(DataTypes.INTEGER),
@@ -19,44 +19,58 @@ export default function(sequelize, DataTypes) {
         notEmpty: true,
         len: [2],
       },
-      unique: true
+      unique: true,
     },
     moneyPercent: {
-      type: DataTypes.INTEGER
+      type: DataTypes.INTEGER,
     },
     resources: {
       type: DataTypes.JSON,
       // defaultValue: defaultResources
     },
     buildings: {
-      type: DataTypes.JSON
+      type: DataTypes.JSON,
     },
     kitchenWorkers: {
-      type: DataTypes.JSON
+      type: DataTypes.JSON,
     },
     outsideWorkers: {
-      type: DataTypes.JSON
-    }
+      type: DataTypes.JSON,
+    },
   }, {
     hooks: {
-      beforeCreate: function(restaurant) {
+      beforeCreate: restaurant => {
         // restaurant.resources
         restaurant.resources = {
           loyals: 20,
           money: 100,
           burgers: 100,
           fries: 100,
-          drinks: 100
+          drinks: 100,
         };
         restaurant.buildings = {
-          kitchen: 0
+          kitchen: 0,
         };
-      }
-    }
+      },
+    },
+    classMethods: {
+      getAvailableCoords: allCoords => {
+        Restaurant.findAll({
+          attributes: ['location'],
+          where: {
+            location: {
+              $in: [...allCoords],
+            },
+          },
+          raw: true,
+        })
+        .then(res => {
+          const usedLocations = res.map(i => i.location.join(','));
+          return allCoords.filter(c => !usedLocations.includes(c.join(',')));
+        });
+      },
+    },
   });
 
-  // function defaultResources() {
-  //   console.log(this);
-  //   console.log('default res');
-  // }
+  return Restaurant;
 }
