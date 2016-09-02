@@ -6,6 +6,7 @@ import compose from 'composable-middleware';
 import { main } from '../sqldb';
 
 const User = main.User;
+const UserWorlds = main.UserWorlds;
 
 const validateJwt = expressJwt({
   secret: config.secrets.session,
@@ -29,7 +30,14 @@ export function isAuthenticated() {
     .use(validate)
     // Attach user to request
     .use((req, res, next) => {
-      User.findOne({ where: { _id: req.user._id } })
+      User.findOne({
+        where: {
+          _id: req.user._id,
+        },
+        include: [{
+          model: UserWorlds,
+        }],
+      })
         .then(user => {
           if (!user) {
             return res.status(401).end();

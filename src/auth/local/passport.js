@@ -3,7 +3,9 @@ import { Strategy as LocalStrategy } from 'passport-local';
 
 function localAuthenticate(User, email, password, done) {
   User.findOne({
-    email: email.toLowerCase(),
+    where: {
+      email: email.toLowerCase(),
+    },
   })
     .then(user => {
       if (!user) {
