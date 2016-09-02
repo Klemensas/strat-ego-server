@@ -1,6 +1,3 @@
-/**
- * Express configuration
- */
 import express from 'express';
 import cors from 'cors';
 import favicon from 'serve-favicon'; // dedicaed favicon handler
@@ -14,10 +11,10 @@ import passport from 'passport'; // authentication
 import path from 'path';
 import config from './environment';
 
-module.exports = function(app) {
-  var env = app.get('env');
+module.exports = app => {
+  const env = app.get('env');
 
-  app.set('views', config.root + '/server/views');
+  app.set('views', `${config.root}/server/views`);
   app.engine('html', require('ejs').renderFile);
   app.set('view engine', 'html');
   app.use(compression());
@@ -30,17 +27,17 @@ module.exports = function(app) {
 
   app.set('appPath', path.join(config.root, 'client'));
 
-  if ('production' === env) {
+  if (env === 'production') {
     app.use(favicon(path.join(config.root, 'client', 'favicon.ico')));
     app.use(express.static(app.get('appPath')));
     app.use(morgan('dev'));
   }
 
-  if ('development' === env) {
+  if (env === 'development') {
     app.use(require('connect-livereload')());
   }
 
-  if ('development' === env || 'test' === env) {
+  if (env === 'development' || env === 'test') {
     app.use(express.static(path.join(config.root, '.tmp')));
     app.use(express.static(app.get('appPath')));
     app.use(morgan('dev'));

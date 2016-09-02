@@ -1,15 +1,19 @@
-export default function(sequelize, DataTypes) {
+export default function (sequelize, DataTypes) {
   return sequelize.define('Player', {
     _id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       primaryKey: true,
-      autoIncrement: true
+      autoIncrement: true,
     },
     UserId: {
       primaryKey: true,
       type: DataTypes.INTEGER,
-      allowNull: false
-    }
+      allowNull: false,
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
   });
 }
