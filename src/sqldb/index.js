@@ -40,7 +40,6 @@ db.main.UserWorlds = db.main.sequelize.define('UserWorlds', {
 
 db.main.User.hasMany(db.main.UserWorlds);
 db.main.UserWorlds.belongsTo(db.main.User);
-// db.main.World.belongsToMany(db.main.User, { through: 'UserWorlds' });
 
 db.world.Player.hasMany(db.world.Restaurant);
 db.world.Restaurant.belongsTo(db.world.Player);

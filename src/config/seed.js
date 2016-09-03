@@ -8,10 +8,8 @@ const Player = sqldb.world.Player;
 const Restaurant = sqldb.world.Restaurant;
 
 import * as map from '../components/map';
+import { addWorld } from '../components/worlds';
 
-console.log(map);
-
-let targetWorld = null;
 World.sync()
   .then(() => World.destroy({ where: {} }))
   .then(() => World.create({
@@ -28,20 +26,22 @@ World.sync()
     generationArea: 9,
     currentRing: 1,
   }))
-  .then(world => targetWorld = world);
+  .then(world => {
+    addWorld(world.name.toLowerCase(), world);
+  });
 
-Restaurant.sync().then(() => Restaurant.getAvailableCoords([[497, 500]]));
+// Restaurant.sync().then(() => Restaurant.getAvailableCoords([[497, 500]]));
 
 Player.sync().then(() => Player.destroy({ where: {} }));
 UserWorlds.sync().then(() => UserWorlds.destroy({ where: {} }));
-// Restaurant.sync().then(() => Restaurant.destroy({ where: {} }));
-Restaurant.sync()
-  .then(() => Restaurant.destroy({ where: {} }))
-  .then(() => Restaurant.bulkCreate([{
-    name: 'kebab',
-    location: [497, 500],
-  }]))
-  .then(() => console.log('restaurant?'));
+Restaurant.sync().then(() => Restaurant.destroy({ where: {} }));
+// Restaurant.sync()
+//   .then(() => Restaurant.destroy({ where: {} }))
+//   // .then(() => Restaurant.bulkCreate([{
+//   //   name: 'kebab',
+//   //   location: [497, 500],
+//   // }]))
+//   .then(() => console.log('restaurant?'));
 
 User.sync()
   .then(() => User.destroy({ where: {} }))
@@ -60,14 +60,14 @@ User.sync()
   .then(() => User.findAll())
   .then(us => {
     us.forEach(u => {
-      Player.create({ UserId: u._id, name: u.name })
-        .then(player => {
-          UserWorlds.create({
-            UserId: u._id,
-            PlayerId: player._id,
-            World: 'Megapolis',
-          });
-        });
+      // Player.create({ UserId: u._id, name: u.name })
+      //   .then(player => {
+      //     UserWorlds.create({
+      //       UserId: u._id,
+      //       PlayerId: player._id,
+      //       World: 'Megapolis',
+      //     });
+      //   });
     });
   })
   .then(() => {

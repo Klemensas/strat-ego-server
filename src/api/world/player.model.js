@@ -7,7 +7,6 @@ export default function (sequelize, DataTypes) {
       autoIncrement: true,
     },
     UserId: {
-      primaryKey: true,
       type: DataTypes.INTEGER,
       allowNull: false,
     },
