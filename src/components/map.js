@@ -1,12 +1,16 @@
+import { activeWorlds } from './worlds';
+import { world } from '../sqldb';
+
+const Restaurant = world.Restaurant;
+
+// TODO: crucial part, should be tested and optimized
 export const getRingCoords = (size, ring) => {
-  const minY = size - ring;
-  const maxY = size + ring;
-  const minX = size - ring;
-  const maxX = size + ring;
+  const min = size - ring;
+  const max = size + ring;
   const halfRing = Math.floor(ring / 2);
 
-  const xLeft = [minX, size];
-  const xRight = [maxX, size];
+  const xLeft = [min, size];
+  const xRight = [max, size];
   const top = [];
   const bottom = [];
   const leftTop = [];
@@ -15,14 +19,14 @@ export const getRingCoords = (size, ring) => {
   const rightBottom = [];
 
   for (let i = 0; i < ring + 1; i++) {
-    const x = minX + halfRing + i;
-    top.push([x, minY]);
-    bottom.push([x, maxY]);
+    const x = min + halfRing + i;
+    top.push([x, min]);
+    bottom.push([x, max]);
     if (i < ring - 1) {
       const yT = size - 1 - i;
       const yB = size + 1 + i;
-      const xL = minX + Math.floor((i + 1) / 2);
-      const xR = maxX - Math.round((1 + i) / 2);
+      const xL = min + Math.floor((i + 1) / 2);
+      const xR = max - Math.round((1 + i) / 2);
       leftTop.unshift([xL, yT]);
       rightTop.unshift([xR, yT]);
       leftBottom.push([xL, yB]);
@@ -58,11 +62,20 @@ export const getCoordsInRange = (rings, furthestRing, size) => {
   return [...coords.top, ...innards, ...coords.bottom];
 };
 
-export const generateRestaurant = (size, currentRim, radius, name = 'Government restaurant') => {
-  Restaurant.getAvailableCoords(getCoordsInRange(radius, currentRim, size))
-    .then(coords => {
-      const location = coords[Math.round(Math.random() * coords.length)];
-      Restaurant.create({
+export const chooseLocation = targetWorld => {
+  const worldData = activeWorlds[targetWorld];
+  return Restaurant.getAvailableCoords(getCoordsInRange(
+    worldData.generationArea,
+    worldData.currentRing,
+    Math.ceil(worldData.size / 2)
+  ))
+  .then(coords => coords[Math.round(Math.random() * coords.length - 1)]);
+};
+
+export const generateRestaurant = (targetWorld, name = 'Government restaurant') => {
+  chooseLocation(targetWorld)
+    .then(location => {
+      return Restaurant.create({
         name,
         location,
       });
