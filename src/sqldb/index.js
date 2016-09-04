@@ -29,12 +29,10 @@ db.main.UserWorlds = db.main.sequelize.define('UserWorlds', {
   PlayerId: {
     type: Sequelize.INTEGER,
     allowNull: false,
-    primaryKey: true,
   },
   World: {
     type: Sequelize.STRING,
     allowNull: false,
-    primaryKey: true,
   },
 });
 
