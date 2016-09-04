@@ -90,5 +90,11 @@ export function joinWorld(req, res) {
       include: [Restaurant],
     });
   })
-  .then(player => res.json(player));
+  .then(player => {
+    req.user.createUserWorld({
+      World: targetWorld,
+      PlayerId: player._id,
+    });
+    return res.json(player);
+  });
 }
