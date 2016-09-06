@@ -63,7 +63,7 @@ export const getCoordsInRange = (rings, furthestRing, size) => {
 };
 
 export const chooseLocation = targetWorld => {
-  const worldData = activeWorlds[targetWorld];
+  const worldData = activeWorlds.get(targetWorld);
   return Restaurant.getAvailableCoords(getCoordsInRange(
     worldData.generationArea,
     worldData.currentRing,
