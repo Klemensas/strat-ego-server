@@ -19,11 +19,9 @@ function removeListener(event, listener) {
 
 function sendInitData(socket) {
   if (!socket.player) {
-  console.log('watafak?', socket.player);
     return worldCtrl.joinWorld(socket.world, socket.username, socket.userId)
       .then(player => {
         socket.player = player;
-        console.log('dis is da playa wtf', player);
         socket.emit('self', player);
       })
     .catch();
