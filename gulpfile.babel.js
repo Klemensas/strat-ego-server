@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import del from 'del';
 import gulp from 'gulp';
 import path from 'path';
 import gulpLoadPlugins from 'gulp-load-plugins';
@@ -20,6 +21,7 @@ const paths = {
           unit: [`${serverPath}/**/*.spec.js`, 'mocha.global.js']
         }
     },
+    dist: 'dist'
 };
 
 
@@ -79,6 +81,10 @@ gulp.task('start:server', () => {
         .on('log', onServerLog);
 });
 
+gulp.task('clean:tmp', () => del(['.tmp/**/*'], {dot: true}));
+gulp.task('clean:dist', () => del([`${paths.dist}/!(.git*|.openshift|Procfile)**`], {dot: true}));
+
+
 gulp.task('watch', () => {
     plugins.livereload.listen();
 
@@ -91,5 +97,15 @@ gulp.task('serve', cb => {
     runSequence(
         'start:server',
         'watch',
+        cb);
+});
+
+gulp.task('build', cb => {
+    runSequence(
+        [
+            'clean:dist',
+            'clean:tmp'
+        ],
+        'transpile:server',
         cb);
 });
