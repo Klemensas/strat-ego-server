@@ -1,5 +1,5 @@
 // import passport from 'passport';
-import { generateRestaurant } from '../restaurant/restaurant.controller';
+import { generateTown } from '../town/town.controller';
 import config from '../../config/environment';
 import jwt from 'jsonwebtoken';
 import workers from '../../config/game/workers';
@@ -46,7 +46,7 @@ export function create(req, res) {
   newUser.role = 'user';
   newUser.save()
     .then(user => {
-      addRestaurant(user)
+      addTown(user)
         .then((user) => {
           var token = jwt.sign({ _id: user._id }, config.secrets.session, {
             expiresIn: 60 * 60 * 5
@@ -120,7 +120,7 @@ export function me(req, res, next) {
       model: UserWorlds,
     }],
   })
-  // , '-salt -password').populate('gameData.restaurants').exec()
+  // , '-salt -password').populate('gameData.towns').exec()
     // .then(user => user.getWorlds())
     .then(user => { // don't ever give out the password or salt
       if (!user) {
@@ -139,12 +139,12 @@ export function authCallback(req, res) {
   res.redirect('/');
 }
 
-function addRestaurant(user) {
-  return generateRestaurant(user)
-    .then(rest => {
+function addTown(user) {
+  return generateTown(user)
+    .then(town => {
       user.gameData = {
         active: true,
-        restaurants: [rest],
+        towns: [town],
       };
       return user.save();
     });

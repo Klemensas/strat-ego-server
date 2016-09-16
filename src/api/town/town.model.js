@@ -1,5 +1,5 @@
 export default function (sequelize, DataTypes) {
-  const Restaurant = sequelize.define('Restaurant', {
+  const Town = sequelize.define('Town', {
     _id: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -39,23 +39,23 @@ export default function (sequelize, DataTypes) {
     },
   }, {
     hooks: {
-      beforeCreate: restaurant => {
-        // restaurant.resources
-        restaurant.resources = {
+      beforeCreate: town => {
+        // Town.resources
+        town.resources = {
           loyals: 20,
           money: 100,
           burgers: 100,
           fries: 100,
           drinks: 100,
         };
-        restaurant.buildings = {
+        town.buildings = {
           kitchen: 0,
         };
       },
     },
     classMethods: {
       getAvailableCoords: allCoords => {
-        return Restaurant.findAll({
+        return Town.findAll({
           attributes: ['location'],
           where: {
             location: {
@@ -72,5 +72,5 @@ export default function (sequelize, DataTypes) {
     },
   });
 
-  return Restaurant;
+  return Town;
 }

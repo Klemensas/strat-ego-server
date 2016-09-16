@@ -5,7 +5,7 @@ const Message = sqldb.main.Message;
 const World = sqldb.main.World;
 const UserWorlds = sqldb.main.UserWorlds;
 const Player = sqldb.world.Player;
-const Restaurant = sqldb.world.Restaurant;
+const Town = sqldb.world.Town;
 
 import * as map from '../components/map';
 import { addWorld } from '../components/worlds';
@@ -30,18 +30,18 @@ World.sync()
     addWorld(world.name.toLowerCase(), world);
   });
 
-// Restaurant.sync().then(() => Restaurant.getAvailableCoords([[497, 500]]));
+// Town.sync().then(() => Town.getAvailableCoords([[497, 500]]));
 
 Player.sync().then(() => Player.destroy({ where: {} }));
 UserWorlds.sync().then(() => UserWorlds.destroy({ where: {} }));
-Restaurant.sync().then(() => Restaurant.destroy({ where: {} }));
-// Restaurant.sync()
-//   .then(() => Restaurant.destroy({ where: {} }))
-//   // .then(() => Restaurant.bulkCreate([{
+Town.sync().then(() => Town.destroy({ where: {} }));
+// Town.sync()
+//   .then(() => Town.destroy({ where: {} }))
+//   // .then(() => Town.bulkCreate([{
 //   //   name: 'kebab',
 //   //   location: [497, 500],
 //   // }]))
-//   .then(() => console.log('restaurant?'));
+//   .then(() => console.log('Town?'));
 
 User.sync()
   .then(() => User.destroy({ where: {} }))
@@ -93,7 +93,7 @@ console.log('-----pass 5')
 
 // import Message from '../api/message/message.model';
 // import User from '../api/user/user.model';
-// import Restaurant from '../api/restaurant/restaurant.model';
+// import Town from '../api/Town/Town.model';
 // import buildings from './game/buildings';
 // import { defaultWorkers } from './game/workers';
 
@@ -104,7 +104,7 @@ console.log('-----pass 5')
 //   for (let j = 1; j < 100; j++) {
 //     if (Math.random() <= chance) {
 //       restaurants.push({
-//         name: `Restaurant #${i * j}`,
+//         name: `Town #${i * j}`,
 //         location: [i, j],
 //         buildings: buildings.defaultBuildings,
 //         workers: defaultWorkers,
@@ -164,10 +164,10 @@ console.log('-----pass 5')
 // }
 
 // User.find({}).remove().then(() => {
-//   Restaurant.find({}).remove()
+//   Town.find({}).remove()
 //     .then(() => {
 //       restaurants.forEach((rest, i) => {
-//         Restaurant.create(rest)
+//         Town.create(rest)
 //           .then(r => {
 //             savedRestaurants.push(r);
 //             if (i === restaurants.length - 1) {

@@ -3,7 +3,7 @@ import * as map from '../../components/map';
 
 const UserWorlds = main.UserWorlds;
 const Player = world.Player;
-const Restaurant = world.Restaurant;
+const Town = world.Town;
 
 function playerData(world, player, targetPlayer) {
   const isActive = req.user.UserWorlds.some(w => w.World.toLowerCase() === targetWorld);
@@ -15,7 +15,7 @@ function playerData(world, player, targetPlayer) {
       UserId: req.user._id,
     },
     include: {
-      model: Restaurant,
+      model: Town,
     },
   })
   .then(handleEntityNotFound(res))
@@ -29,12 +29,12 @@ function joinWorld(targetWorld, name, userId) {
     return Player.create({
       name,
       UserId: userId,
-      Restaurants: [{
-        name: `${name}s restaurant`,
+      Towns: [{
+        name: `${name}s Town`,
         location,
       }],
     }, {
-      include: [Restaurant],
+      include: [Town],
     });
   })
   .then(player => {

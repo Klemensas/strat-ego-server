@@ -1,12 +1,12 @@
 import _ from 'lodash';
 import mongoose from 'mongoose';
-import { Restaurant, updateRes } from './restaurant.model';
+import { Town, updateRes } from './town.model';
 import buildings from '../../config/game/buildings';
 import workers from '../../config/game/workers';
 import events from '../../components/events';
 import Promise from 'bluebird';
 
-const subscribedRestaurants = {};
+const subscribedTowns = {};
 
 function respondWithResult(res, statusCode) {
   statusCode = statusCode || 200;
@@ -57,53 +57,53 @@ function handleError(res, statusCode) {
 
 // Gets a list of Things
 export function index(req, res) {
-  Restaurant.find()
+  Town.find()
     .then(respondWithResult(res))
     .catch(handleError(res));
 }
 
-// Gets a single Restaurant from the DB
+// Gets a single Town from the DB
 export function show(req, res) {
-  Restaurant.findById(req.params.id)
+  Town.findById(req.params.id)
     .then(handleEntityNotFound(res))
     .then(respondWithResult(res))
     .catch(handleError(res));
 }
 
-export function restaurantView(req, res) {
+export function TownView(req, res) {
   res.status(200).send();
 }
 
 export function map(req, res) {
-  Restaurant.find({}, 'location owner').populate('owner', 'name')
+  Town.find({}, 'location owner').populate('owner', 'name')
   .then(result => {
     res.status(200).json(result);
   })
     .catch(handleError(res));
 }
 
-// Creates a new Restaurant in the DB
+// Creates a new Town in the DB
 export function create(req, res) {
-  Restaurant.create(req.body)
+  Town.create(req.body)
     .then(respondWithResult(res, 201))
     .catch(handleError(res));
 }
 
-// Updates an existing Restaurant in the DB
+// Updates an existing Town in the DB
 export function update(req, res) {
   if (req.body._id) {
     delete req.body._id;
   }
-  Restaurant.findById(req.params.id)
+  Town.findById(req.params.id)
     .then(handleEntityNotFound(res))
     .then(saveUpdates(req.body))
     .then(respondWithResult(res))
     .catch(handleError(res));
 }
 
-// Deletes a Restaurant from the DB
+// Deletes a Town from the DB
 export function destroy(req, res) {
-  Restaurant.findById(req.params.id)
+  Town.findById(req.params.id)
     .then(handleEntityNotFound(res))
     .then(removeEntity(res))
     .catch(handleError(res));
@@ -124,14 +124,14 @@ export function getBuildings(req, res) {
 
 export function updateQueues(req, res) {
   if (isOwner(req.user, req.params.id)) {
-    return Restaurant.findById(req.params.id)
+    return Town.findById(req.params.id)
       .then(handleEntityNotFound(res))
       .then(events.checkQueueAndUpdate)
       .then(rest => {
         // TODO: events moved to promise, no more checking if soonest is up?
         // if (rest.events.soonest <= Date.now()) {
           rest = updateRes(rest);
-          return Restaurant.update({ _id: rest._id, nonce: rest.nonce }, rest)
+          return Town.update({ _id: rest._id, nonce: rest.nonce }, rest)
           .then(r => {
             if (r.nModified) {
               return res.json(rest);
@@ -151,11 +151,11 @@ export function updateIncoming(req, res) {
     const time = Date.now();
     return findEndedEvents(id, time).then(ev => {
         for (const sender of ev) {
-          return Restaurant.findById(sender._id)
+          return Town.findById(sender._id)
             .then(events.checkQueueAndUpdate)
             .then(rest => {
               rest = updateRes(rest);
-              return Restaurant.update({ _id: rest._id, nonce: rest.nonce }, rest)
+              return Town.update({ _id: rest._id, nonce: rest.nonce }, rest)
                 .then(() => res.status(200).end());
             });
         }
@@ -166,10 +166,10 @@ export function updateIncoming(req, res) {
 
 // Post, attempt to upgrade a building
 export function upgradeBuilding(req, res) {
-  // TODO: get the user, check if he owns the restaurant, check if he has enough resources and meets the reqs
+  // TODO: get the user, check if he owns the Town, check if he has enough resources and meets the reqs
   if (isOwner(req.user, req.params.id) && typeof req.body.building === 'string') {
     const target = req.body.building;
-    return Restaurant.findById(req.params.id)
+    return Town.findById(req.params.id)
       .then(handleEntityNotFound(res))
       .then(events.checkQueueAndUpdate)
       .then(rest => {
@@ -190,7 +190,7 @@ export function upgradeBuilding(req, res) {
           return res.status(401).end();
         }
         rest = events.queueBuilding(rest, building, targetLevel);
-        return Restaurant.update({ _id: rest._id, nonce: rest.nonce }, rest)
+        return Town.update({ _id: rest._id, nonce: rest.nonce }, rest)
         .then(r => {
           if (r.nModified) {
             return res.json(rest);
@@ -200,20 +200,20 @@ export function upgradeBuilding(req, res) {
       })
       .catch(handleError(res));
   }
-  // TODO: error, non user restaurant
+  // TODO: error, non user Town
   res.status(401).end();
 }
 
 export function setMoneyProd(req, res) {
   if (isOwner(req.user, req.params.id) && typeof req.body.percent === 'string') {
     const percent = req.body.percent;
-    return Restaurant.findById(req.params.id)
+    return Town.findById(req.params.id)
       .then(handleEntityNotFound(res))
       .then(rest => {
         if (canSetMoneyProd(rest)) {
           rest = updateRes(rest);
           rest.moneyPercent = percent;
-          return Restaurant.update({ _id: rest._id, nonce: rest.nonce }, rest)
+          return Town.update({ _id: rest._id, nonce: rest.nonce }, rest)
           .then(r => {
             if (r.nModified) {
               return res.json(rest);
@@ -224,17 +224,17 @@ export function setMoneyProd(req, res) {
       })
       .catch(handleError(res));
   }
-  // TODO: error, non user restaurant
+  // TODO: error, non user Town
   return res.status(401).end();
 }
 
 export function sseEvents(req, res) {
   if (isOwner(req.user, req.params.id)) {
-    subscribedRestaurants[req.params.id] = res;
+    subscribedTowns[req.params.id] = res;
 
     // Cleanup
     res.on('close', () => {
-      delete subscribedRestaurants[req.params.id];
+      delete subscribedTowns[req.params.id];
     });
     // Send initial data
     sendEvents(req.params.id, res);
@@ -248,14 +248,14 @@ function canSetMoneyProd(rest) {
   return true;
 }
 
-// Generates a restaurant for new players
-export function generateRestaurant(user) {
-  return Restaurant.find({}, 'location -_id')
+// Generates a Town for new players
+export function generateTown(user) {
+  return Town.find({}, 'location -_id')
     .then(resList => {
       const location = findSuitable(resList);
-      return Restaurant.create({
+      return Town.create({
         location,
-        name: `${user.name}'s restaurant`,
+        name: `${user.name}'s Town`,
         buildings: buildings.defaultBuildings,
         owner: user,
         workers: workers.defaultWorkers,
@@ -263,8 +263,8 @@ export function generateRestaurant(user) {
     });
 }
 
-function isOwner(user, restaurantId) {
-  return user.gameData.restaurants.some(r => r.equals(restaurantId));
+function isOwner(user, TownId) {
+  return user.gameData.Towns.some(r => r.equals(TownId));
 }
 
 function findSuitable(list) {
@@ -278,19 +278,19 @@ function findSuitable(list) {
 }
 
 export function sendMovementEvent(target, event) {
-  if (subscribedRestaurants[target]) {
-    subscribedRestaurants[target].sse(`data: ${JSON.stringify({ newMovement: event })}\n\n`);
+  if (subscribedTowns[target]) {
+    subscribedTowns[target].sse(`data: ${JSON.stringify({ newMovement: event })}\n\n`);
   }
 }
 
-export function sendRestaurantUpdate(target, restaurant) {
-  if (subscribedRestaurants[target]) {
-    subscribedRestaurants[target].sse(`data: ${JSON.stringify({ rest: restaurant })}\n\n`);
+export function sendTownUpdate(target, Town) {
+  if (subscribedTowns[target]) {
+    subscribedTowns[target].sse(`data: ${JSON.stringify({ rest: Town })}\n\n`);
   }
 }
 
 function findEvents(id) {
-  return Restaurant.aggregate([
+  return Town.aggregate([
     { $match: { "$and": [{ "events.movement.targetId" : id },
       { "events.movement.action" : {"$ne": "returning"} }]}},
     { $project: { "location" : 1, "events.movement" : {
@@ -304,7 +304,7 @@ function findEvents(id) {
 }
 
 function findEndedEvents(id, time) {
-  return Restaurant.aggregate([
+  return Town.aggregate([
     { $match: { $and: [
       { 'events.movement.targetId': id },
       { 'events.movement.action': { $ne: 'returning' } },

@@ -1,6 +1,6 @@
 import sse from 'express-server-sent-events';
 import { Router } from 'express';
-import * as controller from './restaurant.controller';
+import * as controller from './town.controller';
 import * as auth from '../../auth/auth.service';
 
 var router = new Router();
@@ -8,7 +8,7 @@ var router = new Router();
 router.get('/', controller.index);
 // router.get('/', auth.hasRole('admin'), controller.index);
 // router.delete('/:id', auth.hasRole('admin'), controller.destroy);
-// router.get('/', auth.isAuthenticated(), controller.restaurantView);
+// router.get('/', auth.isAuthenticated(), controller.townView);
 router.get('/map', auth.isAuthenticated(), controller.map);
 router.get('/buildings', auth.isAuthenticated(), controller.getBuildings);
 router.get('/:id/events', auth.isAuthenticated(), sse, controller.sseEvents);

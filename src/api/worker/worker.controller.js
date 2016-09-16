@@ -1,6 +1,6 @@
 import workers from '../../config/game/workers';
-import { Restaurant, updateRes } from '../restaurant/restaurant.model';
-import { sendMovementEvent } from '../restaurant/restaurant.controller';
+import { Town, updateRes } from '../town/town.model';
+import { sendMovementEvent } from '../town/town.controller';
 import buildings from '../../config/game/buildings';
 import events from '../../components/events';
 import _ from 'lodash';
@@ -15,8 +15,8 @@ export function index(req, res) {
   });
 }
 
-function isOwner(user, restaurantId) {
-  return user.gameData.restaurants.some(r => r.equals(restaurantId));
+function isOwner(user, townId) {
+  return user.gameData.towns.some(r => r.equals(townId));
 }
 
 function handleEntityNotFound(res) {
@@ -29,13 +29,13 @@ function handleEntityNotFound(res) {
   };
 }
 
-// Add worker to user restaurant
+// Add worker to user Town
 export function hireWorkers(req, res) {
   const data = req.body;
   if (data.rest && isOwner(req.user, data.rest) && data.workers) {
     const filteredUnits = Object.keys(data.workers).filter(t => !!workers.allWorkers[t] && Number(data.workers[t]) > 0);
     if (filteredUnits.length) {
-      return Restaurant.findById(data.rest)
+      return Town.findById(data.rest)
         .then(handleEntityNotFound(res))
           .then(rest => {
             const costs = {
@@ -57,7 +57,7 @@ export function hireWorkers(req, res) {
             });
             if (canBuild && canAfford) {
               rest = events.queueRecruits(rest, data.workers, filteredUnits);
-              Restaurant.update({ _id: rest._id, nonce: rest.nonce }, rest)
+              Town.update({ _id: rest._id, nonce: rest.nonce }, rest)
                 .then(r => {
                   if (r.nModified) {
                     return res.json(rest);
@@ -80,7 +80,7 @@ export function moveWorkers(req, res) {
       if (!valid) {
         return res.status(404).end();
       }
-      return Restaurant.findById(data.rest)
+      return Town.findById(data.rest)
         .then(handleEntityNotFound(res))
           .then(rest => {
             if (!enoughToSend(rest.workers.outside, units)) {
@@ -89,7 +89,7 @@ export function moveWorkers(req, res) {
             const queuedEvent = events.queueMovement(rest, units, data.type, data.target, data.id);
             rest = queuedEvent.rest;
             rest = updateRes(rest);
-            return Restaurant.update({ _id: rest._id, nonce: rest.nonce }, rest)
+            return Town.update({ _id: rest._id, nonce: rest.nonce }, rest)
               .then(r => {
                 if (r.nModified) {
                   sendMovementEvent(data.id, queuedEvent.event);
@@ -104,7 +104,7 @@ export function moveWorkers(req, res) {
 }
 
 function validTarget(id, location) {
-  return Restaurant.count({ location, _id: id }).then(c => c);
+  return Town.count({ location, _id: id }).then(c => c);
 }
 
 function enoughToSend(allWorkers, sent) {

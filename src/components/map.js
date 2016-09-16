@@ -1,7 +1,7 @@
 import { activeWorlds } from './worlds';
 import { world } from '../sqldb';
 
-const Restaurant = world.Restaurant;
+const Town = world.Town;
 
 // TODO: crucial part, should be tested and optimized
 export const getRingCoords = (size, ring) => {
@@ -64,7 +64,7 @@ export const getCoordsInRange = (rings, furthestRing, size) => {
 
 export const chooseLocation = targetWorld => {
   const worldData = activeWorlds.get(targetWorld);
-  return Restaurant.getAvailableCoords(getCoordsInRange(
+  return Town.getAvailableCoords(getCoordsInRange(
     worldData.generationArea,
     worldData.currentRing,
     Math.ceil(worldData.size / 2)
@@ -72,10 +72,10 @@ export const chooseLocation = targetWorld => {
   .then(coords => coords[Math.round(Math.random() * coords.length - 1)]);
 };
 
-export const generateRestaurant = (targetWorld, name = 'Government restaurant') => {
+export const generateTown = (targetWorld, name = 'Government Town') => {
   chooseLocation(targetWorld)
     .then(location => {
-      return Restaurant.create({
+      return Town.create({
         name,
         location,
       });

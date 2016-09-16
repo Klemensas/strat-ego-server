@@ -3,7 +3,7 @@ import { register as worldSocket } from '../api/world/world.socket';
 import { world } from '../sqldb';
 
 const Player = world.Player;
-const Restaurant = world.Restaurant;
+const Town = world.Town;
 
 // When the user disconnects.. perform this
 function onDisconnect(socket) {
@@ -48,7 +48,7 @@ module.exports = socketio => {
         UserId: client.decoded_token._id,
       },
       include: {
-        model: Restaurant,
+        model: Town,
       },
     })
     .then(player => {
@@ -56,6 +56,7 @@ module.exports = socketio => {
       onConnect(client);
     })
     .catch(player => {
+      console.log('real error', player)
       // handle crash;
     });
     // Call onConnect.
