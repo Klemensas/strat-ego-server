@@ -31,10 +31,7 @@ export default function (sequelize, DataTypes) {
     buildings: {
       type: DataTypes.JSON,
     },
-    kitchenWorkers: {
-      type: DataTypes.JSON,
-    },
-    outsideWorkers: {
+    units: {
       type: DataTypes.JSON,
     },
   }, {
@@ -42,14 +39,21 @@ export default function (sequelize, DataTypes) {
       beforeCreate: town => {
         // Town.resources
         town.resources = {
-          loyals: 20,
-          money: 100,
-          burgers: 100,
-          fries: 100,
-          drinks: 100,
+          wood: 0,
+          clay: 0,
+          iron: 0,
         };
         town.buildings = {
-          kitchen: 0,
+          headquarters: 1,
+          storage: 1,
+          barracks: 0,
+          wall: 0,
+          woodcutter: 0,
+          clayer: 0,
+          ironer: 0,
+        };
+        town.units = {
+          archer: 10,
         };
       },
     },
