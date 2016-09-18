@@ -6,6 +6,7 @@ import { world } from '../sqldb';
 
 const Player = world.Player;
 const Town = world.Town;
+const BuildingQueue = world.BuildingQueue;
 
 // When the user disconnects.. perform this
 function onDisconnect(socket) {
@@ -55,9 +56,12 @@ module.exports = socketio => {
       where: {
         UserId: client.decoded_token._id,
       },
-      include: {
+      include: [{
         model: Town,
-      },
+        include: [{
+          model: BuildingQueue,
+        }],
+      }],
     })
     .then(player => {
       client.player = player;

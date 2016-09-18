@@ -17,9 +17,10 @@ db.main.User = db.main.sequelize.import('../api/user/user.model');
 db.main.Message = db.main.sequelize.import('../api/message/message.model');
 db.main.World = db.main.sequelize.import('../api/world/world.model');
 
+db.world.Building = db.world.sequelize.import('../api/world/building.model');
 db.world.Player = db.world.sequelize.import('../api/world/player.model');
 db.world.Town = db.world.sequelize.import('../api/town/town.model');
-db.world.Building = db.world.sequelize.import('../api/world/building.model');
+db.world.BuildingQueue = db.world.sequelize.import('../api/world/building.queue.model');
 
 // db.World.belongsToMany(db.User, { through: 'WorldUsers' });
 
@@ -42,5 +43,8 @@ db.main.UserWorlds.belongsTo(db.main.User);
 
 db.world.Player.hasMany(db.world.Town);
 db.world.Town.belongsTo(db.world.Player);
+
+db.world.Town.hasMany(db.world.BuildingQueue);
+db.world.BuildingQueue.belongsTo(db.world.Town);
 
 module.exports = db;
