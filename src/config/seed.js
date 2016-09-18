@@ -1,8 +1,15 @@
 import sqldb from '../sqldb';
+import config from './environment';
+
 import { buildingData } from './game/buildingData';
 
 import * as map from '../components/map';
 import { addWorld } from '../components/worlds';
+
+// Randomize session while seeding to nulify old tokens
+config.secrets.session = String(Math.random());
+
+
 const User = sqldb.main.User;
 const Message = sqldb.main.Message;
 const World = sqldb.main.World;
