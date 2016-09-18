@@ -1,6 +1,7 @@
 import config from './environment';
 import { activeWorlds } from '../components/worlds';
 import { register as worldSocket } from '../api/world/world.socket';
+import { register as townSocket } from '../api/town/town.socket';
 import { world } from '../sqldb';
 
 const Player = world.Player;
@@ -20,6 +21,7 @@ function onConnect(client) {
 
   client.log('shmuck logged in', client.decoded_token.name);
   worldSocket(client);
+  townSocket(client);
 }
 
 module.exports = socketio => {
