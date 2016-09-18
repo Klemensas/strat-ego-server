@@ -1,5 +1,6 @@
 import { main, world } from '../../sqldb';
 import * as map from '../../components/map';
+import { activeWorlds } from '../../components/worlds';
 
 const World = main.World;
 const Player = world.Player;
@@ -43,11 +44,13 @@ export function worldData(req, res) {
     .catch(handleError(res));
 }
 
-export function activeWorlds(req, res) {
-  return World.findAll()
-    .then(handleEntityNotFound(res))
-    .then(respondWithResult(res))
-    .catch(handleError(res));
+export function worlds(req, res) {
+  const data = [];
+  activeWorlds.forEach(world => {
+    data.push(world);
+  });
+  console.log(data);
+  res.status(200).json(data);
 }
 
 export function playerData(req, res) {
@@ -67,34 +70,4 @@ export function playerData(req, res) {
   .then(handleEntityNotFound(res))
   .then(respondWithResult(res))
   .catch(handleError(res));
-}
-
-export function joinWorld(req, res) {
-  const targetWorld = String(req.params.world).toLowerCase();
-  const isActive = req.user.UserWorlds.some(w => w.World.toLowerCase() === targetWorld);
-  // currently redirects instead of erroring
-  if (isActive) {
-    return playerData(req, res);
-  }
-  const name = req.user.name;
-  map.chooseLocation(targetWorld)
-  .then(location => {
-    return Player.create({
-      name,
-      UserId: req.user._id,
-      Restaurants: [{
-        name: `${name}s restaurant`,
-        location,
-      }],
-    }, {
-      include: [Restaurant],
-    });
-  })
-  .then(player => {
-    req.user.createUserWorld({
-      World: targetWorld,
-      PlayerId: player._id,
-    });
-    return res.json(player);
-  });
 }
