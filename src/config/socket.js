@@ -1,4 +1,5 @@
 import config from './environment';
+import { activeWorlds } from '../components/worlds';
 import { register as worldSocket } from '../api/world/world.socket';
 import { world } from '../sqldb';
 
@@ -11,9 +12,13 @@ function onDisconnect(socket) {
 
 // When the user connects.. perform this
 function onConnect(client) {
-  // When the client emits 'info', this listens and executes
-  client.log(client.decoded_token);
-  client.log('shmuck logged in');
+  // Disconnect client if sent world not found
+  if (!activeWorlds.has(client.world)) {
+    client.disconnect();
+    return;
+  }
+
+  client.log('shmuck logged in', client.decoded_token.name);
   worldSocket(client);
 }
 
@@ -33,6 +38,7 @@ module.exports = socketio => {
     client.world = client.handshake.query.world;
     client.userId = client.decoded_token._id;
     client.username = client.decoded_token.name;
+
     client.log = (...data) => {
       console.log(`SocketIO ${client.nsp.name} [${client.address}]`, ...data);
     };
@@ -56,9 +62,8 @@ module.exports = socketio => {
       onConnect(client);
     })
     .catch(player => {
-      console.log('real error', player)
+      console.log('real error', player);
       // handle crash;
     });
-    // Call onConnect.
   });
-}
+};

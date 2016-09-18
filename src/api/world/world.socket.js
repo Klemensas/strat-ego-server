@@ -1,5 +1,4 @@
 import { worldEvents } from './world.events';
-import { activeWorlds } from '../../components/worlds';
 import { worldCtrl } from './world.ctrl';
 
 // Model events to emit
@@ -26,15 +25,10 @@ function sendInitData(socket) {
       })
     .catch();
   }
-  console.log('dis aother?', socket.player);
   socket.emit('self', socket.player);
 }
 
 export const register = (socket) => {
-  if (!activeWorlds.has(socket.world)) {
-    // No world, procceed to disconnect
-    return;
-  }
   sendInitData(socket);
 
   // Bind model events to socket events
