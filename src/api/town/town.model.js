@@ -24,6 +24,9 @@ export default function (sequelize, DataTypes) {
     moneyPercent: {
       type: DataTypes.INTEGER,
     },
+    production: {
+      type: DataTypes.JSON,
+    },
     resources: {
       type: DataTypes.JSON,
       // defaultValue: defaultResources
@@ -39,9 +42,9 @@ export default function (sequelize, DataTypes) {
       beforeCreate: town => {
         // Town.resources
         town.resources = {
-          wood: 0,
-          clay: 0,
-          iron: 0,
+          wood: 100,
+          clay: 100,
+          iron: 100,
         };
         town.buildings = {
           headquarters: 1,
@@ -52,12 +55,47 @@ export default function (sequelize, DataTypes) {
           clayer: 0,
           ironer: 0,
         };
+        town.production = {
+          clay: 5,
+          wood: 5,
+          iron: 5,
+        };
         town.units = {
           archer: 10,
         };
       },
+      // beforeUpdate: (town, options, cb) => {
+
+      //   town.resources = town.updateRes(now);
+      //   town.updatedAt = now;
+      //   options.fields.push('updatedAt')
+      //   options.silent = false;
+      //   return cb(null, options);
+      // },
+    },
+    instanceMethods: {
+      // TODO: fix this, apparently, hooks already have updated data so can't get good updatedAt,
+      // setting silent prevents updatedAt from updating even when doing so manually...
+      updateRes: function (time) {
+        const timePast = (time - new Date(this.updatedAt).getTime()) / 1000 / 60 / 60;
+        this.resources.clay += this.production.clay * timePast;
+        this.resources.wood += this.production.wood * timePast;
+        this.resources.iron += this.production.iron * timePast;
+
+        return this.resources;
+      },
+      /* Custom save, to update resources before updatedAt is changed
+      because hooks don't allow this behavior :(.
+      This is bad since save can occur later and set updatedAt to a different time than now...*/
+      fullSave: function () {
+        const now = Date.now();
+
+        this.resources = this.updateRes(now);
+        return this.save();
+      },
     },
     classMethods: {
+
       getAvailableCoords: allCoords => {
         return Town.findAll({
           attributes: ['location'],
