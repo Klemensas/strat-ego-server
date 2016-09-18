@@ -19,6 +19,7 @@ db.main.World = db.main.sequelize.import('../api/world/world.model');
 
 db.world.Player = db.world.sequelize.import('../api/world/player.model');
 db.world.Town = db.world.sequelize.import('../api/town/town.model');
+db.world.Building = db.world.sequelize.import('../api/world/building.model');
 
 // db.World.belongsToMany(db.User, { through: 'WorldUsers' });
 

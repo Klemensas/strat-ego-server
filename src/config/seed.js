@@ -1,14 +1,16 @@
 import sqldb from '../sqldb';
+import { buildingData } from './game/buildingData';
 
+import * as map from '../components/map';
+import { addWorld } from '../components/worlds';
 const User = sqldb.main.User;
 const Message = sqldb.main.Message;
 const World = sqldb.main.World;
 const UserWorlds = sqldb.main.UserWorlds;
 const Player = sqldb.world.Player;
 const Town = sqldb.world.Town;
+const Building = sqldb.world.Building;
 
-import * as map from '../components/map';
-import { addWorld } from '../components/worlds';
 
 World.sync()
   .then(() => World.destroy({ where: {} }))
@@ -27,10 +29,18 @@ World.sync()
     currentRing: 1,
   }))
   .then(world => {
-    addWorld(world.name.toLowerCase(), world);
+    Building.sync()
+      .then(() => Building.destroy({ where: {} }))
+      .then(() => Building.bulkCreate(buildingData))
+      .then(() => Building.findAll())
+      .then(builds => {
+        const data = world.dataValues;
+        data.buildingData = builds;
+        addWorld(data.name.toLowerCase(), data);
+      });
   });
 
-// Town.sync().then(() => Town.getAvailableCoords([[497, 500]]));
+
 
 Player.sync().then(() => Player.destroy({ where: {} }));
 UserWorlds.sync().then(() => UserWorlds.destroy({ where: {} }));
@@ -73,23 +83,6 @@ User.sync()
   .then(() => {
     console.log('seeding done');
   });
-
-
-function populateMessages(userId) {
-console.log('-----pass 5')
-  Message.sync()
-    .then(() => Message.destroy({ where: {} }))
-    .then(() => {
-      Message.bulkCreate([{
-        UserId: userId,
-        content: 'I like kebab'
-      }, {
-        UserId: null,
-        content: 'Hohohoh i am a rogue'
-      }])
-    })
-    .then(() => console.log('finished populating db'))
-}
 
 // import Message from '../api/message/message.model';
 // import User from '../api/user/user.model';
