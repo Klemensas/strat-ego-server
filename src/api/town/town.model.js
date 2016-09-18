@@ -29,7 +29,14 @@ export default function (sequelize, DataTypes) {
     },
     resources: {
       type: DataTypes.JSON,
-      // defaultValue: defaultResources
+      validate: {
+        isPositive: function (resources) {
+          const invalid = Object.keys(resources).some(i => resources[i] < 0);
+          if (invalid) {
+            throw new Error('Not enough resources. Last updated at ', this.updatedAt);
+          }
+        },
+      },
     },
     buildings: {
       type: DataTypes.JSON,
@@ -47,13 +54,13 @@ export default function (sequelize, DataTypes) {
           iron: 100,
         };
         town.buildings = {
-          headquarters: 1,
-          storage: 1,
-          barracks: 0,
-          wall: 0,
-          woodcutter: 0,
-          clayer: 0,
-          ironer: 0,
+          headquarters: { level: 1, queued: 0 },
+          storage: { level: 1, queued: 0 },
+          barracks: { level: 0, queued: 0 },
+          wall: { level: 0, queued: 0 },
+          woodcutter: { level: 0, queued: 0 },
+          clayer: { level: 0, queued: 0 },
+          ironer: { level: 0, queued: 0 },
         };
         town.production = {
           clay: 5,
