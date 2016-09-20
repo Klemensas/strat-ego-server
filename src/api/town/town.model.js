@@ -71,20 +71,15 @@ export default function (sequelize, DataTypes) {
           archer: 10,
         };
       },
-      // beforeUpdate: (town, options, cb) => {
-
-      //   town.resources = town.updateRes(now);
-      //   town.updatedAt = now;
-      //   options.fields.push('updatedAt')
-      //   options.silent = false;
-      //   return cb(null, options);
-      // },
+      beforeUpdate: town => {
+        town.resources = town.updateRes(town.updatedAt, town._previousDataValues.updatedAt);
+      },
     },
     instanceMethods: {
       // TODO: fix this, apparently, hooks already have updated data so can't get good updatedAt,
       // setting silent prevents updatedAt from updating even when doing so manually...
-      updateRes: function (time) {
-        const timePast = (time - new Date(this.updatedAt).getTime()) / 1000 / 60 / 60;
+      updateRes: function (now, previous = this.updatedAt) {
+        const timePast = (now - new Date(previous).getTime()) / 1000 / 60 / 60;
         this.resources.clay += this.production.clay * timePast;
         this.resources.wood += this.production.wood * timePast;
         this.resources.iron += this.production.iron * timePast;
