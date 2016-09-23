@@ -34,6 +34,7 @@ module.exports = app => {
   }
 
   if (env === 'development') {
+    app.use(require('express-status-monitor')());
     app.use(require('connect-livereload')());
   }
 
