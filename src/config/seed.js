@@ -1,4 +1,4 @@
-import sqldb from '../sqldb';
+import { main, world } from '../sqldb';
 import config from './environment';
 
 import { buildingData } from './game/buildingData';
@@ -10,13 +10,13 @@ import { addWorld } from '../components/worlds';
 config.secrets.session = String(Math.random());
 
 
-const User = sqldb.main.User;
-const Message = sqldb.main.Message;
-const World = sqldb.main.World;
-const UserWorlds = sqldb.main.UserWorlds;
-const Player = sqldb.world.Player;
-const Town = sqldb.world.Town;
-const Building = sqldb.world.Building;
+const User = main.User;
+const Message = main.Message;
+const World = main.World;
+const UserWorlds = main.UserWorlds;
+const Player = world.Player;
+const Town = world.Town;
+const Building = world.Building;
 
 
 World.sync()
