@@ -1,9 +1,12 @@
-/**
- * Sequelize initialization module
- */
-
 import config from '../config/environment';
 import Sequelize from 'sequelize';
+
+import * as redis from 'redis';
+
+const redisClient = redis.createClient();
+redisClient.on('error', error => {
+  console.log(`REDIS ERROR: ${error}`);
+});
 
 const db = {
   Sequelize,
@@ -47,4 +50,6 @@ db.world.Town.belongsTo(db.world.Player);
 db.world.Town.hasMany(db.world.BuildingQueue);
 db.world.BuildingQueue.belongsTo(db.world.Town);
 
-module.exports = db;
+export const main = db.main;
+export const world = db.world;
+export { redisClient };

@@ -1,5 +1,5 @@
 import express from 'express';
-import sqldb from './sqldb';
+import { main, world } from './sqldb';
 import config from './config/environment';
 import http from 'http';
 // import map from './components/map';
@@ -26,8 +26,8 @@ function startServer() {
   });
 }
 
-sqldb.main.sequelize.sync()
-  .then(() => sqldb.world.sequelize.sync())
+main.sequelize.sync()
+  .then(() => world.sequelize.sync())
   .then(startServer)
   .then(() => { // TODO: separate this into a startup service
 

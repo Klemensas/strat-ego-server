@@ -93,11 +93,30 @@ gulp.task('watch', () => {
         .pipe(plugins.livereload());
 });
 
+gulp.task('env:all', () => {
+    let localConfig;
+    try {
+        localConfig = require(`./${serverPath}/config/local.env`);
+    } catch (e) {
+        localConfig = {};
+    }
+    plugins.env({
+        vars: localConfig
+    });
+});
+
 gulp.task('serve', cb => {
     runSequence(
-        'start:server',
+        [
+            'clean:tmp',
+            'env:all'
+        ],
+        [
+            'start:server',
+        ],
         'watch',
-        cb);
+        cb
+    );
 });
 
 gulp.task('build', cb => {
