@@ -1,5 +1,6 @@
 import { activeWorlds } from '../../components/worlds';
-import { world } from '../../sqldb';
+import { world, redisClient } from '../../sqldb';
+import { queue } from '../world/queue';
 
 const BuildingQueue = world.BuildingQueue;
 
@@ -30,17 +31,23 @@ function tryBuilding(town, data) {
       // trigger buildings change manully, because sequalize can't detect it
       town.changed('buildings', true);
       // save town with updated values
-      return town.save()
-        // create buildingQueue
-        .then(updatedTown => updatedTown.createBuildingQueue({
+
+      return world.sequelize.transaction(transaction => {
+        let queuedItem = null;
+        return town.createBuildingQueue({
           building: data.building,
           buildTime: buildingData.buildTime,
-          endsAt: updatedTown.updatedAt + buildingData.buildTime * 1000,
+          endsAt: Date.now() + buildingData.buildTime * 1000,
           level,
-        }))
-        // reload town to fetch association and new values
-        .then(() => town.reload({ include: [{ model: BuildingQueue }] }));
-    }
+        }, { transaction })
+          .then(item => {
+            queuedItem = item;
+            return town.save({ transaction });
+          })
+          // Return queue item for further queuing
+          .then(() => queuedItem);
+      })
+      .then(item => queue.queueItem(item));
   }
   // TODO: real error here
   return Promise.reject('target not found');
@@ -55,11 +62,7 @@ function changeName(data) {
   }
   targetTown.name = data.name;
   targetTown.save()
-    .then(town => {
-      targetTown = town;
-      this.log('town saved');
-      this.emit('town', town);
-    })
+    // .then()
     .catch(err => {
       console.log('---save fail', err);
     });
@@ -73,25 +76,26 @@ function build(data) {
     return;
   }
   tryBuilding(targetTown, data)
-    .then(town => {
-      targetTown = town;
-      this.emit('town', town);
-    })
+    // .then(town => {
+    //   console.log('town updated', town.BuildingQueue)
+    //   targetTown = town;
+    //   this.emit('town', town);
+    // })
     .catch(error => {
       console.log('SOCKET ERROR ERROR', error);
     });
 }
 
+export const joinTownRoom = socket => {
+  if (socket.player && socket.player.Towns.length) {
+    socket.player.Towns.forEach(town => socket.join(town._id));
+  }
+};
 
-export const register = socket => {
+export const initializeTown = socket => {
+  joinTownRoom(socket);
 
-  // for (let i = 0, eventsLength = events.length; i < eventsLength; i++) {
-  //   const event = events[i];
-  //   const listener = createListener(`world:${event}`, socket);
-
-  //   worldEvents.player.on(event, listener);
-  //   socket.on('disconnect', removeListener(event, listener));
   socket.on('town:name', changeName);
   socket.on('town:build', build);
-  // }
+  return socket;
 };

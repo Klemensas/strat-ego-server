@@ -1,35 +1,29 @@
 import config from './environment';
 import { activeWorlds } from '../components/worlds';
-import { register as worldSocket } from '../api/world/world.socket';
-import { register as townSocket } from '../api/town/town.socket';
-import { world } from '../sqldb';
-
-const Player = world.Player;
-const Town = world.Town;
-const BuildingQueue = world.BuildingQueue;
+import { initializePlayer } from '../api/world/player.socket';
+import { initializeTown } from '../api/town/town.socket';
 
 // When the user disconnects.. perform this
-function onDisconnect(socket) {
-}
 
 // When the user connects.. perform this
 function onConnect(client) {
+  client.log('shmuck logged in', client.username);
   // Disconnect client if sent world not found
   if (!activeWorlds.has(client.world)) {
     client.disconnect();
     return;
   }
 
-  client.log('shmuck logged in', client.decoded_token.name);
-  worldSocket(client);
-  townSocket(client);
+  initializePlayer(client)
+    .then(initializeTown)
+    .catch(error => {
+      console.log(`SOCKET ON CONNECT ERROR ${error}`);
+    })
+}
+function onDisconnect(client) {
 }
 
-module.exports = socketio => {
-  // socket.io (v1.x.x) is powered by debug.
-  // In order to see all the debug output, set DEBUG (in server/config/local.env.js) to including the desired scope.
-  // ex: DEBUG: "http*,socket.io:socket"
-
+export default socketio => {
   socketio.use(require('socketio-jwt').authorize({
     secret: config.secrets.session,
     handshake: true,
@@ -49,27 +43,8 @@ module.exports = socketio => {
     // Call onDisconnect.
     client.on('disconnect', () => {
       onDisconnect(client);
-      console.log('Disconnected');
     });
 
-    Player.findOne({
-      where: {
-        UserId: client.decoded_token._id,
-      },
-      include: [{
-        model: Town,
-        include: [{
-          model: BuildingQueue,
-        }],
-      }],
-    })
-    .then(player => {
-      client.player = player;
-      onConnect(client);
-    })
-    .catch(player => {
-      console.log('real error', player);
-      // handle crash;
-    });
+    onConnect(client);
   });
 };

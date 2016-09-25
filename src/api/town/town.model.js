@@ -1,3 +1,6 @@
+import { socket } from '../../app';
+import { world } from '../../sqldb';
+
 export default function (sequelize, DataTypes) {
   const Town = sequelize.define('Town', {
     _id: {
@@ -74,6 +77,13 @@ export default function (sequelize, DataTypes) {
       beforeUpdate: town => {
         town.resources = town.updateRes(town.updatedAt, town._previousDataValues.updatedAt);
       },
+      afterUpdate: town => {
+        town.getBuildingQueues()
+          .then(queues => {
+            town.setDataValue('BuildingQueues', queues);
+            socket.sockets.in(town._id).emit('town', town);
+          })
+      }
     },
     instanceMethods: {
       // TODO: fix this, apparently, hooks already have updated data so can't get good updatedAt,

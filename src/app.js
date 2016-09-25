@@ -2,6 +2,8 @@ import express from 'express';
 import { main, world } from './sqldb';
 import config from './config/environment';
 import http from 'http';
+import initSocket from './config/socket';
+
 // import map from './components/map';
 
 // Populate databases with sample data
@@ -10,11 +12,11 @@ if (config.seedDB) { require('./config/seed'); }
 // Setup server
 export const app = express();
 const server = http.createServer(app);
-const socketio = require('socket.io')(server, {
+export const socket = require('socket.io')(server, {
   serveClient: config.env !== 'production',
   path: '/socket.io-client',
 });
-require('./config/socket')(socketio);
+initSocket(socket);
 
 require('./config/express')(app);
 require('./routes')(app);
