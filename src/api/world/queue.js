@@ -7,26 +7,20 @@ const BuildingQueue = world.BuildingQueue;
 class Queue {
   processItem(item) {
     return Town.findOne({ where: { _id: item.TownId } }, { include: { all: true } })
-    .then(town => {
-      const building = town.buildings[item.building];
-      building.level++;
-      // Set queued to 0 if queue is empty for building
-      if (building.queued === building.level) {
-        building.queued = 0;
-      }
-      return town.save();
-    })
-    .then(town => {
-      redisClient.get(town._id, (error, id) => {
-
-        if (error) { console.log(`REDIS GEt ERROR ${error}`); return; }
-        // If there is a connected socket
-        if (id) {
-          socket.to(id).emit('town', town);
+      .then(town => {
+        const building = town.buildings[item.building];
+        building.level++;
+        // Set queued to 0 if queue is empty for building
+        if (building.queued === building.level) {
+          building.queued = 0;
         }
-      });
-      return town.removeBuildingQueue(item);
-    });
+        return world.sequelize.transaction(transaction => {
+          return town.removeBuildingQueue(item, { transaction })
+            .then(() => town.save({ transaction }));
+        })
+        // .then(item => queue.queueItem(item));
+      })
+      .catch(error => console.log(`PROCESS ERROR: ${error}`));
   }
 
   queueItem(item) {

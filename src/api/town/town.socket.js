@@ -1,5 +1,5 @@
 import { activeWorlds } from '../../components/worlds';
-import { world, redisClient } from '../../sqldb';
+import { world } from '../../sqldb';
 import { queue } from '../world/queue';
 
 const BuildingQueue = world.BuildingQueue;
@@ -48,6 +48,7 @@ function tryBuilding(town, data) {
           .then(() => queuedItem);
       })
       .then(item => queue.queueItem(item));
+    }
   }
   // TODO: real error here
   return Promise.reject('target not found');
