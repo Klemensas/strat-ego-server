@@ -1,40 +1,44 @@
 import { world } from '../../sqldb';
+import { socket } from '../../app';
 
 const Town = world.Town;
 const BuildingQueue = world.BuildingQueue;
 
-function processItem(item) {
-  Town.find({ where: { _id: item.TownId } })
+class Queue {
+  processItem(item) {
+    return Town.findOne({ where: { _id: item.TownId } }, { include: { all: true } })
     .then(town => {
-
+      const building = town.buildings[item.building];
+      building.level++;
+      // Set queued to 0 if queue is empty for building
+      if (building.queued === building.level) {
+        building.queued = 0;
+      }
+      return town.save();
     })
+    .then(town => {
+      redisClient.get(town._id, (error, id) => {
+
+        if (error) { console.log(`REDIS GEt ERROR ${error}`); return; }
+        // If there is a connected socket
+        if (id) {
+          socket.to(id).emit('town', town);
+        }
+      });
+      return town.removeBuildingQueue(item);
+    });
+  }
+
+  queueItem(item) {
+    const timeLeft = new Date(item.endsAt) - Date.now();
+    setTimeout(this.processItem, timeLeft, item);
+  }
 }
-
-function queueItem(item) {
-  const timeLeft = new Date(item.endsAt) - Date.now();
-  setTimeout(processItem, timeLeft, item);
-}
+export const queue = new Queue();
 
 
+// initialization
 BuildingQueue
-  .destroy({ where: { TownId: 2 } })
+  .destroy({ where: { TownId: null } })
   .then(() => BuildingQueue.findAll())
-  .then(items => items.forEach(queueItem));
-
-//
-// function timeout(i) {
-//   User.findOne({ where: { role: 'admin' } }).then(user => {
-//     user.name = String(Math.random());
-//     return user;
-//   })
-//   .then(user => user.save())
-//   .then(() => console.log(i));
-// }
-//
-// setTimeout(() => {
-//   for (let i = 0; i < 1000; i++) {
-//     const z = Math.floor(Math.random() * 10);
-//     setTimeout(timeout, 1000 * z, i);
-//     }
-//   console.log('--------- done registering')
-// }, 120000);
+  .then(items => items.forEach(queue.queueItem));
