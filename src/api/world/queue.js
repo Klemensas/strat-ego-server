@@ -14,11 +14,14 @@ class Queue {
         if (building.queued === building.level) {
           building.queued = 0;
         }
+        // trigger buildings change manully, because sequalize can't detect it
+        town.changed('buildings', true);
+
         return world.sequelize.transaction(transaction => {
           return town.removeBuildingQueue(item, { transaction })
             .then(() => town.save({ transaction }));
         })
-        // .then(item => queue.queueItem(item));
+        // .then(town => console.log('processed item', town));
       })
       .catch(error => console.log(`PROCESS ERROR: ${error}`));
   }

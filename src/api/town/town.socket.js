@@ -2,11 +2,12 @@ import { activeWorlds } from '../../components/worlds';
 import { world } from '../../sqldb';
 import { queue } from '../world/queue';
 
-const BuildingQueue = world.BuildingQueue;
-
-function getTown(client, data) {
-  const targetTown = client.player.Towns.find(t => data.town === t._id);
-  return targetTown;
+function getTown(client, town) {
+  const targetTown = client.player.Towns.find(t => town === t._id);
+  if (targetTown) {
+    return targetTown.reload({ include: [{ all: true }] });
+  }
+  return Promise.reject('No town found');
 }
 
 function tryBuilding(town, data) {
@@ -55,33 +56,27 @@ function tryBuilding(town, data) {
 }
 
 function changeName(data) {
-  let targetTown = getTown(this, data);
-  if (!targetTown || !data.name) {
-    // handle missing town / no name error
-    // this.disconnect();
+  // TODO: full handling
+  if (!data.name || !data.town) {
     return;
   }
-  targetTown.name = data.name;
-  targetTown.save()
-    // .then()
+  getTown(this, data.town)
+    .then(town => {
+      town.name = data.name;
+      return town.save();
+    })
     .catch(err => {
-      console.log('---save fail', err);
+      console.log('SOCKET, CHANGE NAME FAIL', err);
     });
 }
 
 function build(data) {
-  let targetTown = getTown(this, data);
-  if (!targetTown) {
-    // handle missing town / no name error
-    // this.disconnect();
+  // TODO: full handling
+  if (!data.building || !data.town) {
     return;
   }
-  tryBuilding(targetTown, data)
-    // .then(town => {
-    //   console.log('town updated', town.BuildingQueue)
-    //   targetTown = town;
-    //   this.emit('town', town);
-    // })
+  getTown(this, data.town)
+    .then(town => tryBuilding(town, data))
     .catch(error => {
       console.log('SOCKET ERROR ERROR', error);
     });
