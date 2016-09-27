@@ -41,7 +41,6 @@
     "connect-livereload": "^0.5.4",
     "del": "^2.2.2",
     "eslint-config-airbnb": "^6.1.0",
-    "eslint-plugin-react": "^6.3.0",
     "express-status-monitor": "^0.1.4",
     "gulp-babel": "^6.1.2",
     "gulp-env": "^0.4.0",
