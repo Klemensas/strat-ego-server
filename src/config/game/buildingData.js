@@ -204,16 +204,18 @@ export const buildingData = (buildings = buildingList) => buildings.map(building
 
   for (let i = 0; i < item.levels.max; i++) {
     const data = {
-      buildTime: building.baseTime * Math.pow(building.timeFactor, i),
+      buildTime: Math.ceil(building.baseTime * Math.pow(building.timeFactor, i)),
       costs: {
-        wood: building.costs.wood.base * Math.pow(building.costs.wood.factor, i),
-        clay: building.costs.clay.base * Math.pow(building.costs.clay.factor, i),
-        iron: building.costs.iron.base * Math.pow(building.costs.iron.factor, i),
+        wood: Math.ceil(building.costs.wood.base * Math.pow(building.costs.wood.factor, i)),
+        clay: Math.ceil(building.costs.clay.base * Math.pow(building.costs.clay.factor, i)),
+        iron: Math.ceil(building.costs.iron.base * Math.pow(building.costs.iron.factor, i)),
       },
     };
     if (building.additional) {
       for (const key in building.additional) {
-        data.key = building.additional[key].base * Math.pow(building.additional[key].factor, i);
+        if (building.additional.hasOwnProperty(key)) {
+          data[key] = Math.ceil(building.additional[key].base * Math.pow(building.additional[key].factor, i));
+        }
       }
     }
     item.data.push(data);
