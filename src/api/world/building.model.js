@@ -10,6 +10,10 @@ export default function (sequelize, DataTypes) {
       type: DataTypes.STRING,
       allowNull: false,
     },
+    levels: {
+      type: DataTypes.JSON,
+      allowNull: false,
+    },
     data: {
       type: DataTypes.JSON,
       allowNull: false,
