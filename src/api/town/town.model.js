@@ -1,5 +1,5 @@
 import { socket } from '../../app';
-import { world } from '../../sqldb';
+import { activeWorlds } from '../../components/worlds';
 
 export default function (sequelize, DataTypes) {
   const Town = sequelize.define('Town', {
@@ -50,26 +50,20 @@ export default function (sequelize, DataTypes) {
   }, {
     hooks: {
       beforeCreate: town => {
+        const world = activeWorlds.get('megapolis');
+        const buildings = world.buildingData.reduce((map, item) => {
+          map[item.name] = { level: item.levels.min, queued: 0 };
+          return map;
+        }, {});
+
         // Town.resources
         town.resources = {
-          wood: 100,
-          clay: 100,
-          iron: 100,
+          wood: 800,
+          clay: 800,
+          iron: 800,
         };
-        town.buildings = {
-          headquarters: { level: 1, queued: 0 },
-          storage: { level: 1, queued: 0 },
-          barracks: { level: 0, queued: 0 },
-          wall: { level: 0, queued: 0 },
-          woodcutter: { level: 0, queued: 0 },
-          clayer: { level: 0, queued: 0 },
-          ironer: { level: 0, queued: 0 },
-        };
-        town.production = {
-          clay: 5,
-          wood: 5,
-          iron: 5,
-        };
+        town.buildings = buildings;
+        town.production = town.calculateProduction();
         town.units = {
           archer: 10,
         };
@@ -88,13 +82,22 @@ export default function (sequelize, DataTypes) {
     instanceMethods: {
       // TODO: fix this, apparently, hooks already have updated data so can't get good updatedAt,
       // setting silent prevents updatedAt from updating even when doing so manually...
-      updateRes: function (now, previous = this.updatedAt) {
+      updateRes(now, previous = this.updatedAt) {
         const timePast = (now - new Date(previous).getTime()) / 1000 / 60 / 60;
         this.resources.clay += this.production.clay * timePast;
         this.resources.wood += this.production.wood * timePast;
         this.resources.iron += this.production.iron * timePast;
 
         return this.resources;
+      },
+      calculateProduction() {
+        const world = activeWorlds.get('megapolis');
+        const buildingData = world.buildingDataMap;
+        return {
+          wood: world.baseProduction + buildingData.wood.data[this.buildings.wood.level].production,
+          clay: world.baseProduction + buildingData.clay.data[this.buildings.clay.level].production,
+          iron: world.baseProduction + buildingData.iron.data[this.buildings.iron.level].production,
+        }
       },
       /* Custom save, to update resources before updatedAt is changed
       because hooks don't allow this behavior :(.
