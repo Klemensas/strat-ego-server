@@ -49,7 +49,6 @@ export function worlds(req, res) {
   activeWorlds.forEach(world => {
     data.push(world);
   });
-  console.log(data);
   res.status(200).json(data);
 }
 
