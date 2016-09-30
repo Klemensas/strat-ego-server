@@ -70,6 +70,11 @@ export default function (sequelize, DataTypes) {
       },
       beforeUpdate: town => {
         town.resources = town.updateRes(town.updatedAt, town._previousDataValues.updatedAt);
+
+        // Recalculate production if buildings updated
+        if (town.changed('buildings')) {
+          town.production = town.calculateProduction();
+        }
       },
       afterUpdate: town => {
         town.getBuildingQueues()
