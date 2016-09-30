@@ -205,7 +205,7 @@ export const buildingData = (buildings = buildingList) => buildings.map(building
     data: [],
   };
 
-  for (let i = 0; i < item.levels.max; i++) {
+  for (let i = 0; i <= item.levels.max; i++) {
     const data = {
       buildTime: Math.ceil(building.baseTime * Math.pow(building.timeFactor, i)),
       costs: {
@@ -217,7 +217,8 @@ export const buildingData = (buildings = buildingList) => buildings.map(building
     if (building.additional) {
       for (const key in building.additional) {
         if (building.additional.hasOwnProperty(key)) {
-          data[key] = Math.ceil(building.additional[key].base * Math.pow(building.additional[key].factor, i) - building.additional[key].base);
+          const factor = !!i ? Math.pow(building.additional[key].factor, i - 1) : 0;
+          data[key] = Math.ceil(building.additional[key].base * factor);
         }
       }
     }
