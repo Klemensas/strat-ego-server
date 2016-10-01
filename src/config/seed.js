@@ -2,6 +2,7 @@ import { main, world } from '../sqldb';
 import config from './environment';
 
 import { buildingData } from './game/buildingData';
+import { unitData } from './game/unitData';
 
 // import * as map from '../components/map';
 import { addWorld } from '../components/worlds';
@@ -16,6 +17,7 @@ const UserWorlds = main.UserWorlds;
 const Player = world.Player;
 const Town = world.Town;
 const Building = world.Building;
+const Unit = world.Unit;
 
 let worldInstance;
 const worldData = {
@@ -50,6 +52,7 @@ const userData = [
 Promise.all([
   World.sync().then(() => World.destroy({ where: {} })),
   Building.sync().then(() => Building.destroy({ where: {} })),
+  Unit.sync().then(() => Unit.destroy({ where: {} })),
   Player.sync().then(() => Player.destroy({ where: {} })),
   UserWorlds.sync().then(() => UserWorlds.destroy({ where: {} })),
   Town.sync().then(() => Town.destroy({ where: {} })),
@@ -63,6 +66,7 @@ Promise.all([
   worldInstance = data[0].dataValues;
   return Promise.all([
     Building.bulkCreate(buildingData()).then(() => Building.findAll({ raw: true })),
+    Unit.bulkCreate(unitData).then(() => Unit.findAll({ raw: true })),
     // User.findAll(),
   ]);
 })
@@ -76,4 +80,5 @@ Promise.all([
   addWorld(worldInstance.name.toLowerCase(), worldInstance);
   // const users = data[1];
 })
-.then(() => console.log('Seeding done.'));
+.then(() => console.log('Seeding done.'))
+.catch(error => console.log(`Seeding error: ${error}`));

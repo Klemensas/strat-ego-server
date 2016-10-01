@@ -21,6 +21,7 @@ db.main.Message = db.main.sequelize.import('../api/message/message.model');
 db.main.World = db.main.sequelize.import('../api/world/world.model');
 
 db.world.Building = db.world.sequelize.import('../api/world/building.model');
+db.world.Unit = db.world.sequelize.import('../api/world/unit.model');
 db.world.Player = db.world.sequelize.import('../api/world/player.model');
 db.world.Town = db.world.sequelize.import('../api/town/town.model');
 db.world.BuildingQueue = db.world.sequelize.import('../api/world/building.queue.model');
