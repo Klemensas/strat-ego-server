@@ -24,9 +24,6 @@ export default function (sequelize, DataTypes) {
       },
       unique: true,
     },
-    moneyPercent: {
-      type: DataTypes.INTEGER,
-    },
     production: {
       type: DataTypes.JSON,
     },
@@ -55,6 +52,10 @@ export default function (sequelize, DataTypes) {
           map[item.name] = { level: item.levels.min, queued: 0 };
           return map;
         }, {});
+        const units = world.unitData.reduce((map, item) => {
+          map[item.name] = { amount: 0, queued: 0 };
+          return map;
+        }, {});
 
         // Town.resources
         town.resources = {
@@ -64,9 +65,7 @@ export default function (sequelize, DataTypes) {
         };
         town.buildings = buildings;
         town.production = town.calculateProduction();
-        town.units = {
-          archer: 10,
-        };
+        town.units = units;
       },
       beforeUpdate: town => {
         town.resources = town.updateRes(town.updatedAt, town._previousDataValues.updatedAt);
@@ -74,6 +73,7 @@ export default function (sequelize, DataTypes) {
         // Recalculate production if buildings updated
         if (town.changed('buildings')) {
           town.production = town.calculateProduction();
+
         }
       },
       afterUpdate: town => {
