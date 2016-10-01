@@ -72,8 +72,14 @@ Promise.all([
 })
 .then(data => {
   const buildings = data[0];
+  const units = data[1];
   worldInstance.buildingData = buildings;
   worldInstance.buildingDataMap = buildings.reduce((map, item) => {
+    map[item.name] = item;
+    return map;
+  }, {});
+  worldInstance.unitData = units;
+  worldInstance.unitDataMap = units.reduce((map, item) => {
     map[item.name] = item;
     return map;
   }, {});
