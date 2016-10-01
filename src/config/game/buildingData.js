@@ -39,6 +39,10 @@ const buildingList = [
     },
     baseTime: 30,
     timeFactor: 1.2,
+    requirements: [{
+      item: 'headquarters',
+      level: 3,
+    }],
   }, {
     name: 'wood',
     levels: 30,
@@ -202,6 +206,7 @@ export const buildingData = (buildings = buildingList) => buildings.map(building
   const item = {
     name: building.name,
     levels: { max: building.levels, min: building.min },
+    requirements: building.requirements,
     data: [],
   };
 

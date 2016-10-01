@@ -14,6 +14,9 @@ export default function (sequelize, DataTypes) {
       type: DataTypes.JSON,
       allowNull: false,
     },
+    requirements: {
+      type: DataTypes.ARRAY(DataTypes.JSON),
+    },
     data: {
       type: DataTypes.JSON,
       allowNull: false,
