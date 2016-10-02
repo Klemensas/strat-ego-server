@@ -35,6 +35,10 @@ export const unitData = [
         archer: 40,
       },
     },
+    requirements: [{
+      item: 'barracks',
+      level: 2,
+    }],
   }, {
     name: 'axe',
     costs: {
@@ -53,6 +57,10 @@ export const unitData = [
         archer: 10,
       },
     },
+    requirements: [{
+      item: 'barracks',
+      level: 5,
+    }],
   }, {
     name: 'archer',
     costs: {
@@ -71,6 +79,10 @@ export const unitData = [
         archer: 5,
       },
     },
+    requirements: [{
+      item: 'barracks',
+      level: 10,
+    }],
   }, {
     name: 'scout',
     costs: {
