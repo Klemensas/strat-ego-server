@@ -7,7 +7,8 @@ const unitList = [
       iron: 10,
     },
     type: ['infantry'],
-    speed: 18,
+    speed: 1080,
+    recruitTime: 1020,
     haul: 25,
     combat: {
       attack: 10,
@@ -25,7 +26,8 @@ const unitList = [
       iron: 70,
     },
     type: ['infantry'],
-    speed: 22,
+    speed: 1320,
+    recruitTime: 1500,
     haul: 15,
     combat: {
       attack: 25,
@@ -47,7 +49,8 @@ const unitList = [
       iron: 40,
     },
     type: ['infantry'],
-    speed: 18,
+    speed: 1080,
+    recruitTime: 1320,
     haul: 10,
     combat: {
       attack: 40,
@@ -69,7 +72,8 @@ const unitList = [
       iron: 40,
     },
     type: ['infantry', 'archer'],
-    speed: 18,
+    speed: 1080,
+    recruitTime: 1800,
     haul: 10,
     combat: {
       attack: 15,
@@ -91,7 +95,8 @@ const unitList = [
       iron: 20,
     },
     type: ['cavalry'],
-    speed: 9,
+    speed: 540,
+    recruitTime: 900,
     haul: 0,
     combat: {
       attack: 0,
@@ -109,7 +114,8 @@ const unitList = [
       iron: 250,
     },
     type: ['cavalry'],
-    speed: 10,
+    speed: 600,
+    recruitTime: 1800,
     haul: 80,
     combat: {
       attack: 130,
@@ -127,7 +133,8 @@ const unitList = [
       iron: 150,
     },
     type: ['cavalry', 'archer'],
-    speed: 10,
+    speed: 600,
+    recruitTime: 2700,
     haul: 50,
     combat: {
       attack: 120,
@@ -145,7 +152,8 @@ const unitList = [
       iron: 600,
     },
     type: ['cavalry'],
-    speed: 11,
+    speed: 660,
+    recruitTime: 3600,
     haul: 50,
     combat: {
       attack: 150,
@@ -163,7 +171,8 @@ const unitList = [
       iron: 200,
     },
     type: ['siege'],
-    speed: 30,
+    speed: 1800,
+    recruitTime: 4800,
     haul: 0,
     combat: {
       attack: 2,
@@ -181,7 +190,8 @@ const unitList = [
       iron: 100,
     },
     type: ['siege'],
-    speed: 30,
+    speed: 1800,
+    recruitTime: 7200,
     haul: 0,
     combat: {
       attack: 100,
@@ -199,7 +209,8 @@ const unitList = [
       iron: 50000,
     },
     type: ['special'],
-    speed: 35,
+    speed: 2100,
+    recruitTime: 18000,
     haul: 0,
     combat: {
       attack: 30,
@@ -213,5 +224,6 @@ const unitList = [
 ];
 export const unitData = (speed = 1, units = unitList) => units.map(unit => {
   unit.speed /= speed;
+  unit.recruitTime /= speed;
   return unit;
 });
