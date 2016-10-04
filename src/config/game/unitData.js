@@ -1,4 +1,4 @@
-export const unitData = [
+const unitList = [
   {
     name: 'spear',
     costs: {
@@ -211,3 +211,7 @@ export const unitData = [
     },
   },
 ];
+export const unitData = (speed = 1, units = unitList) => units.map(unit => {
+  unit.speed /= speed;
+  return unit;
+});

@@ -66,7 +66,7 @@ Promise.all([
   worldInstance = data[0].dataValues;
   return Promise.all([
     Building.bulkCreate(buildingData(worldInstance.speed)).then(() => Building.findAll({ raw: true })),
-    Unit.bulkCreate(unitData).then(() => Unit.findAll({ raw: true })),
+    Unit.bulkCreate(unitData(worldInstance.speed)).then(() => Unit.findAll({ raw: true })),
     // User.findAll(),
   ]);
 })
