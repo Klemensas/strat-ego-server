@@ -22,9 +22,9 @@ const Unit = world.Unit;
 let worldInstance;
 const worldData = {
   name: 'Megapolis',
-  baseProduction: 5,
+  baseProduction: 500,
   moneyConversion: 0.5,
-  speed: 1,
+  speed: 10,
   size: 999,
   regionSize: 27,
   fillTime: (90 * 24 * 60 * 60 * 1000),
@@ -65,7 +65,7 @@ Promise.all([
 .then(data => {
   worldInstance = data[0].dataValues;
   return Promise.all([
-    Building.bulkCreate(buildingData()).then(() => Building.findAll({ raw: true })),
+    Building.bulkCreate(buildingData(worldInstance.speed)).then(() => Building.findAll({ raw: true })),
     Unit.bulkCreate(unitData).then(() => Unit.findAll({ raw: true })),
     // User.findAll(),
   ]);
