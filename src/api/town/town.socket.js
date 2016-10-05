@@ -78,7 +78,20 @@ function build(data) {
   getTown(this, data.town)
     .then(town => tryBuilding(town, data))
     .catch(error => {
-      console.log('SOCKET ERROR ERROR', error);
+      console.log('SOCKET BUILD ERROR', error);
+    });
+}
+
+function recruit(data) {
+  if (!data.units || !data.town) {
+    return;
+  }
+  getTown(this, data.town)
+    .then(town => {
+        // STUB
+    })
+    .catch(err => {
+      console.log('SOCKET RECRUIT ERROR', err);
     });
 }
 
@@ -93,5 +106,6 @@ export const initializeTown = socket => {
 
   socket.on('town:name', changeName);
   socket.on('town:build', build);
+  socket.on('town:recruit', recruit);
   return socket;
 };
