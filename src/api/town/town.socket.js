@@ -19,8 +19,7 @@ function tryBuilding(town, data) {
     // const world = activeWorlds.get('megapolis');
     // get data for target building
     const townWorld = activeWorlds.get('megapolis');
-    const buildingData = townWorld.buildingData
-      .find(building => building.name === data.building).data[level];
+    const buildingData = townWorld.buildingDataMap[data.building].data[level];
 
     // check if building has target level
     // TODO: add and check requirements somewhere here
@@ -48,7 +47,7 @@ function tryBuilding(town, data) {
           // Return queue item for further queuing
           .then(() => queuedItem);
       })
-      .then(item => queue.queueItem(item));
+      .then(item => queue.queueItem(item, 'building'));
     }
   }
   // TODO: real error here
@@ -70,6 +69,48 @@ function changeName(data) {
     });
 }
 
+function tryRecruiting(town, data) {
+  const townWorld = activeWorlds.get('megapolis');
+  const unitData = townWorld.unitDataMap;
+  const unitsToQueue = [];
+  const queueCreateTime = Date.now();
+  const TownId = town._id;
+
+  for (const unit of data.units) {
+    if (!town.units.hasOwnProperty(unit.type)) {
+      return Promise.reject('no such unit');
+    }
+    // TODO: add unit requirement checking
+    town.resources.wood -= unitData[unit.type].costs.wood * unit.amount;
+    town.resources.clay -= unitData[unit.type].costs.clay * unit.amount;
+    town.resources.iron -= unitData[unit.type].costs.iron * unit.amount;
+    town.units[unit.type].queued += unit.amount;
+
+    const recruitTime = unit.amount * unitData[unit.type].recruitTime;
+    const endsAt = queueCreateTime + recruitTime * 1000;
+    unitsToQueue.push({
+      unit: unit.type,
+      amount: unit.amount,
+      recruitTime,
+      endsAt,
+      TownId,
+    });
+  }
+
+  town.changed('units', true);
+  return world.sequelize.transaction(transaction => {
+    let unitQueue;
+    return world.UnitQueue.bulkCreate(unitsToQueue, { transaction, returning: true })
+      .then(item => {
+        unitQueue = item;
+        return town.save({ transaction });
+      })
+      // Return queue item for further queuing
+      .then(() => unitQueue);
+  })
+  .then(items => items.forEach(item => queue.queueItem(item, 'unit')));
+}
+
 function build(data) {
   // TODO: full handling
   if (!data.building || !data.town) {
@@ -89,6 +130,7 @@ function recruit(data) {
   getTown(this, data.town)
     .then(town => {
         // STUB
+        tryRecruiting(town, data);
     })
     .catch(err => {
       console.log('SOCKET RECRUIT ERROR', err);
