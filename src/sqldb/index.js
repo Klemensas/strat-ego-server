@@ -51,6 +51,8 @@ db.world.Town.belongsTo(db.world.Player);
 
 db.world.Town.hasMany(db.world.UnitQueue);
 db.world.UnitQueue.belongsTo(db.world.Town);
+db.world.Town.hasMany(db.world.BuildingQueue);
+db.world.BuildingQueue.belongsTo(db.world.Town);
 
 export const main = db.main;
 export const world = db.world;
