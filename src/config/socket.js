@@ -2,6 +2,7 @@ import config from './environment';
 import { activeWorlds } from '../components/worlds';
 import { initializePlayerSocket } from '../api/world/player.socket';
 import { initializeTownSocket } from '../api/town/town.socket';
+import { initializeMapSocket } from '../api/map/map.socket';
 
 // When the user disconnects.. perform this
 
@@ -16,6 +17,7 @@ function onConnect(client) {
 
   initializePlayerSocket(client)
     .then(initializeTownSocket)
+    .then(initializeMapSocket)
     .catch(error => {
       console.log(`SOCKET ON CONNECT ERROR ${error}`);
     })
