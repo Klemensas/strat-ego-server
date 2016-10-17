@@ -1,7 +1,7 @@
 import config from './environment';
 import { activeWorlds } from '../components/worlds';
-import { initializePlayer } from '../api/world/player.socket';
-import { initializeTown } from '../api/town/town.socket';
+import { initializePlayerSocket } from '../api/world/player.socket';
+import { initializeTownSocket } from '../api/town/town.socket';
 
 // When the user disconnects.. perform this
 
@@ -14,8 +14,8 @@ function onConnect(client) {
     return;
   }
 
-  initializePlayer(client)
-    .then(initializeTown)
+  initializePlayerSocket(client)
+    .then(initializeTownSocket)
     .catch(error => {
       console.log(`SOCKET ON CONNECT ERROR ${error}`);
     })

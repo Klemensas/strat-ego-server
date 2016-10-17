@@ -35,7 +35,7 @@ function createPlayer(socket) {
   };
 }
 
-export const initializePlayer = socket => {
+export const initializePlayerSocket = socket => {
   return Player.findOne({
     where: { UserId: socket.userId },
     include: [{

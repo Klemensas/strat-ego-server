@@ -143,7 +143,7 @@ export const joinTownRoom = socket => {
   }
 };
 
-export const initializeTown = socket => {
+export const initializeTownSocket = socket => {
   joinTownRoom(socket);
 
   socket.on('town:name', changeName);
