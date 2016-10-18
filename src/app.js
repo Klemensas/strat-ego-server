@@ -3,7 +3,12 @@ import { main, world } from './sqldb';
 import config from './config/environment';
 import http from 'http';
 import initSocket from './config/socket';
+import { mapData } from './config/game/map';
+// import * as redis from 'redis';
+// import * as bluebird from 'bluebird';
 
+// bluebird.promisifyAll(redis.RedisClient.prototype);
+// bluebird.promisifyAll(redis.Multi.prototype);
 // import map from './components/map';
 
 // Populate databases with sample data
@@ -28,8 +33,10 @@ function startServer() {
   });
 }
 
+
 main.sequelize.sync()
   .then(() => world.sequelize.sync())
+  .then(() => mapData.initialize(/*redis.createClient()*/))
   .then(startServer)
   .then(() => { // TODO: separate this into a startup service
 

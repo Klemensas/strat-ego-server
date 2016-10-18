@@ -1,13 +1,6 @@
 import config from '../config/environment';
 import Sequelize from 'sequelize';
 
-import * as redis from 'redis';
-
-const redisClient = redis.createClient();
-redisClient.on('error', error => {
-  console.log(`REDIS ERROR: ${error}`);
-});
-
 const db = {
   Sequelize,
   main: { sequelize: new Sequelize(config.sequelize.main, config.sequelize.options) },
@@ -56,4 +49,3 @@ db.world.BuildingQueue.belongsTo(db.world.Town);
 
 export const main = db.main;
 export const world = db.world;
-export { redisClient };
