@@ -36,7 +36,7 @@ function startServer() {
 
 main.sequelize.sync()
   .then(() => world.sequelize.sync())
-  .then(() => mapData.initialize(/*redis.createClient()*/))
+  .then(() => mapData.initialize(world))
   .then(startServer)
   .then(() => { // TODO: separate this into a startup service
 

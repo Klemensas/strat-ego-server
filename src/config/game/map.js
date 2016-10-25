@@ -1,19 +1,15 @@
-import { world } from '../../sqldb';
-
-const Player = world.Player;
-const Town = world.Town;
-
 class MapData {
 
   constructor() {
-    // this.redisClient = null;
+    // this.redisClient  = null;
     this.data = {
       townLocations: {},
     };
   }
 
-  initialize(/* redis */) {
+  initialize(world) {
     // this.setRedisConnection(redis);
+    this.worldDB = world;
     this.storeData();
   }
 
@@ -26,10 +22,10 @@ class MapData {
   }
 
   storeData() {
-    return Town.findAll({
+    return this.worldDB.Town.findAll({
       attributes: ['_id', 'name', 'location'],
       include: [{
-        model: Player,
+        model: this.worldDB.Player,
         attributes: ['name'],
       }],
       raw: true,
@@ -45,7 +41,6 @@ class MapData {
           return data;
         }, {});
       })
-      .then(() => this.getAllData())
       .catch(err => {
         console.log('ERROR IN REDIS OP', err);
       });
