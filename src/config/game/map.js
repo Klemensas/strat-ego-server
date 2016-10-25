@@ -18,7 +18,15 @@ class MapData {
   // }
 
   getAllData() {
-    console.log(this.data.townLocations)
+  }
+
+  addTown(town) {
+    this.data.townLocations[town.location] = {
+      _id: town._id,
+      name: town.name,
+      location: town.location,
+      owner: town['Player.name'],
+    };
   }
 
   storeData() {

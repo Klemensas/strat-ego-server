@@ -1,5 +1,6 @@
 import { socket } from '../../app';
 import { activeWorlds } from '../../components/worlds';
+import { mapData } from '../../config/game/map';
 
 export default function (sequelize, DataTypes) {
   const Town = sequelize.define('Town', {
@@ -73,7 +74,6 @@ export default function (sequelize, DataTypes) {
         // Recalculate production if buildings updated
         if (town.changed('buildings')) {
           town.production = town.calculateProduction();
-
         }
       },
       afterUpdate: town => {
@@ -81,8 +81,12 @@ export default function (sequelize, DataTypes) {
           .then(queues => {
             town.setDataValue('BuildingQueues', queues);
             socket.sockets.in(town._id).emit('town', town);
-          })
-      }
+          });
+      },
+      afterCreate: town => {
+        town.reload({ include: [{ all: true }] })
+          .then(mapData.addTown);
+      },
     },
     instanceMethods: {
       // TODO: fix this, apparently, hooks already have updated data so can't get good updatedAt,
