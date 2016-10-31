@@ -6,6 +6,8 @@ import { unitData } from './game/unitData';
 
 // import * as map from '../components/map';
 import { addWorld } from '../components/worlds';
+import * as mapUtils from '../components/map';
+
 
 // Randomize session while seeding to nulify old tokens
 config.secrets.session = String(Math.random());
@@ -20,6 +22,7 @@ const Building = world.Building;
 const Unit = world.Unit;
 
 let worldInstance;
+
 const worldData = {
   name: 'Megapolis',
   baseProduction: 500,
@@ -48,6 +51,12 @@ const userData = [
     password: 'test',
   },
 ];
+const townGenerationData = {
+  percent: 0.5,
+  furthestRing: worldData.generationArea,
+  area: worldData.generationArea,
+  size: Math.ceil(worldData.size / 2),
+};
 
 Promise.all([
   World.sync().then(() => World.destroy({ where: {} })),
@@ -86,5 +95,20 @@ Promise.all([
   addWorld(worldInstance.name.toLowerCase(), worldInstance);
   // const users = data[1];
 })
+.then(() => Town.bulkCreate(seedTowns(
+    mapUtils.getCoordsInRange(townGenerationData.area,
+      townGenerationData.furthestRing, townGenerationData.size),
+    townGenerationData.percent)))
 .then(() => console.log('Seeding done.'))
 .catch(error => console.log(`Seeding error: ${error}`));
+
+function seedTowns(coords, factor) {
+  console.log(`seeding towns in ${coords.length} fields at ${factor} factor`);
+  return coords.reduce((towns, value) => {
+    if (Math.random() > factor) {
+      return towns;
+    }
+    towns.push({ location: value });
+    return towns;
+  }, []);
+}

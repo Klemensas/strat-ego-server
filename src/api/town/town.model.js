@@ -16,6 +16,7 @@ export default function (sequelize, DataTypes) {
         notEmpty: true,
         len: [1, 50],
       },
+      defaultValue: 'Abandoned Town',
     },
     location: {
       type: DataTypes.ARRAY(DataTypes.INTEGER),
@@ -47,6 +48,29 @@ export default function (sequelize, DataTypes) {
     },
   }, {
     hooks: {
+      beforeBulkCreate: towns => {
+        const world = activeWorlds.get('megapolis');
+        const buildings = world.buildingData.reduce((map, item) => {
+          map[item.name] = { level: item.levels.min, queued: 0 };
+          return map;
+        }, {});
+        const units = world.unitData.reduce((map, item) => {
+          map[item.name] = { amount: 0, queued: 0 };
+          return map;
+        }, {});
+        const resources = {
+          wood: 800,
+          clay: 800,
+          iron: 800,
+        };
+        return towns.map(town => {
+          town.buildings = buildings;
+          town.units = units;
+          town.resources = resources;
+          town.production = town.calculateProduction();
+          return town;
+        });
+      },
       beforeCreate: town => {
         const world = activeWorlds.get('megapolis');
         const buildings = world.buildingData.reduce((map, item) => {
@@ -85,7 +109,7 @@ export default function (sequelize, DataTypes) {
       },
       afterCreate: town => {
         town.reload({ include: [{ all: true }] })
-          .then(mapData.addTown);
+          .then(fullTown => mapData.addTown(fullTown));
       },
     },
     instanceMethods: {
