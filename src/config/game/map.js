@@ -18,14 +18,17 @@ class MapData {
   // }
 
   getAllData() {
+    return this.data.townLocations;
   }
 
   addTown(town) {
+    const owner = town.Player ? town.Player.name : town['Player.name'];
+
     this.data.townLocations[town.location] = {
       _id: town._id,
       name: town.name,
       location: town.location,
-      owner: town['Player.name'],
+      owner,
     };
   }
 
