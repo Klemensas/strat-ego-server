@@ -69,7 +69,10 @@ export const chooseLocation = targetWorld => {
     worldData.currentRing,
     Math.ceil(worldData.size / 2)
   ))
-  .then(coords => coords[Math.round(Math.random() * coords.length - 1)]);
+  .then(coords => {
+    console.log('available coords:', coords);
+    return coords[Math.round(Math.random() * (coords.length - 1))];
+  });
 };
 
 export const generateTown = (targetWorld, name = 'Government Town') => {

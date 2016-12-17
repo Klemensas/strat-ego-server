@@ -20,6 +20,7 @@ export default function (sequelize, DataTypes) {
     },
     location: {
       type: DataTypes.ARRAY(DataTypes.INTEGER),
+      allowNull: false,
       validate: {
         notEmpty: true,
         len: [2],

@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import favicon from 'serve-favicon'; // dedicaed favicon handler
+// import favicon from 'serve-favicon'; // dedicaed favicon handler
 import morgan from 'morgan'; // http request logger
 import compression from 'compression'; // compression middleware, gzip/deflate
 import bodyParser from 'body-parser'; // json parsing middleware;
@@ -28,7 +28,7 @@ module.exports = app => {
   app.set('appPath', path.join(config.root, 'client'));
 
   if (env === 'production') {
-    app.use(favicon(path.join(config.root, 'client', 'favicon.ico')));
+    // app.use(favicon(path.join(config.root, 'client', 'favicon.ico')));
     app.use(express.static(app.get('appPath')));
     app.use(morgan('dev'));
   }
