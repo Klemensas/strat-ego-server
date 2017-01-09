@@ -1,14 +1,11 @@
 // import passport from 'passport';
 import { generateTown } from '../town/town.controller';
-import config from '../../config/environment';
-import jwt from 'jsonwebtoken';
-import workers from '../../config/game/workers';
+import { signToken } from '../../auth/auth.service';
 import { main } from '../../sqldb';
 
 const User = main.User;
 const UserWorlds = main.UserWorlds;
 const World = main.World;
-// console.log('aasa', User.getAssociations());
 
 function validationError(res, statusCode) {
   statusCode = statusCode || 422;
@@ -41,18 +38,12 @@ export function index(req, res) {
  */
 // export function create(req, res, next) {
 export function create(req, res) {
-  var newUser = new User(req.body);
+  const newUser = req.body;
   newUser.provider = 'local';
   newUser.role = 'user';
-  newUser.save()
+  User.create(newUser)
     .then(user => {
-      addTown(user)
-        .then((user) => {
-          var token = jwt.sign({ _id: user._id }, config.secrets.session, {
-            expiresIn: 60 * 60 * 5
-          });
-          res.json({ token });
-        });
+      res.json({ token: signToken(user) });
     })
     .catch(validationError(res));
 }
@@ -138,15 +129,3 @@ export function me(req, res, next) {
 export function authCallback(req, res) {
   res.redirect('/');
 }
-
-function addTown(user) {
-  return generateTown(user)
-    .then(town => {
-      user.gameData = {
-        active: true,
-        towns: [town],
-      };
-      return user.save();
-    });
-}
-
