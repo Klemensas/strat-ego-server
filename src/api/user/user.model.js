@@ -16,7 +16,10 @@ module.exports = function(sequelize, DataTypes) {
       primaryKey: true,
       autoIncrement: true
     },
-    name: DataTypes.STRING,
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
     email: {
       type: DataTypes.STRING,
       unique: {
@@ -180,14 +183,15 @@ module.exports = function(sequelize, DataTypes) {
 
         var defaultIterations = 10000;
         var defaultKeyLength = 64;
+        var defaultDigest = 'sha256';
         var salt = new Buffer(this.salt, 'base64');
 
         if (!callback) {
-          return crypto.pbkdf2Sync(password, salt, defaultIterations, defaultKeyLength)
+          return crypto.pbkdf2Sync(password, salt, defaultIterations, defaultKeyLength, defaultDigest)
                        .toString('base64');
         }
 
-        return crypto.pbkdf2(password, salt, defaultIterations, defaultKeyLength,
+        return crypto.pbkdf2(password, salt, defaultIterations, defaultKeyLength, defaultDigest,
           function(err, key) {
             if (err) {
               callback(err);
