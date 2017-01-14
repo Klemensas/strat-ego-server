@@ -1,8 +1,8 @@
-import { socket } from '../../app';
+import { io } from '../../app';
 import { activeWorlds } from '../../components/worlds';
-import { mapData } from '../../config/game/map';
+import mapData from '../../config/game/map';
 
-export default function (sequelize, DataTypes) {
+export default (sequelize, DataTypes) => {
   const Town = sequelize.define('Town', {
     _id: {
       type: DataTypes.INTEGER,
@@ -105,7 +105,7 @@ export default function (sequelize, DataTypes) {
         town.getBuildingQueues()
           .then(queues => {
             town.setDataValue('BuildingQueues', queues);
-            socket.sockets.in(town._id).emit('town', town);
+            io.sockets.in(town._id).emit('town', town);
           });
       },
       afterCreate: town => {

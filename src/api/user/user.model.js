@@ -1,15 +1,9 @@
-'use strict';
-
 import crypto from 'crypto';
-var authTypes = ['github', 'twitter', 'facebook', 'google'];
 
-var validatePresenceOf = function(value) {
-  return value && value.length;
-};
+const authTypes = ['github.', 'twitter', 'facebook', 'google'];
 
-module.exports = function(sequelize, DataTypes) {
-  var User = sequelize.define('User', {
-
+export default (sequelize, DataTypes) => {
+  const User = sequelize.define('User', {
     _id: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -47,25 +41,16 @@ module.exports = function(sequelize, DataTypes) {
     github: DataTypes.JSON
 
   }, {
-
-    /**
-     * Virtual Getters
-     */
+    // Virtual Getters
     getterMethods: {
       // Public profile information
-      profile: function() {
-        return {
-          'name': this.name,
-          'role': this.role
-        };
+      profile: function userProfile() {
+        return { name: this.name, role: this.role };
       },
 
       // Non-sensitive info we'll be putting in the token
-      token: function() {
-        return {
-          '_id': this._id,
-          'role': this.role
-        };
+      token: function tokenData() {
+        return { _id: this._id, role: this.role };
       }
     },
 
@@ -73,10 +58,10 @@ module.exports = function(sequelize, DataTypes) {
      * Pre-save hooks
      */
     hooks: {
-      beforeBulkCreate: function(users, fields, fn) {
-        var totalUpdated = 0;
-        users.forEach(function(user) {
-          user.updatePassword(function(err) {
+      beforeBulkCreate: (users, fields, fn) => {
+        let totalUpdated = 0;
+        users.forEach(user => {
+          user.updatePassword(err => {
             if (err) {
               return fn(err);
             }
@@ -87,10 +72,10 @@ module.exports = function(sequelize, DataTypes) {
           });
         });
       },
-      beforeCreate: function(user, fields, fn) {
+      beforeCreate: (user, fields, fn) => {
         user.updatePassword(fn);
       },
-      beforeUpdate: function(user, fields, fn) {
+      beforeUpdate: (user, fields, fn) => {
         if (user.changed('password')) {
           return user.updatePassword(fn);
         }
@@ -210,7 +195,7 @@ module.exports = function(sequelize, DataTypes) {
       updatePassword: function(fn) {
         // Handle new/update passwords
         if (this.password) {
-          if (!validatePresenceOf(this.password) && authTypes.indexOf(this.provider) === -1) {
+          if ((!this.password || !this.password.length) && authTypes.indexOf(this.provider) === -1) {
             fn(new Error('Invalid password'));
           }
 

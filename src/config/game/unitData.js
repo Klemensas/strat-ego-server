@@ -222,7 +222,7 @@ const unitList = [
     },
   },
 ];
-export const unitData = (speed = 1, units = unitList) => units.map(unit => {
+export default (speed = 1, units = unitList) => units.map(unit => {
   unit.speed /= speed;
   unit.recruitTime /= speed;
   return unit;

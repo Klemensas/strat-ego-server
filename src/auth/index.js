@@ -1,21 +1,17 @@
-'use strict';
-
 import express from 'express';
 // import passport from 'passport';
 import config from '../config/environment';
 import { main } from '../sqldb';
+import localPassport from './local/passport';
+import localController from './local';
 
 const User = main.User;
 
-// Passport Configuration
-require('./local/passport').setup(User, config);
-// require('./facebook/passport').setup(User, config);
-// require('./google/passport').setup(User, config);
-// require('./twitter/passport').setup(User, config);
+localPassport(User, config);
 
-var router = express.Router();
+const router = express.Router();
 
-router.use('/local', require('./local'));
+router.use('/local', localController);
 // router.use('/facebook', require('./facebook'));
 // router.use('/twitter', require('./twitter'));
 // router.use('/google', require('./google'));

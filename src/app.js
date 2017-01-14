@@ -1,44 +1,46 @@
 import express from 'express';
+import http from 'http';
+import socket from 'socket.io';
+import uws from 'uws';
 import { main, world } from './sqldb';
 import config from './config/environment';
-import http from 'http';
 import initSocket from './config/socket';
-import { mapData } from './config/game/map';
+import mapData from './config/game/map';
+import routing from './routes';
+import expressConfig from './config/express';
+import seed from './config/seed';
 // import * as redis from 'redis';
-// import * as bluebird from 'bluebird';
 
 // bluebird.promisifyAll(redis.RedisClient.prototype);
 // bluebird.promisifyAll(redis.Multi.prototype);
 // import map from './components/map';
 
-// Populate databases with sample data
-if (config.seedDB) { require('./config/seed'); }
-
-// Setup server
 export const app = express();
 const server = http.createServer(app);
-export const socket = require('socket.io')(server, {
+export const io = socket(server, {
   serveClient: config.env !== 'production',
   path: '/socket.io-client',
 });
-initSocket(socket);
+io.engine.ws = new uws.Server({
+  noServer: true,
+  perMessageDeflate: false
+});
 
-require('./config/express')(app);
-require('./routes')(app);
+expressConfig(app);
+routing(app);
+initSocket(io);
 
-// // Start server
-function startServer() {
-  app.angularFullstack = server.listen(config.port, config.ip, () => {
-    console.log('Express server listening on %d, in %s mode', config.port, app.get('env'));
-  });
+
+if (config.seedDB) {
+  seed();
 }
-
 
 main.sequelize.sync()
   .then(() => world.sequelize.sync())
   .then(() => mapData.initialize(world))
-  .then(startServer)
-  .then(() => { // TODO: separate this into a startup service
-
-  })
+  .then(() => {
+    app.server = server.listen(config.port, config.ip, () => {
+      console.log('Express server listening on %d, in %s mode', config.port, app.get('env'));
+    });
+  }) // TODO: separate this into a startup service
   .catch(err => console.log('Server failed to start due to error: %s', err));

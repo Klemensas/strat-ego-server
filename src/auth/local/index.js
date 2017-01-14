@@ -19,4 +19,4 @@ router.post('/', (req, res, next) => {
   })(req, res, next);
 });
 
-module.exports = router;
+export default router;

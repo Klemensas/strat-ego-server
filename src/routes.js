@@ -1,31 +1,22 @@
-/**
- * Main application routes
- */
+// import town from './api/town';
+// import worker from './api/worker';
+// import message from './api/message';
+import user from './api/user';
+import world from './api/world';
+import auth from './auth';
 
-'use strict';
+export default app => {
+// Disable all routes in favor of socket responses
+  // app.use('/api/town', town);
+  // app.use('/api/worker', worker);
+  // app.use('/api/message', message);
+  app.use('/api/users', user);
+  app.use('/api/world', world);
 
-import errors from './components/errors';
-import path from 'path';
+  app.use('/auth', auth);
 
-module.exports = function (app) {
-  // Insert routes below
-  // app.use('/api/things', require('./api/thing'));
-  app.use('/api/users', require('./api/user'));
-  app.use('/api/town', require('./api/town'));
-  app.use('/api/worker', require('./api/worker'));
-  app.use('/api/message', require('./api/message'));
-  app.use('/api/world', require('./api/world'));
-
-  app.use('/auth', require('./auth'));
-
-  // All undefined asset or api routes should return a 404
-  app.route('/:url(api|auth|components|app|bower_components|assets)/*')
-    .get(errors[404]);
-
-  // All other routes should redirect to the index.html
+  // Return 404 for everything else
   app.route('/*')
-    .get((req, res) => {
-      res.sendFile(path.resolve(`${app.get('appPath')}/index.html`));
-    });
+    .get((req, res) => res.sendStatus(404));
 };
 

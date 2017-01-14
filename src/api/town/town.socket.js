@@ -2,6 +2,13 @@ import { activeWorlds } from '../../components/worlds';
 import { world } from '../../sqldb';
 import { queue } from '../world/queue';
 
+function joinTownRoom(socket) {
+  if (socket.player && socket.player.Towns.length) {
+    socket.player.Towns.forEach(town => socket.join(town._id));
+    socket.log(`${socket.username} joined town rooms`);
+  }
+}
+
 function getTown(client, town) {
   const targetTown = client.player.Towns.find(t => town === t._id);
   if (targetTown) {
@@ -16,8 +23,6 @@ function tryBuilding(town, data) {
   if (target) {
     // Select next level latest queued or the current level;
     const level = target.queued || target.level;
-    // const world = activeWorlds.get('megapolis');
-    // get data for target building
     const townWorld = activeWorlds.get('megapolis');
     const buildingData = townWorld.buildingDataMap[data.building].data[level];
 
@@ -52,21 +57,6 @@ function tryBuilding(town, data) {
   }
   // TODO: real error here
   return Promise.reject('target not found');
-}
-
-function changeName(data) {
-  // TODO: full handling
-  if (!data.name || !data.town) {
-    return;
-  }
-  getTown(this, data.town)
-    .then(town => {
-      town.name = data.name;
-      return town.save();
-    })
-    .catch(err => {
-      console.log('SOCKET, CHANGE NAME FAIL', err);
-    });
 }
 
 function tryRecruiting(town, data) {
@@ -111,11 +101,28 @@ function tryRecruiting(town, data) {
   .then(items => items.forEach(item => queue.queueItem(item, 'unit')));
 }
 
+function changeName(data) {
+  // TODO: full handling
+  if (!data.name || !data.town) {
+    return;
+  }
+  this.log(`${this.username} attempting to change town name to ${data.name} in ${data.town}`);
+  getTown(this, data.town)
+    .then(town => {
+      town.name = data.name;
+      return town.save();
+    })
+    .catch(err => {
+      console.log('SOCKET, CHANGE NAME FAIL', err);
+    });
+}
+
 function build(data) {
   // TODO: full handling
   if (!data.building || !data.town) {
     return;
   }
+  this.log(`${this.username} attempting to build ${data.building} in ${data.town}`);
   getTown(this, data.town)
     .then(town => tryBuilding(town, data))
     .catch(error => {
@@ -127,6 +134,7 @@ function recruit(data) {
   if (!data.units || !data.town) {
     return;
   }
+  this.log(`${this.username} attempting to recruit ${data.units} in ${data.town}`);
   getTown(this, data.town)
     .then(town => {
         // STUB
@@ -137,13 +145,7 @@ function recruit(data) {
     });
 }
 
-export const joinTownRoom = socket => {
-  if (socket.player && socket.player.Towns.length) {
-    socket.player.Towns.forEach(town => socket.join(town._id));
-  }
-};
-
-export const initializeTownSocket = socket => {
+export default socket => {
   joinTownRoom(socket);
 
   socket.on('town:name', changeName);

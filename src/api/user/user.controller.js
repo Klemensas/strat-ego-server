@@ -1,22 +1,17 @@
-// import passport from 'passport';
-import { generateTown } from '../town/town.controller';
 import { signToken } from '../../auth/auth.service';
 import { main } from '../../sqldb';
 
 const User = main.User;
 const UserWorlds = main.UserWorlds;
-const World = main.World;
 
-function validationError(res, statusCode) {
-  statusCode = statusCode || 422;
-  return function (err) {
+function validationError(res, statusCode = 422) {
+  return err => {
     res.status(statusCode).json(err);
   };
 }
 
-function handleError(res, statusCode) {
-  statusCode = statusCode || 500;
-  return function (err) {
+function handleError(res, statusCode = 500) {
+  return err => {
     res.status(statusCode).send(err);
   };
 }
@@ -52,12 +47,13 @@ export function create(req, res) {
  * Get a single user
  */
 export function show(req, res, next) {
-  var userId = req.params.id;
+  const userId = req.params.id;
 
   return User.findById(userId).exec()
     .then(user => {
       if (!user) {
-        return res.status(404).end();
+        res.status(404).end();
+        return;
       }
       res.json(user.profile);
     })
@@ -70,7 +66,7 @@ export function show(req, res, next) {
  */
 export function destroy(req, res) {
   return User.findByIdAndRemove(req.params.id)
-    .then(function () {
+    .then(() => {
       res.status(204).end();
     })
     .catch(handleError(res));
@@ -81,9 +77,9 @@ export function destroy(req, res) {
  */
 // export function changePassword(req, res, next) {
 export function changePassword(req, res) {
-  var userId = req.user._id;
-  var oldPass = String(req.body.oldPassword);
-  var newPass = String(req.body.newPassword);
+  const userId = req.user._id;
+  const oldPass = String(req.body.oldPassword);
+  const newPass = String(req.body.newPassword);
 
   return User.findById(userId).exec()
     .then(user => {
@@ -120,12 +116,4 @@ export function me(req, res, next) {
       return res.json(user);
     })
     .catch(err => next(err));
-}
-
-/**
- * Authentication callback
- */
-// export function authCallback(req, res, next) {
-export function authCallback(req, res) {
-  res.redirect('/');
 }

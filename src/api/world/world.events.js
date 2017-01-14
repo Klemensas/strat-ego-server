@@ -1,5 +1,5 @@
-import { world } from '../../sqldb';
 import { EventEmitter } from 'events';
+import { world } from '../../sqldb';
 
 const Player = world.Player;
 const PlayerEvents = new EventEmitter();
@@ -28,6 +28,6 @@ function emitEvent(event) {
   };
 }
 
-export const worldEvents = {
+export default {
   player: PlayerEvents,
 };

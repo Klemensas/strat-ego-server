@@ -1,4 +1,3 @@
-import { worldCtrl } from './world.ctrl';
 import { world, main } from '../../sqldb';
 import * as map from '../../components/map';
 
@@ -12,7 +11,7 @@ function createPlayer(socket) {
     if (player) {
       return player;
     }
-    console.log('Creating new player!');
+    socket.log(`creating player for ${socket.username}, on ${socket.world}`);
     return map.chooseLocation(socket.world)
       .then(location => Player.create({
         name: socket.username,
@@ -35,20 +34,18 @@ function createPlayer(socket) {
   };
 }
 
-export const initializePlayerSocket = socket => {
-  return Player.findOne({
-    where: { UserId: socket.userId },
+export default socket => Player.findOne({
+  where: { UserId: socket.userId },
+  include: [{
+    model: Town,
     include: [{
-      model: Town,
-      include: [{
-        model: BuildingQueue,
-      }],
+      model: BuildingQueue,
     }],
-  })
-    .then(createPlayer(socket))
-    .then(player => {
-      socket.player = player;
-      socket.emit('player', player);
-      return socket;
-    });
-};
+  }],
+})
+  .then(createPlayer(socket))
+  .then(player => {
+    socket.player = player;
+    socket.emit('player', player);
+    return socket;
+  });

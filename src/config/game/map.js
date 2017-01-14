@@ -1,5 +1,4 @@
 class MapData {
-
   constructor() {
     // this.redisClient  = null;
     this.data = {
@@ -59,5 +58,4 @@ class MapData {
 
 }
 
-
-export const mapData = new MapData();
+export default new MapData();
