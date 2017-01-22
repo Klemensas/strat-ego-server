@@ -62,8 +62,8 @@ export const getCoordsInRange = (rings, furthestRing, size) => {
   return [...coords.top, ...innards, ...coords.bottom];
 };
 
-export const chooseLocation = () => {
-  return Town.getAvailableCoords(getCoordsInRange(
+export const chooseLocation = () =>
+  Town.getAvailableCoords(getCoordsInRange(
     worldData.config.generationArea,
     worldData.config.currentRing,
     Math.ceil(worldData.config.size / 2)
@@ -72,14 +72,13 @@ export const chooseLocation = () => {
     console.log('available coords:', coords);
     return coords[Math.round(Math.random() * (coords.length - 1))];
   });
-};
 
 export const generateTown = (name = 'Government Town') => {
   chooseLocation()
-    .then(location => {
-      return Town.create({
+    .then(location =>
+      Town.create({
         name,
         location,
-      });
-    });
+      })
+    );
 };

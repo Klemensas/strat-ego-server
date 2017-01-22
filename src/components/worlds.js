@@ -1,6 +1,6 @@
 import { main, world } from '../sqldb';
 
-let worldData = {};
+const worldData = {};
 
 export const readWorld = targetWorld => {
   const World = main.World;

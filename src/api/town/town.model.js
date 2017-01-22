@@ -92,7 +92,7 @@ export default (sequelize, DataTypes) => {
         town.units = units;
       },
       beforeUpdate: town => {
-        town.resources = town.updateRes(town.updatedAt, town._previousDataValues.updatedAt);
+        town.resources = town.updateRes(town.updatedAt, town.previous('updatedAt'));
 
         // Recalculate production if buildings updated
         if (town.changed('buildings')) {
@@ -128,22 +128,12 @@ export default (sequelize, DataTypes) => {
           wood: worldData.config.baseProduction + buildingData.wood.data[this.buildings.wood.level].production,
           clay: worldData.config.baseProduction + buildingData.clay.data[this.buildings.clay.level].production,
           iron: worldData.config.baseProduction + buildingData.iron.data[this.buildings.iron.level].production,
-        }
-      },
-      /* Custom save, to update resources before updatedAt is changed
-      because hooks don't allow this behavior :(.
-      This is bad since save can occur later and set updatedAt to a different time than now...*/
-      fullSave: function () {
-        const now = Date.now();
-
-        this.resources = this.updateRes(now);
-        return this.save();
+        };
       },
     },
     classMethods: {
-
-      getAvailableCoords: allCoords => {
-        return Town.findAll({
+      getAvailableCoords: allCoords =>
+        Town.findAll({
           attributes: ['location'],
           where: {
             location: {
@@ -155,8 +145,7 @@ export default (sequelize, DataTypes) => {
         .then(res => {
           const usedLocations = res.map(i => i.location.join(','));
           return allCoords.filter(c => !usedLocations.includes(c.join(',')));
-        });
-      },
+        })
     },
   });
 
