@@ -1,6 +1,6 @@
 import worldData from '../../components/worlds';
 import { world } from '../../sqldb';
-import { queue } from '../world/queue';
+// import { queue } from '../world/queue';
 
 function joinTownRoom(socket) {
   if (socket.player && socket.player.Towns.length) {
@@ -51,7 +51,7 @@ function tryBuilding(town, data) {
           // Return queue item for further queuing
           .then(() => queuedItem);
       })
-      .then(item => queue.queueItem(item, 'building'));
+      // .then(item => queue.queueItem(item, 'building'));
     }
   }
   // TODO: real error here
@@ -96,7 +96,7 @@ function tryRecruiting(town, data) {
       // Return queue item for further queuing
       .then(() => unitQueue);
   })
-  .then(items => items.forEach(item => queue.queueItem(item, 'unit')));
+  // .then(items => items.forEach(item => queue.queueItem(item, 'unit')));
 }
 
 function changeName(data) {
