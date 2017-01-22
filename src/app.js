@@ -9,6 +9,8 @@ import mapData from './config/game/map';
 import routing from './routes';
 import expressConfig from './config/express';
 import seed from './config/seed';
+import Queue from './api/world/queue';
+import { readWorld } from './components/worlds';
 // import * as redis from 'redis';
 
 // bluebird.promisifyAll(redis.RedisClient.prototype);
@@ -25,19 +27,19 @@ io.engine.ws = new uws.Server({
   noServer: true,
   perMessageDeflate: false
 });
+let queue;
 
 expressConfig(app);
 routing(app);
-initSocket(io);
-
-
-if (config.seedDB) {
-  seed();
-}
 
 main.sequelize.sync()
   .then(() => world.sequelize.sync())
   .then(() => mapData.initialize(world))
+  .then(() => (config.seedDB ? seed() : readWorld('Megapolis')))
+  .then(worldData => {
+    queue = new Queue();
+    initSocket(io);
+  })
   .then(() => {
     app.server = server.listen(config.port, config.ip, () => {
       console.log('Express server listening on %d, in %s mode', config.port, app.get('env'));
