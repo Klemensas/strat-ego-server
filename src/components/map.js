@@ -1,4 +1,4 @@
-import { activeWorlds } from './worlds';
+import worldData from './worlds';
 import { world } from '../sqldb';
 
 const Town = world.Town;
@@ -62,12 +62,11 @@ export const getCoordsInRange = (rings, furthestRing, size) => {
   return [...coords.top, ...innards, ...coords.bottom];
 };
 
-export const chooseLocation = targetWorld => {
-  const worldData = activeWorlds.get(targetWorld);
+export const chooseLocation = () => {
   return Town.getAvailableCoords(getCoordsInRange(
-    worldData.generationArea,
-    worldData.currentRing,
-    Math.ceil(worldData.size / 2)
+    worldData.config.generationArea,
+    worldData.config.currentRing,
+    Math.ceil(worldData.config.size / 2)
   ))
   .then(coords => {
     console.log('available coords:', coords);
@@ -75,8 +74,8 @@ export const chooseLocation = targetWorld => {
   });
 };
 
-export const generateTown = (targetWorld, name = 'Government Town') => {
-  chooseLocation(targetWorld)
+export const generateTown = (name = 'Government Town') => {
+  chooseLocation()
     .then(location => {
       return Town.create({
         name,

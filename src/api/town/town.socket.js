@@ -1,4 +1,4 @@
-import { activeWorlds } from '../../components/worlds';
+import worldData from '../../components/worlds';
 import { world } from '../../sqldb';
 import { queue } from '../world/queue';
 
@@ -23,8 +23,7 @@ function tryBuilding(town, data) {
   if (target) {
     // Select next level latest queued or the current level;
     const level = target.queued || target.level;
-    const townWorld = activeWorlds.get('megapolis');
-    const buildingData = townWorld.buildingDataMap[data.building].data[level];
+    const buildingData = worldData.buildingMap[data.building].data[level];
 
     // check if building has target level
     // TODO: add and check requirements somewhere here
@@ -60,8 +59,7 @@ function tryBuilding(town, data) {
 }
 
 function tryRecruiting(town, data) {
-  const townWorld = activeWorlds.get('megapolis');
-  const unitData = townWorld.unitDataMap;
+  const unitData = worldData.unitMap;
   const unitsToQueue = [];
   const queueCreateTime = Date.now();
   const TownId = town._id;

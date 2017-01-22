@@ -1,5 +1,5 @@
 import { io } from '../../app';
-import { activeWorlds } from '../../components/worlds';
+import worldData from '../../components/worlds';
 import mapData from '../../config/game/map';
 
 export default (sequelize, DataTypes) => {
@@ -50,12 +50,11 @@ export default (sequelize, DataTypes) => {
   }, {
     hooks: {
       beforeBulkCreate: towns => {
-        const world = activeWorlds.get('megapolis');
-        const buildings = world.buildingData.reduce((map, item) => {
+        const buildings = worldData.buildings.reduce((map, item) => {
           map[item.name] = { level: item.levels.min, queued: 0 };
           return map;
         }, {});
-        const units = world.unitData.reduce((map, item) => {
+        const units = worldData.units.reduce((map, item) => {
           map[item.name] = { amount: 0, queued: 0 };
           return map;
         }, {});
@@ -73,12 +72,11 @@ export default (sequelize, DataTypes) => {
         });
       },
       beforeCreate: town => {
-        const world = activeWorlds.get('megapolis');
-        const buildings = world.buildingData.reduce((map, item) => {
+        const buildings = worldData.buildings.reduce((map, item) => {
           map[item.name] = { level: item.levels.min, queued: 0 };
           return map;
         }, {});
-        const units = world.unitData.reduce((map, item) => {
+        const units = worldData.units.reduce((map, item) => {
           map[item.name] = { amount: 0, queued: 0 };
           return map;
         }, {});
@@ -125,12 +123,11 @@ export default (sequelize, DataTypes) => {
         return this.resources;
       },
       calculateProduction() {
-        const world = activeWorlds.get('megapolis');
-        const buildingData = world.buildingDataMap;
+        const buildingData = worldData.buildingMap;
         return {
-          wood: world.baseProduction + buildingData.wood.data[this.buildings.wood.level].production,
-          clay: world.baseProduction + buildingData.clay.data[this.buildings.clay.level].production,
-          iron: world.baseProduction + buildingData.iron.data[this.buildings.iron.level].production,
+          wood: worldData.config.baseProduction + buildingData.wood.data[this.buildings.wood.level].production,
+          clay: worldData.config.baseProduction + buildingData.clay.data[this.buildings.clay.level].production,
+          iron: worldData.config.baseProduction + buildingData.iron.data[this.buildings.iron.level].production,
         }
       },
       /* Custom save, to update resources before updatedAt is changed

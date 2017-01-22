@@ -1,6 +1,6 @@
 import socketJwt from 'socketio-jwt';
 import config from './environment';
-import { activeWorlds } from '../components/worlds';
+import worldData from '../components/worlds';
 import initializePlayerSocket from '../api/world/player.socket';
 import initializeTownSocket from '../api/town/town.socket';
 import initializeMapSocket from '../api/map/map.socket';
@@ -8,7 +8,7 @@ import initializeMapSocket from '../api/map/map.socket';
 function onConnect(client) {
   client.log(`${client.username} connected`);
   // Disconnect client if sent world not found
-  if (!activeWorlds.has(client.world)) {
+  if (worldData.config.name === client.world) {
     client.log(`${client.username} disconnect, dattempted world: ${client.world}`);
     client.disconnect();
     return;

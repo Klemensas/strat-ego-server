@@ -1,8 +1,7 @@
 import { main, world } from '../sqldb';
-import config from './environment';
 import buildingData from './game/buildingData';
 import unitData from './game/unitData';
-import { addWorld } from '../components/worlds';
+import { readWorld } from '../components/worlds';
 import * as mapUtils from '../components/map';
 
 export default () => {
@@ -47,8 +46,7 @@ export default () => {
     area: worldData.generationArea,
     size: Math.ceil(worldData.size / 2),
   };
-
-  let worldInstance;
+  let generatedWorld = {};
 
   function seedTowns(coords, factor) {
     console.log(`seeding towns in ${coords.length} fields at ${factor} factor`);
@@ -74,35 +72,41 @@ export default () => {
     World.create(worldData),
     User.bulkCreate(userData),
   ]))
-  .then(data => {
-    worldInstance = data[0].dataValues;
-    return Promise.all([
-      Building.bulkCreate(buildingData(worldInstance.speed))
+  .then(() =>
+    Promise.all([
+      readWorld(worldData.name),
+      Building.bulkCreate(buildingData(worldData.speed))
         .then(() => Building.findAll({ raw: true })),
-      Unit.bulkCreate(unitData(worldInstance.speed))
+      Unit.bulkCreate(unitData(worldData.speed))
         .then(() => Unit.findAll({ raw: true })),
-    ]);
-  })
+    ])
+  )
   .then(data => {
-    const buildings = data[0];
-    const units = data[1];
-    worldInstance.buildingData = buildings;
-    worldInstance.buildingDataMap = buildings.reduce((map, item) => {
-      map[item.name] = item;
-      return map;
-    }, {});
-    worldInstance.unitData = units;
-    worldInstance.unitDataMap = units.reduce((map, item) => {
-      map[item.name] = item;
-      return map;
-    }, {});
-    addWorld(worldInstance.name.toLowerCase(), worldInstance);
-    // const users = data[1];
+    generatedWorld = data[0];
   })
   .then(() => Town.bulkCreate(seedTowns(
       mapUtils.getCoordsInRange(townGenerationData.area,
         townGenerationData.furthestRing, townGenerationData.size),
       townGenerationData.percent)))
   .then(() => console.log('Seeding done.'))
-  .catch(error => console.log(`Seeding error: ${error}`));
+  .then(() => generatedWorld)
+  .catch(error => console.log('Seeding error', error));
 };
+
+// const buildings = ['headquarters', 'barracks', 'wood', 'clay', 'iron', 'wall', 'storage', 'farm'];
+// return readWorld('Megapolis')
+//   .then(() => Town.findAll())
+//   .then(towns => {
+//     console.time('special Seed');
+//     return Promise.all(
+//       towns.map(town => {
+//         return Promise.all([
+//           town.createBuildingQueue({ building: buildings[Math.ceil(Math.random() * buildings.length) - 1], buildTime: 2, level: 0, endsAt: Date.now() - Math.random() * 100 * 1000 - 5000 }),
+//           town.createBuildingQueue({ building: buildings[Math.ceil(Math.random() * buildings.length) - 1], buildTime: 2, level: 0, endsAt: Date.now() - Math.random() * 100 * 1000 - 5000 }),
+//           town.createBuildingQueue({ building: buildings[Math.ceil(Math.random() * buildings.length) - 1], buildTime: 2, level: 0, endsAt: Date.now() - Math.random() * 100 * 1000 - 5000 })
+//         ]).catch(err => console.log('queue creaete err', err));
+//       })
+//     ).catch(err => console.log('all err', err));
+//   })
+//   .then(() => console.timeEnd('special Seed'))
+//   .catch(err => console.log('full err', err));
