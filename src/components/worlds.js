@@ -30,7 +30,7 @@ export const readWorld = targetWorld => {
       }, {});
       return worldData;
     })
-    .catch(err => console.log(`Error in world read: ${err}`));
+    .catch(err => console.log('Error in world read', err));
 };
 
 export default worldData;
