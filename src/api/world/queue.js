@@ -7,9 +7,9 @@ const UnitQueue = world.UnitQueue;
 class Queue {
   constructor() {
     this.queueTick = 30000;
-    this.items = [];
-    const queueTypes = ['building', 'unit'];
+  }
 
+  init() {
     Promise.all([
       BuildingQueue.destroy({ where: { TownId: null } }),
       UnitQueue.destroy({ where: { TownId: null } })
@@ -28,12 +28,13 @@ class Queue {
         where: { endsAt: { $lte: time } }
       }]
     })
-    .then(towns => Promise.all(towns.map(town => Queue.processTown(town))))
+    .then(towns => Promise.all(towns.map(town => this.processTown(town))))
     .then(() => setTimeout(() => this.processQueue(time + this.queueTick), this.queueTick))
     .catch(err => console.log('Queue process error', err));
   }
 
-  static processTown(town) {
+  // non static due to being called from class instance
+  processTown(town) {
     const procdTown = Queue.processBuildings(town);
 
     return world.sequelize.transaction(transaction =>
@@ -43,7 +44,7 @@ class Queue {
       })
       .then(() => procdTown.save({ transaction }))
     )
-    .catch(err => console.log('transaction error', err));
+    .catch(err => console.log('town process transaction error', err));
   }
 
   static processBuildings(town) {
@@ -71,4 +72,6 @@ class Queue {
 //   }
 }
 
-export default Queue;
+const queue = new Queue();
+
+export default queue;

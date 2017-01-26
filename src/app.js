@@ -27,7 +27,6 @@ io.engine.ws = new uws.Server({
   noServer: true,
   perMessageDeflate: false
 });
-let queue;
 
 expressConfig(app);
 routing(app);
@@ -37,7 +36,7 @@ main.sequelize.sync()
   .then(() => mapData.initialize(world))
   .then(() => (config.seedDB ? seed() : readWorld('Megapolis')))
   .then(worldData => {
-    queue = new Queue();
+    Queue.init();
     initSocket(io);
   })
   .then(() => {
