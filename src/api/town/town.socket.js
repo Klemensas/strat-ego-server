@@ -1,6 +1,6 @@
 import worldData from '../../components/worlds';
 import { world } from '../../sqldb';
-// import { queue } from '../world/queue';
+import Queue from '../world/queue';
 
 function joinTownRoom(socket) {
   if (socket.player && socket.player.Towns.length) {
@@ -143,11 +143,28 @@ function recruit(data) {
     });
 }
 
+function update(data) {
+  if (!data.town) {
+    return;
+  }
+  getTown(this, data.town)
+    .then(town => {
+      const time = Date.now();
+      town.BuildingQueues = town.BuildingQueues.filter(item => {
+        return time > new Date(item.endsAt).getTime() ? true : console.log('item not yet fini', item, new Date());
+      });
+      return town;  
+    })
+    .then(town => Queue.processTown(town))
+}
+
 export default socket => {
   joinTownRoom(socket);
 
   socket.on('town:name', changeName);
   socket.on('town:build', build);
   socket.on('town:recruit', recruit);
+  socket.on('town:update', update);
   return socket;
 };
+// 
