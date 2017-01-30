@@ -17,7 +17,7 @@ export const readWorld = targetWorld => {
     })
     .then(objects => {
       const buildings = objects[0];
-      const units = objects[0];
+      const units = objects[1];
       worldData.buildings = buildings;
       worldData.buildingMap = buildings.reduce((map, item) => {
         map[item.name] = item;
