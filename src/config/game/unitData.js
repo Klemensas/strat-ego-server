@@ -223,7 +223,7 @@ const unitList = [
   },
 ];
 export default (speed = 1, units = unitList) => units.map(unit => {
-  unit.speed /= speed;
-  unit.recruitTime /= speed;
+  unit.speed /= speed / 1000;
+  unit.recruitTime /= speed / 1000;
   return unit;
 });

@@ -41,7 +41,7 @@ function tryBuilding(town, data) {
         return town.createBuildingQueue({
           building: data.building,
           buildTime: buildingData.buildTime,
-          endsAt: Date.now() + buildingData.buildTime * 1000,
+          endsAt: Date.now() + buildingData.buildTime,
           level,
         }, { transaction })
           .then(item => {
@@ -75,7 +75,7 @@ function tryRecruiting(town, data) {
     town.units[unit.type].queued += unit.amount;
 
     const recruitTime = unit.amount * unitData[unit.type].recruitTime;
-    const endsAt = queueCreateTime + recruitTime * 1000;
+    const endsAt = queueCreateTime + recruitTime;
     unitsToQueue.push({
       unit: unit.type,
       amount: unit.amount,
@@ -151,9 +151,9 @@ function update(data) {
     .then(town => {
       const time = Date.now();
       town.BuildingQueues = town.BuildingQueues.filter(item => {
-        return time > new Date(item.endsAt).getTime() ? true : console.log('item not yet fini', item, new Date());
+        return time > new Date(item.endsAt).getTime() ? true : console.log('update on non find item', new Date(), item.endsAt);
       });
-      return town;  
+      return town;    
     })
     .then(town => Queue.processTown(town))
 }

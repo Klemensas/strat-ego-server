@@ -212,7 +212,7 @@ export default (speed = 1, buildings = buildingList) => buildings.map(building =
 
   for (let i = 0; i <= item.levels.max; i++) {
     const data = {
-      buildTime: Math.ceil((building.baseTime * (building.timeFactor ** i)) / speed),
+      buildTime: Math.ceil((building.baseTime * (building.timeFactor ** i)) / speed) * 1000,
       costs: {
         wood: Math.ceil(building.costs.wood.base * (building.costs.wood.factor ** i)),
         clay: Math.ceil(building.costs.clay.base * (building.costs.clay.factor ** i)),
