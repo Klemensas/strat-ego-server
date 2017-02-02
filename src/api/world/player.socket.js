@@ -38,10 +38,8 @@ export default socket => Player.findOne({
   where: { UserId: socket.userId },
   include: [{
     model: Town,
-    include: [{
-      model: BuildingQueue,
-    }],
-  }],
+    include: [{ all: true }]
+  }]
 })
   .then(createPlayer(socket))
   .then(player => {

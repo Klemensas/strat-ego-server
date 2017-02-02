@@ -150,10 +150,9 @@ function update(data) {
   getTown(this, data.town)
     .then(town => {
       const time = Date.now();
-      town.BuildingQueues = town.BuildingQueues.filter(item => {
-        return time > new Date(item.endsAt).getTime() ? true : console.log('update on non find item', new Date(), item.endsAt);
-      });
-      return town;    
+      town.BuildingQueues = town.BuildingQueues.filter(item => time >= new Date(item.endsAt).getTime());
+      town.UnitQueues = town.UnitQueues.filter(item => time >= new Date(item.endsAt).getTime());
+      return town;
     })
     .then(town => Queue.processTown(town))
 }
