@@ -35,31 +35,23 @@ class Queue {
 
   // non static due to being called from class instance
   processTown(town) {
-    const procdTown = Queue.processBuildings(town);
+    const procdTown = Town.processQueues(town);
 
+    if (!procdTown.doneBuildings.length && !procdTown.doneUnits.length) {
+      return town;
+    }
     return world.sequelize.transaction(transaction =>
       BuildingQueue.destroy({
-        where: { _id: { $in: procdTown.processedBuildings } },
+        where: { _id: { $in: procdTown.doneBuildings } },
         transaction
       })
+      .then(() => UnitQueue.destroy({
+        where: { _id: { $in: procdTown.doneUnits } },
+        transaction
+      }))
       .then(() => procdTown.save({ transaction }))
     )
     .catch(err => console.log('town process transaction error', err));
-  }
-
-  static processBuildings(town) {
-    town.processedBuildings = [];
-    town.BuildingQueues.forEach(queue => {
-      const building = town.buildings[queue.building];
-      building.level++;
-      if (building.queued === building.level) {
-        building.queued = 0;
-      }
-      town.processedBuildings.push(queue._id);
-    });
-    // trigger buildings change manully, because sequalize can't detect it
-    town.changed('buildings', true);
-    return town;
   }
 
 //   static processUnit(town, item) {
