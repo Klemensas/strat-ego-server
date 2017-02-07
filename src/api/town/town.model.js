@@ -36,7 +36,7 @@ export default (sequelize, DataTypes) => {
         isPositive: function (resources) {
           const invalid = Object.keys(resources).some(i => resources[i] < 0);
           if (invalid) {
-            throw new Error('Not enough resources. Last updated at ', this.updatedAt);
+            throw new Error('Resources can\'t be negative. Last updated at ', this.updatedAt);
           }
         },
       },
@@ -46,6 +46,14 @@ export default (sequelize, DataTypes) => {
     },
     units: {
       type: DataTypes.JSON,
+      validate: {
+        isPositive: function (units) {
+          const invalid = Object.keys(units).some(i => units[i].inside < 0 || units[i].outside < 0);
+          if (invalid) {
+            throw new Error('Units can\'t be negative. Last updated at ', this.updatedAt);
+          }
+        },
+      },
     },
   }, {
     hooks: {
@@ -55,7 +63,7 @@ export default (sequelize, DataTypes) => {
           return map;
         }, {});
         const units = worldData.units.reduce((map, item) => {
-          map[item.name] = { amount: 0, queued: 0 };
+          map[item.name] = { inside: 0, outside: 0, queued: 0 };
           return map;
         }, {});
         const resources = {
@@ -77,7 +85,7 @@ export default (sequelize, DataTypes) => {
           return map;
         }, {});
         const units = worldData.units.reduce((map, item) => {
-          map[item.name] = { amount: 0, queued: 0 };
+          map[item.name] = { inside: 0, outside: 0, queued: 0 };
           return map;
         }, {});
 
