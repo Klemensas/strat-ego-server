@@ -22,10 +22,15 @@ class Queue {
     if (targetTime) {
       console.log(`Queue delay is ${time - targetTime}`);
     }
+
     return Town.findAll({
       include: [{
         model: BuildingQueue,
         where: { endsAt: { $lte: time } }
+      }, {
+        model: UnitQueue,
+        where: { endsAt: { $lte: time } },
+        required: false
       }]
     })
     .then(towns => Promise.all(towns.map(town => this.processTown(town))))
@@ -35,7 +40,7 @@ class Queue {
 
   // non static due to being called from class instance
   processTown(town) {
-    const procdTown = Town.processQueues(town);
+    const procdTown = town.processQueues();
 
     if (!procdTown.doneBuildings.length && !procdTown.doneUnits.length) {
       return town;

@@ -138,6 +138,35 @@ export default (sequelize, DataTypes) => {
           iron: worldData.config.baseProduction + buildingData.iron.data[this.buildings.iron.level].production,
         };
       },
+      processQueues() {
+        // console.log('process town queues', this.dataValues);
+        this.doneBuildings = [];
+        this.doneUnits = [];
+        this.BuildingQueues.forEach(queue => {
+          const building = this.buildings[queue.building];
+          building.level++;
+          if (building.queued === building.level) {
+            building.queued = 0;
+          }
+          this.doneBuildings.push(queue._id);
+        });
+        this.UnitQueues.forEach(queue => {
+          const unit = this.units[queue.unit];
+          unit.inside += queue.amount;
+          unit.queued -= queue.amount;
+          this.doneUnits.push(queue._id);
+        });
+
+        // trigger change manully, because sequalize can't detect it
+        if (this.doneBuildings.length) {
+          this.changed('buildings', true);
+        }
+        if (this.doneUnits.length) {
+          this.changed('units', true);
+        }
+
+        return this;
+      }
     },
     classMethods: {
       getAvailableCoords: allCoords =>
@@ -154,35 +183,7 @@ export default (sequelize, DataTypes) => {
           const usedLocations = res.map(i => i.location.join(','));
           return allCoords.filter(c => !usedLocations.includes(c.join(',')));
         }),
-      processQueues: town => {
-        town.doneBuildings = [];
-        town.doneUnits = [];
-        town.BuildingQueues.forEach(queue => {
-          const building = town.buildings[queue.building];
-          building.level++;
-          if (building.queued === building.level) {
-            building.queued = 0;
-          }
-          town.doneBuildings.push(queue._id);
-        });
-        town.UnitQueues.forEach(queue => {
-          const unit = town.units[queue.unit];
-          unit.amount += queue.amount;
-          unit.queued -= queue.amount;
-          town.doneUnits.push(queue._id);
-        });
-
-        // trigger change manully, because sequalize can't detect it
-        if (town.doneBuildings.length) {
-          town.changed('buildings', true);
-        }
-        if (town.doneUnits.length) {
-          town.changed('units', true);
-        }
-
-        return town;
-      }
-    },
+    }
   });
 
   return Town;
