@@ -99,6 +99,39 @@ function tryRecruiting(town, data) {
   // .then(items => items.forEach(item => queue.queueItem(item, 'unit')));
 }
 
+function trySending(town, data) {
+  const unitData = worldData.unitMap;
+  const dataUnits = Object.entries(data.units);
+  const queueCreateTime = Date.now();
+  let slowest = 0;
+
+  for (const unit of dataUnits) {
+    if (!town.units.hasOwnProperty(unit[0])) {
+      return Promise.reject('no such unit');
+    }
+    town.units[unit[0]].inside -= unit[1];
+    town.units[unit[0]].outside += unit[1];
+
+    slowest = Math.max(unitData[unit[0]].speed, slowest);
+  }
+
+  town.changed('units', true);
+  return world.sequelize.transaction(transaction => {
+    let queuedItem = null;
+    return town.createMovementOriginTown({
+      units: data.units,
+      type: data.type,
+      endsAt: queueCreateTime + (slowest * 1000),
+      MovementDestinationId: data.target
+    }, { transaction })
+      .then(item => {
+        queuedItem = item;
+        return town.save({ transaction });
+      })
+      .then(() => queuedItem);
+  });
+}
+
 function changeName(data) {
   // TODO: full handling
   if (!data.name || !data.town) {
@@ -157,6 +190,19 @@ function update(data) {
     .then(town => Queue.processTown(town))
 }
 
+function troopMovement(data) {
+  if (!data.town || !data.target || !data.type) {
+    this.log('wrong data');
+    return;
+  }
+
+  getTown(this, data.town)
+    .then(town => {
+      trySending(town, data);
+    })
+    .catch(error => console.log('SOCKET MOVE ERROR', error));
+}
+
 export default socket => {
   joinTownRoom(socket);
 
@@ -164,6 +210,7 @@ export default socket => {
   socket.on('town:build', build);
   socket.on('town:recruit', recruit);
   socket.on('town:update', update);
+  socket.on('town:moveTroops', troopMovement);
   return socket;
 };
 // 
