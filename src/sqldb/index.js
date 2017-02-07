@@ -17,6 +17,7 @@ db.world.Building = db.world.sequelize.import('../api/world/building.model');
 db.world.Unit = db.world.sequelize.import('../api/world/unit.model');
 db.world.Player = db.world.sequelize.import('../api/world/player.model');
 db.world.Town = db.world.sequelize.import('../api/town/town.model');
+db.world.Movement = db.world.sequelize.import('../api/town/movement.model');
 db.world.BuildingQueue = db.world.sequelize.import('../api/world/building.queue.model');
 db.world.UnitQueue = db.world.sequelize.import('../api/world/unit.queue.model');
 
@@ -41,6 +42,23 @@ db.main.UserWorlds.belongsTo(db.main.User);
 
 db.world.Player.hasMany(db.world.Town);
 db.world.Town.belongsTo(db.world.Player);
+
+db.world.Town.hasMany(db.world.Movement, {
+  as: 'MovementOriginTown',
+  foreignKey: 'MovementOriginId'
+});
+db.world.Town.hasMany(db.world.Movement, {
+  as: 'MovementDestinationTown',
+  foreignKey: 'MovementDestinationId'
+});
+db.world.Movement.belongsTo(db.world.Town, {
+  as: 'MovementOriginTown',
+  foreignKey: 'MovementOriginId'
+});
+db.world.Movement.belongsTo(db.world.Town, {
+  as: 'MovementDestinationTown',
+  foreignKey: 'MovementDestinationId'
+});
 
 db.world.Town.hasMany(db.world.UnitQueue);
 db.world.UnitQueue.belongsTo(db.world.Town);
