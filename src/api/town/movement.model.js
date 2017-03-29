@@ -9,6 +9,9 @@ export default (sequelize, DataTypes) => sequelize.define('Movement', {
     type: DataTypes.JSON,
     allowNull: false,
   },
+  haul: {
+    type: DataTypes.JSON
+  },
   type: {
     type: DataTypes.STRING,
     allowNull: false

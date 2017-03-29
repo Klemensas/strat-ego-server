@@ -1,7 +1,8 @@
 exports = module.exports = {
   sequelize: {
     options: {
-      logging: false/* console.log*/,
+      logging: false,
+      // logging: console.log,
       define: {
         timestamps: true,
         paranoid: false
