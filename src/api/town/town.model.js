@@ -1,6 +1,7 @@
 import { io } from '../../app';
 import worldData from '../../components/worlds';
 import mapData from '../../config/game/map';
+import { resolveAttack, resolveReturn, resolveSupport } from './components/movement.resolver';
 
 export default (sequelize, DataTypes) => {
   const Town = sequelize.define('Town', {
@@ -42,10 +43,10 @@ export default (sequelize, DataTypes) => {
       },
     },
     buildings: {
-      type: DataTypes.JSON,
+      type: DataTypes.JSONB,
     },
     units: {
-      type: DataTypes.JSON,
+      type: DataTypes.JSONB,
       validate: {
         isPositive: function (units) {
           const invalid = Object.keys(units).some(i => units[i].inside < 0 || units[i].outside < 0);
@@ -169,6 +170,22 @@ export default (sequelize, DataTypes) => {
       }
     },
     classMethods: {
+      resolveMovement: function movementResolver(movement, destinationTown) {
+        let resolver = null;
+        switch (movement.type) {
+          case 'attack':
+            resolver = resolveAttack;
+            break;
+          case 'return':
+            resolver = resolveReturn;
+            break;
+          case 'support':
+            resolver = resolveSupport;
+            break;
+        }
+        console.log('attempting to resolve', movement.type)
+        return resolver(movement, destinationTown);
+      },
       getAvailableCoords: allCoords =>
         Town.findAll({
           attributes: ['location'],
