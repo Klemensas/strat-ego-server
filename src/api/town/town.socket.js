@@ -34,24 +34,16 @@ function tryBuilding(town, data) {
       target.queued = level + 1;
       // trigger buildings change manully, because sequalize can't detect it
       town.changed('buildings', true);
-      // save town with updated values
 
       return world.sequelize.transaction(transaction => {
-        let queuedItem = null;
         return town.createBuildingQueue({
           building: data.building,
           buildTime: buildingData.buildTime,
           endsAt: Date.now() + buildingData.buildTime,
           level,
         }, { transaction })
-          .then(item => {
-            queuedItem = item;
-            return town.save({ transaction });
-          })
-          // Return queue item for further queuing
-          .then(() => queuedItem);
-      })
-      // .then(item => queue.queueItem(item, 'building'));
+          .then(() => town.save({ transaction }));
+      });
     }
   }
   // TODO: real error here
@@ -87,16 +79,9 @@ function tryRecruiting(town, data) {
 
   town.changed('units', true);
   return world.sequelize.transaction(transaction => {
-    let unitQueue;
-    return world.UnitQueue.bulkCreate(unitsToQueue, { transaction, returning: true })
-      .then(item => {
-        unitQueue = item;
-        return town.save({ transaction });
-      })
-      // Return queue item for further queuing
-      .then(() => unitQueue);
-  })
-  // .then(items => items.forEach(item => queue.queueItem(item, 'unit')));
+    return world.UnitQueue.bulkCreate(unitsToQueue, { transaction })
+      .then(() => town.save({ transaction }));
+  });
 }
 
 function trySending(town, data) {
@@ -121,7 +106,7 @@ function trySending(town, data) {
     return town.createMovementOriginTown({
       units: data.units,
       type: data.type,
-      endsAt: queueCreateTime + (slowest * 1000),
+      endsAt: queueCreateTime + slowest,
       MovementDestinationId: data.target
     }, { transaction })
       .then(item => {
@@ -187,7 +172,7 @@ function update(data) {
       town.UnitQueues = town.UnitQueues.filter(item => time >= new Date(item.endsAt).getTime());
       return town;
     })
-    .then(town => Queue.processTown(town))
+    .then(town => Queue.processTown(town));
 }
 
 function troopMovement(data) {
