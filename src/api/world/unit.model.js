@@ -9,8 +9,8 @@ export default (sequelize, DataTypes) => sequelize.define('Unit', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  type: {
-    type: DataTypes.ARRAY(DataTypes.STRING),
+  attackType: {
+    type: DataTypes.STRING,
     allowNull: false,
   },
   speed: {
