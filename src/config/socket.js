@@ -18,7 +18,7 @@ function onConnect(client) {
     .then(initializeTownSocket)
     .then(initializeMapSocket)
     .catch(error => {
-      console.log(`SOCKET ON CONNECT ERROR ${error}`);
+      console.log('SOCKET ON CONNECT ERROR', error);
     });
 }
 function onDisconnect(client) {

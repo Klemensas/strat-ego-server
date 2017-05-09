@@ -7,7 +7,6 @@ const db = {
   world: { sequelize: new Sequelize(config.sequelize.world, config.sequelize.options) },
 };
 
-
 // Insert models below
 db.main.User = db.main.sequelize.import('../api/user/user.model');
 db.main.Message = db.main.sequelize.import('../api/message/message.model');
@@ -20,6 +19,7 @@ db.world.Town = db.world.sequelize.import('../api/town/town.model');
 db.world.Movement = db.world.sequelize.import('../api/town/movement.model');
 db.world.BuildingQueue = db.world.sequelize.import('../api/world/building.queue.model');
 db.world.UnitQueue = db.world.sequelize.import('../api/world/unit.queue.model');
+db.world.Report = db.world.sequelize.import('../api/report/report.model');
 
 // db.World.belongsToMany(db.User, { through: 'WorldUsers' });
 
@@ -58,6 +58,40 @@ db.world.Movement.belongsTo(db.world.Town, {
 db.world.Movement.belongsTo(db.world.Town, {
   as: 'MovementDestinationTown',
   foreignKey: 'MovementDestinationId'
+});
+
+db.world.Town.hasMany(db.world.Report, {
+  as: 'ReportOriginTown',
+  foreignKey: 'ReportOriginTownId'
+});
+db.world.Town.hasMany(db.world.Report, {
+  as: 'ReportDestinationTown',
+  foreignKey: 'ReportDestinationTownId'
+});
+db.world.Report.belongsTo(db.world.Town, {
+  as: 'ReportOriginTown',
+  foreignKey: 'ReportOriginTownId'
+});
+db.world.Report.belongsTo(db.world.Town, {
+  as: 'ReportDestinationTown',
+  foreignKey: 'ReportDestinationTownId'
+});
+
+db.world.Player.hasMany(db.world.Report, {
+  as: 'ReportOriginPlayer',
+  foreignKey: 'ReportOriginPlayerId'
+});
+db.world.Player.hasMany(db.world.Report, {
+  as: 'ReportDestinationPlayer',
+  foreignKey: 'ReportDestinationPlayerId'
+});
+db.world.Report.belongsTo(db.world.Player, {
+  as: 'ReportOriginPlayer',
+  foreignKey: 'ReportOriginPlayerId'
+});
+db.world.Report.belongsTo(db.world.Player, {
+  as: 'ReportDestinationPlayer',
+  foreignKey: 'ReportDestinationPlayerId'
 });
 
 db.world.Town.hasMany(db.world.UnitQueue);

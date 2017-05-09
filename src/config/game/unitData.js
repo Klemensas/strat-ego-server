@@ -1,6 +1,6 @@
 const unitList = [
   {
-    name: 'spear',
+    name: 'axe',
     costs: {
       wood: 50,
       clay: 30,
@@ -42,7 +42,7 @@ const unitList = [
       level: 2,
     }],
   }, {
-    name: 'axe',
+    name: 'mace',
     costs: {
       wood: 60,
       clay: 30,
@@ -164,7 +164,7 @@ const unitList = [
       },
     },
   }, {
-    name: 'ram',
+    name: 'trebuchet',
     costs: {
       wood: 300,
       clay: 200,
@@ -182,25 +182,25 @@ const unitList = [
         archer: 20,
       },
     },
-  }, {
-    name: 'catapult',
-    costs: {
-      wood: 320,
-      clay: 400,
-      iron: 100,
-    },
-    attackType: 'general',
-    speed: 1800,
-    recruitTime: 7200,
-    haul: 0,
-    combat: {
-      attack: 100,
-      defense: {
-        general: 100,
-        cavalry: 50,
-        archer: 100,
-      },
-    },
+  // }, {
+  //   name: 'catapult',
+  //   costs: {
+  //     wood: 320,
+  //     clay: 400,
+  //     iron: 100,
+  //   },
+  //   attackType: 'general',
+  //   speed: 1800,
+  //   recruitTime: 7200,
+  //   haul: 0,
+  //   combat: {
+  //     attack: 100,
+  //     defense: {
+  //       general: 100,
+  //       cavalry: 50,
+  //       archer: 100,
+  //     },
+  //   },
   }, {
     name: 'noble',
     costs: {
@@ -217,6 +217,25 @@ const unitList = [
       defense: {
         general: 100,
         cavalry: 50,
+        archer: 100,
+      },
+    },
+  }, {
+    name: 'commander',
+    costs: {
+      wood: 100,
+      clay: 100,
+      iron: 100,
+    },
+    attackType: 'general',
+    speed: 600,
+    recruitTime: 18000,
+    haul: 100,
+    combat: {
+      attack: 1000,
+      defense: {
+        general: 100,
+        cavalry: 100,
         archer: 100,
       },
     },

@@ -18,7 +18,7 @@ class MapData {
 
   getAllData() {
     return this.data.townLocations;
-  }
+  } 
 
   addTown(town) {
     const owner = town.Player ? town.Player.name : town['Player.name'];
@@ -50,6 +50,7 @@ class MapData {
           };
           return data;
         }, {});
+        console.log(`stored ${towns.length} town map data`);
       })
       .catch(err => {
         console.log('ERROR IN REDIS OP', err);

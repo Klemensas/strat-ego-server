@@ -5,6 +5,7 @@ const UserWorlds = main.UserWorlds;
 const Player = world.Player;
 const Town = world.Town;
 const Movement = world.Movement;
+const Report = world.Report;
 
 function createPlayer(socket) {
   socket.log(`creating player for ${socket.username}, on ${socket.world}`);
@@ -40,12 +41,37 @@ export default socket => Player.findOne({
       as: 'MovementDestinationTown',
       attributes: { exclude: ['createdAt', 'updatedAt', 'units'] }
     }]
+  }, {
+    model: Report,
+    as: 'ReportDestinationPlayer',
+    include: [{
+      model: Town,
+      as: 'ReportOriginTown',
+      attributes: ['_id', 'name', 'location'],
+    }, {
+      model: Town,
+      as: 'ReportDestinationTown',
+      attributes: ['_id', 'name', 'location'],
+    }],
+  }, {
+    model: Report,
+    as: 'ReportOriginPlayer',
+    include: [{
+      model: Town,
+      as: 'ReportOriginTown',
+      attributes: ['_id', 'name', 'location'],
+    }, {
+      model: Town,
+      as: 'ReportDestinationTown',
+      attributes: ['_id', 'name', 'location'],
+    }],
   }]
 })
   .then(player => {
     if (!player) {
       return createPlayer(socket);
     }
+    console.log('should process town data before sending');
     // TODO: process queues here before sending?
     // player.Towns.map(town => {
     //   console.log('t', town.dataValues, typeof town.processQueues);

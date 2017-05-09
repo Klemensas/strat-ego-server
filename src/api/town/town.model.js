@@ -101,26 +101,43 @@ export default (sequelize, DataTypes) => {
         town.units = units;
       },
       beforeUpdate: town => {
-        town.resources = town.updateRes(town.updatedAt, town.previous('updatedAt'));
-
+        // Update res if not marked as changed
+        console.log('res update', town.changed('resources'))
+        if (!town.changed('resources')) {
+          town.resources = town.updateRes(town.updatedAt, town.previous('updatedAt'));
+        }
         // Recalculate production if buildings updated
         if (town.changed('buildings')) {
           town.production = town.calculateProduction();
         }
       },
-      afterUpdate: town => {
-        town.getBuildingQueues()
-          .then(queues => {
-            town.setDataValue('BuildingQueues', queues);
-            io.sockets.in(town._id).emit('town', town);
-          });
-      },
+      // afterUpdate: town => {
+      //   town.getBuildingQueues()
+      //     .then(queues => {
+      //       town.setDataValue('BuildingQueues', queues);
+      //       console.log(`Town ${town._id} updated, sending data to sockets`);
+      //     });
+      // },
       afterCreate: town => {
         town.reload({ include: [{ all: true }] })
           .then(fullTown => mapData.addTown(fullTown));
       },
     },
     instanceMethods: {
+      notifySave(event, transaction) {
+        console.log('hello i notify')
+        return this.save({ transaction })
+          .then(town => town.reload({ include: [{ all: true }] }))
+          .then(town => {
+            console.log('reloaded fully', town.dataValues)
+            io.sockets.in(town._id).emit('town', { town, event });
+            return town;
+          });
+      },
+      notify(event) {
+        return this.reload({ include: [{ all: true }] })
+          .then(town => io.sockets.in(town._id).emit('town', { town, event }));
+      },
       // TODO: fix this, apparently, hooks already have updated data so can't get good updatedAt,
       // setting silent prevents updatedAt from updating even when doing so manually...
       updateRes(now, previous = this.updatedAt) {
@@ -140,9 +157,11 @@ export default (sequelize, DataTypes) => {
         };
       },
       processQueues() {
-        // console.log('process town queues', this.dataValues);
+        // TODO: create a sorted ended event object and process it item by item to prevent weirdness
         this.doneBuildings = [];
         this.doneUnits = [];
+        this.doneOriginMovements = [];
+        this.doneDestinationMovements = [];
         this.BuildingQueues.forEach(queue => {
           const building = this.buildings[queue.building];
           building.level++;
@@ -157,12 +176,22 @@ export default (sequelize, DataTypes) => {
           unit.queued -= queue.amount;
           this.doneUnits.push(queue._id);
         });
+        console.log('dest', this.MovementDestinationTown.length)
+        console.log('orgin', this.MovementOriginTown.length)
+        // this.MovementOriginTown.forEach(queue => {
+        // });
+        this.MovementDestinationTown.forEach(movement => {
+          Town.resolveMovement(movement, this);
+        });
 
         // trigger change manully, because sequalize can't detect it
         if (this.doneBuildings.length) {
           this.changed('buildings', true);
         }
         if (this.doneUnits.length) {
+          this.changed('units', true);
+        }
+        if (this.doneOriginMovements.length) {
           this.changed('units', true);
         }
 
@@ -183,7 +212,7 @@ export default (sequelize, DataTypes) => {
             resolver = resolveSupport;
             break;
         }
-        console.log('attempting to resolve', movement.type)
+        console.log('attempting to resolve', movement.type, movement.units, destinationTown.dataValues.units)
         return resolver(movement, destinationTown);
       },
       getAvailableCoords: allCoords =>

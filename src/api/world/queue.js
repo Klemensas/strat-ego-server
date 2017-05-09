@@ -3,6 +3,7 @@ import { Sequelize, world } from '../../sqldb';
 const Town = world.Town;
 const BuildingQueue = world.BuildingQueue;
 const UnitQueue = world.UnitQueue;
+const Movement = world.Movement;
 
 class Queue {
   constructor() {
@@ -18,28 +19,40 @@ class Queue {
   }
 
   processQueue(targetTime) {
-    const time = Date.now();
+    const time = new Date();
     if (targetTime) {
       console.log(`Queue delay is ${time - targetTime}`);
     }
 
     return Town.findAll({
+      where: {
+        $or: [
+          { '$BuildingQueues.endsAt$': { $lte: time } },
+          { '$UnitQueues.endsAt$': { $lte: time } },
+          { '$MovementDestinationTown.endsAt$': { $lte: time } },
+          { '$MovementOriginTown.endsAt$': { $lte: time } }
+        ]
+      },
       include: [{
         model: BuildingQueue,
-        where: { endsAt: { $lte: time } }
       }, {
         model: UnitQueue,
-        where: { endsAt: { $lte: time } },
-        required: false
+      }, {
+        model: Movement,
+        as: 'MovementOriginTown',
+      }, {
+        model: Movement,
+        as: 'MovementDestinationTown',
       }]
     })
     .then(towns => Promise.all(towns.map(town => this.processTown(town))))
-    .then(() => setTimeout(() => this.processQueue(time + this.queueTick), this.queueTick))
+    .then(() => setTimeout(() => this.processQueue(time.getTime() + this.queueTick), this.queueTick))
     .catch(err => console.log('Queue process error', err));
   }
 
   // non static due to being called from class instance
   processTown(town) {
+    console.log('town to process'/*, town.dataValues*/);
     const procdTown = town.processQueues();
 
     if (!procdTown.doneBuildings.length && !procdTown.doneUnits.length) {
@@ -56,6 +69,7 @@ class Queue {
       }))
       .then(() => procdTown.save({ transaction }))
     )
+    .then(updatedTown => updatedTown.notify({ type: 'update' }))
     .catch(err => console.log('town process transaction error', err));
   }
 

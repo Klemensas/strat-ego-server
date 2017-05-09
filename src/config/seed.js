@@ -12,6 +12,8 @@ export default () => {
   const Town = world.Town;
   const Building = world.Building;
   const Unit = world.Unit;
+  const Movement = world.Movement;
+  const Report = world.Report;
   const worldData = {
     name: 'Megapolis',
     baseProduction: 500,
@@ -67,6 +69,8 @@ export default () => {
     UserWorlds.sync().then(() => UserWorlds.destroy({ where: {} })),
     Town.sync().then(() => Town.destroy({ where: {} })),
     User.sync().then(() => User.destroy({ where: {} })),
+    Movement.sync().then(() => Movement.destroy({ where: {} })),
+    Report.sync().then(() => Report.destroy({ where: {} })),
   ])
   .then(() => Promise.all([
     World.create(worldData),

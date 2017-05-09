@@ -102,7 +102,7 @@ function trySending(town, data) {
 
   town.changed('units', true);
   return world.sequelize.transaction(transaction => {
-    let queuedItem = null;
+    // let queuedItem = null;
     return town.createMovementOriginTown({
       units: data.units,
       type: data.type,
@@ -110,10 +110,10 @@ function trySending(town, data) {
       MovementDestinationId: data.target
     }, { transaction })
       .then(item => {
-        queuedItem = item;
+        // queuedItem = item;
         return town.save({ transaction });
-      })
-      .then(() => queuedItem);
+      });
+      // .then(() => queuedItem);
   });
 }
 
@@ -128,6 +128,7 @@ function changeName(data) {
       town.name = data.name;
       return town.save();
     })
+    .then(town => town.notify({ type: 'name' }))
     .catch(err => {
       console.log('SOCKET, CHANGE NAME FAIL', err);
     });
@@ -141,6 +142,7 @@ function build(data) {
   this.log(`${this.username} attempting to build ${data.building} in ${data.town}`);
   getTown(this, data.town)
     .then(town => tryBuilding(town, data))
+    .then(town => town.notify({ type: 'build' }))
     .catch(error => {
       console.log('SOCKET BUILD ERROR', error);
     });
@@ -152,10 +154,8 @@ function recruit(data) {
   }
   this.log(`${this.username} attempting to recruit ${data.units} in ${data.town}`);
   getTown(this, data.town)
-    .then(town => {
-        // STUB
-        tryRecruiting(town, data);
-    })
+    .then(town => tryRecruiting(town, data))
+    .then(town => town.notify({ type: 'recruit' }))
     .catch(err => {
       console.log('SOCKET RECRUIT ERROR', err);
     });
@@ -165,6 +165,8 @@ function update(data) {
   if (!data.town) {
     return;
   }
+  // TODO: use town method instead of queue?
+  this.log(`${this.username} attempting to update queue in ${data.town}`);
   getTown(this, data.town)
     .then(town => {
       const time = Date.now();
@@ -182,9 +184,8 @@ function troopMovement(data) {
   }
 
   getTown(this, data.town)
-    .then(town => {
-      trySending(town, data);
-    })
+    .then(town => trySending(town, data))
+    .then(town => town.notify({ type: 'movement' }))
     .catch(error => console.log('SOCKET MOVE ERROR', error));
 }
 
