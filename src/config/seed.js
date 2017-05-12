@@ -17,7 +17,6 @@ export default () => {
   const worldData = {
     name: 'Megapolis',
     baseProduction: 500,
-    moneyConversion: 0.5,
     speed: 10,
     size: 999,
     regionSize: 27,

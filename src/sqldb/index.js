@@ -9,7 +9,6 @@ const db = {
 
 // Insert models below
 db.main.User = db.main.sequelize.import('../api/user/user.model');
-db.main.Message = db.main.sequelize.import('../api/message/message.model');
 db.main.World = db.main.sequelize.import('../api/world/world.model');
 
 db.world.Building = db.world.sequelize.import('../api/world/building.model');
@@ -23,22 +22,16 @@ db.world.Report = db.world.sequelize.import('../api/report/report.model');
 
 // db.World.belongsToMany(db.User, { through: 'WorldUsers' });
 
-db.main.User.hasMany(db.main.Message);
-db.main.Message.belongsTo(db.main.User);
-
 db.main.UserWorlds = db.main.sequelize.define('UserWorlds', {
   PlayerId: {
     type: Sequelize.INTEGER,
-    allowNull: false,
-  },
-  World: {
-    type: Sequelize.STRING,
     allowNull: false,
   },
 });
 
 db.main.User.hasMany(db.main.UserWorlds);
 db.main.UserWorlds.belongsTo(db.main.User);
+db.main.UserWorlds.belongsTo(db.main.World);
 
 db.world.Player.hasMany(db.world.Town);
 db.world.Town.belongsTo(db.world.Player);

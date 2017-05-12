@@ -19,6 +19,11 @@ export default (sequelize, DataTypes) => {
       },
       defaultValue: 'Abandoned Town',
     },
+    loaylty: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 100,
+    },
     location: {
       type: DataTypes.ARRAY(DataTypes.INTEGER),
       allowNull: false,
@@ -156,8 +161,46 @@ export default (sequelize, DataTypes) => {
           iron: worldData.config.baseProduction + buildingData.iron.data[this.buildings.iron.level].production,
         };
       },
+      getLastQueue(queue) {
+        return this[queue].sort((a, b) => a.endsAt - b.endsAt)[0];
+      },
       processQueues() {
         // TODO: create a sorted ended event object and process it item by item to prevent weirdness
+        // const events = [
+        //   ...this.BuildingQueues.map(event => ({ ...event, eventType: 'building' })),
+        //   ...this.UnitQueues.map(event => ({ ...event, eventType: 'unit' })),
+        //   ...this.MovementDestinationTown.map(event => ({ ...event, eventType: 'movement' })),
+        // ];
+        // events.sort((a, b) => a.endsAt - b.endsAt);
+        // const doneBuildings = [];
+        // const doneUnits = [];
+        // const doneMovements = [];
+
+        // for (const event of events) {
+        //   switch (event.eventType) {
+        //     case 'building': {
+        //       const building = this.buildings[event.building];
+        //       building.level++;
+        //       if (building.queued === building.level) {
+        //         building.queued = 0;
+        //       }
+        //       doneBuildings.push(event._id);
+        //       break;
+        //     }
+        //     case 'unit': {
+        //       const unit = this.units[event.unit];
+        //       unit.inside += event.amount;
+        //       unit.queued -= event.amount;
+        //       doneUnits.push(event._id);
+        //       break;
+        //     }
+        //     case 'movement': {
+        //       await Town.resolveMovement(event, this);
+        //       doneMovements.push(event._id);
+        //     }
+        //   }
+        // }
+
         this.doneBuildings = [];
         this.doneUnits = [];
         this.doneOriginMovements = [];

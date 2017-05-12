@@ -112,13 +112,14 @@ function handleDefenseWin(unitArrays, winnerLoss, destinationTown, movement) {
     outcome.defenseUnits[key] = val.inside;
     outcome.losses = loss;
     outcome.actualLosses = outcome.actualLosses || !!loss;
-    outcome[key] = val;
-    outcome[key].inside = survived;
+    outcome.survivors[key] = val;
+    outcome.survivors[key].inside = survived;
     return outcome;
   }, { survivors: {}, actualLosses: false, defenseUnits: {}, losses: {} });
 
   const attackingUnits = {};
   let originPlayerId;
+
   return world.sequelize.transaction(transaction =>
     movement.destroy({ transaction })
     .then(() => world.Town.findById(movement.MovementOriginId, { transaction }))

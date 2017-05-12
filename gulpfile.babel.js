@@ -30,7 +30,7 @@ function onServerLog(log) {
 
 const transpileServer = lazypipe()
     .pipe(plugins.sourcemaps.init)
-    .pipe(plugins.babel, { presets: ['latest'] })
+    .pipe(plugins.babel, { presets: ['latest', 'stage-3'] })
     .pipe(plugins.sourcemaps.write, '.');
 
 gulp.task('transpile:server', () => gulp.src(_.union(paths.server.scripts, paths.server.json))

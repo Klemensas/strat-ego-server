@@ -10,9 +10,6 @@ export default (sequelize, DataTypes) => sequelize.define('World', {
   speed: {
     type: DataTypes.INTEGER,
   },
-  moneyConversion: {
-    type: DataTypes.INTEGER,
-  },
   size: {
     type: DataTypes.INTEGER,
     // TODO: add matcher of odd number

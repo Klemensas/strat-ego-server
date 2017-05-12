@@ -66,8 +66,11 @@ function tryRecruiting(town, data) {
     town.resources.iron -= unitData[unit.type].costs.iron * unit.amount;
     town.units[unit.type].queued += unit.amount;
 
+    // TODO: test out changes
+    const lastQueue = town.getLastQueue('UnitQueues');
+    const startTime = lastQueue ? lastQueue.endsAt : queueCreateTime;
     const recruitTime = unit.amount * unitData[unit.type].recruitTime;
-    const endsAt = queueCreateTime + recruitTime;
+    const endsAt = startTime + recruitTime;
     unitsToQueue.push({
       unit: unit.type,
       amount: unit.amount,
@@ -169,6 +172,7 @@ function update(data) {
   this.log(`${this.username} attempting to update queue in ${data.town}`);
   getTown(this, data.town)
     .then(town => {
+      console.log('updatin town', town.dataValues);
       const time = Date.now();
       town.BuildingQueues = town.BuildingQueues.filter(item => time >= new Date(item.endsAt).getTime());
       town.UnitQueues = town.UnitQueues.filter(item => time >= new Date(item.endsAt).getTime());
