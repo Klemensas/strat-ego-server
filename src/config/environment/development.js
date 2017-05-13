@@ -11,8 +11,8 @@ exports = module.exports = {
         supportBigNumbers: true
       }
     },
-    main: 'postgres://ffe:test@127.0.0.1:5432/ffe',
-    world: 'postgres://ffe:test@127.0.0.1:5432/ffeWorld'
+    main: process.env.DB_MAIN || 'postgres://ffe:test@127.0.0.1:5432/ffe',
+    world: process.env.DB_WORLD || 'postgres://ffe:test@127.0.0.1:5432/ffeWorld'
   },
   seedDB: true
 };
