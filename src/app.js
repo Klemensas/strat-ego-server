@@ -33,7 +33,7 @@ routing(app);
 
 main.sequelize.sync()
   .then(() => world.sequelize.sync())
-  .then(() => (!config.seedDB ? seed() : readWorld('Megapolis')))
+  .then(() => (config.seedDB ? seed() : readWorld('Megapolis')))
   .then(() => mapData.initialize(world))
   .then(worldData => {
     Queue.init();
