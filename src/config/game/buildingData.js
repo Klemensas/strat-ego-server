@@ -1,27 +1,27 @@
 const buildingList = [
   {
     name: 'headquarters',
-    levels: 30,
+    levels: 15,
     min: 1,
     costs: {
       wood: {
         base: 90,
-        factor: 1.26,
+        factor: 1.56,
       },
       clay: {
         base: 80,
-        factor: 1.275,
+        factor: 1.575,
       },
       iron: {
         base: 70,
-        factor: 1.26,
+        factor: 1.56,
       },
     },
     baseTime: 20,
-    timeFactor: 1.2,
+    timeFactor: 1.4,
   }, {
     name: 'barracks',
-    levels: 25,
+    levels: 20,
     min: 0,
     costs: {
       wood: {
@@ -39,6 +39,12 @@ const buildingList = [
     },
     baseTime: 30,
     timeFactor: 1.2,
+    additional: {
+      recruitment: {
+        base: 1,
+        factor: 0.96,
+      }
+    },
     requirements: [{
       item: 'headquarters',
       level: 3,
@@ -143,8 +149,8 @@ const buildingList = [
     timeFactor: 1.2,
     additional: {
       defense: {
-        base: 0,
-        factor: 0,
+        base: 1.0,
+        factor: 1.04,
       },
     },
   }, {
@@ -199,6 +205,27 @@ const buildingList = [
         factor: 1.172103,
       },
     },
+  }, {
+    name: 'castle',
+    levels: 1,
+    min: 0,
+    costs: {
+      wood: {
+        base: 15000,
+      },
+      clay: {
+        base: 25000,
+      },
+      iron: {
+        base: 10000,
+      },
+    },
+    baseTime: 14400,
+    timeFactor: 1,
+    requirements: [{
+      item: 'headquarters',
+      level: 15,
+    }],
   },
 ];
 

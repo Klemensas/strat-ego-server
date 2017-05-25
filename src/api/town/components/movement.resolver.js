@@ -181,9 +181,10 @@ const resolveAttack = function attackResolver(movement, destinationTown) {
     archer: attackStrength.archer / attackStrength.total
   };
 
+  const wallBonus = destinationTown.getWallBonus();
   const [winner, losser] = combatTypes.reduce((sides, type) => {
     sides[0].strength += attackStrength[type] * attackTypePercentages[type];
-    sides[1].strength += defenseStrength[type] * attackTypePercentages[type];
+    sides[1].strength += defenseStrength[type] * attackTypePercentages[type] * wallBonus;
     return sides;
   }, [{ side: 'attack', strength: 0 }, { side: 'defense', strength: 0 }]).sort((a, b) => b.strength - a.strength);
 
@@ -202,10 +203,15 @@ const resolveReturn = function returnResolver(movement, destinationTown) {
   });
   console.log('town units', destinationTown.units)
   destinationTown.changed('units', true);
-  //  destinationTown.changed('resource', true);
-  destinationTown.resources.wood += movement.haul.wood;
-  destinationTown.resources.clay += movement.haul.clay;
-  destinationTown.resources.iron += movement.haul.iron;
+  const maxRes = destinationTown.getMaxRes();
+  const clay = destinationTown.resources.clay + movement.haul.clay;
+  const wood = destinationTown.resources.wood + movement.haul.wood;
+  const iron = destinationTown.resources.iron + movement.haul.iron;
+  destinationTown.resources = {
+    clay: Math.min(maxRes, clay),
+    wood: Math.min(maxRes, wood),
+    iron: Math.min(maxRes, iron),
+  };
 
   return world.sequelize.transaction(transaction =>
     movement.destroy({ transaction })

@@ -39,8 +39,29 @@ export default socket => Player.findOne({
     }, {
       model: Movement,
       as: 'MovementDestinationTown',
-      attributes: { exclude: ['createdAt', 'updatedAt', 'units'] }
-    }]
+      attributes: { exclude: ['createdAt', 'updatedAt', 'units'] },
+      include: [{
+        model: Town,
+        as: 'MovementOriginTown',
+        attributes: ['_id', 'name', 'location'],
+      }, {
+        model: Town,
+        as: 'MovementDestinationTown',
+        attributes: ['_id', 'name', 'location'],
+      }],
+    }, {
+      model: Movement,
+      as: 'MovementOriginTown',
+      include: [{
+        model: Town,
+        as: 'MovementOriginTown',
+        attributes: ['_id', 'name', 'location'],
+      }, {
+        model: Town,
+        as: 'MovementDestinationTown',
+        attributes: ['_id', 'name', 'location'],
+      }],
+    }],
   }, {
     model: Report,
     as: 'ReportDestinationPlayer',

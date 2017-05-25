@@ -12,7 +12,10 @@ export default (sequelize, DataTypes) => {
     },
     name: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
+      unique: {
+        msg: 'Specified username is already in use.'
+      },
     },
     email: {
       type: DataTypes.STRING,

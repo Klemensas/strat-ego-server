@@ -109,7 +109,7 @@ export default (sequelize, DataTypes) => {
         // Update res if not marked as changed
         console.log('res update', town.changed('resources'))
         if (!town.changed('resources')) {
-          town.resources = town.updateRes(town.updatedAt, town.previous('updatedAt'));
+          town.updateRes(town.updatedAt, town.previous('updatedAt'));
         }
         // Recalculate production if buildings updated
         if (town.changed('buildings')) {
@@ -147,11 +147,16 @@ export default (sequelize, DataTypes) => {
       // setting silent prevents updatedAt from updating even when doing so manually...
       updateRes(now, previous = this.updatedAt) {
         const timePast = (now - new Date(previous).getTime()) / 1000 / 60 / 60;
-        this.resources.clay += this.production.clay * timePast;
-        this.resources.wood += this.production.wood * timePast;
-        this.resources.iron += this.production.iron * timePast;
-
-        return this.resources;
+        const maxRes = this.getMaxRes();
+        const clay = this.resources.clay + this.production.clay * timePast;
+        const wood = this.resources.wood + this.production.wood * timePast;
+        const iron = this.resources.iron + this.production.iron * timePast;
+        this.resources = {
+          clay: Math.min(maxRes, clay),
+          wood: Math.min(maxRes, wood),
+          iron: Math.min(maxRes, iron),
+        };
+        return this;
       },
       calculateProduction() {
         const buildingData = worldData.buildingMap;
@@ -162,83 +167,83 @@ export default (sequelize, DataTypes) => {
         };
       },
       getLastQueue(queue) {
-        return this[queue].sort((a, b) => a.endsAt - b.endsAt)[0];
+        return this[queue].sort((a, b) => b.endsAt.getTime() - a.endsAt.getTime())[0];
+      },
+      checkBuildingRequirements(requirements) {
+        return requirements ?
+          requirements.every(({ item, level }) => this.buildings[item].level >= level) :
+          true;
+      },
+      getMaxRes() {
+        return worldData.buildingMap.storage.data[this.buildings.storage.level].storage;
+      },
+      getWallBonus() {
+        return worldData.buildingMap.wall.data[this.buildings.wall.level].defense
+      },
+      getRecruitmentModifier() {
+        return worldData.buildingMap.barracks.data[this.buildings.barracks.level].recruitment
+      },
+      getAvailablePopulation() {
+        const used = worldData.units.reduce((total, unit) => {
+          return total + Object.values(this.units[unit.name]).reduce((a, b) => a + b);
+        }, 0);
+        const total = worldData.buildingMap.farm.data[this.buildings.farm.level].population;
+        return total - used;
       },
       processQueues() {
-        // TODO: create a sorted ended event object and process it item by item to prevent weirdness
-        // const events = [
-        //   ...this.BuildingQueues.map(event => ({ ...event, eventType: 'building' })),
-        //   ...this.UnitQueues.map(event => ({ ...event, eventType: 'unit' })),
-        //   ...this.MovementDestinationTown.map(event => ({ ...event, eventType: 'movement' })),
-        // ];
-        // events.sort((a, b) => a.endsAt - b.endsAt);
-        // const doneBuildings = [];
-        // const doneUnits = [];
-        // const doneMovements = [];
-
-        // for (const event of events) {
-        //   switch (event.eventType) {
-        //     case 'building': {
-        //       const building = this.buildings[event.building];
-        //       building.level++;
-        //       if (building.queued === building.level) {
-        //         building.queued = 0;
-        //       }
-        //       doneBuildings.push(event._id);
-        //       break;
-        //     }
-        //     case 'unit': {
-        //       const unit = this.units[event.unit];
-        //       unit.inside += event.amount;
-        //       unit.queued -= event.amount;
-        //       doneUnits.push(event._id);
-        //       break;
-        //     }
-        //     case 'movement': {
-        //       await Town.resolveMovement(event, this);
-        //       doneMovements.push(event._id);
-        //     }
-        //   }
-        // }
-
-        this.doneBuildings = [];
-        this.doneUnits = [];
-        this.doneOriginMovements = [];
-        this.doneDestinationMovements = [];
+        const doneBuildings = [];
+        const doneUnits = [];
         this.BuildingQueues.forEach(queue => {
           const building = this.buildings[queue.building];
           building.level++;
           if (building.queued === building.level) {
             building.queued = 0;
           }
-          this.doneBuildings.push(queue._id);
+          doneBuildings.push(queue._id);
         });
         this.UnitQueues.forEach(queue => {
           const unit = this.units[queue.unit];
           unit.inside += queue.amount;
           unit.queued -= queue.amount;
-          this.doneUnits.push(queue._id);
+          doneUnits.push(queue._id);
         });
-        console.log('dest', this.MovementDestinationTown.length)
-        console.log('orgin', this.MovementOriginTown.length)
-        // this.MovementOriginTown.forEach(queue => {
-        // });
-        this.MovementDestinationTown.forEach(movement => {
-          Town.resolveMovement(movement, this);
-        });
-
+        return this.resolveAllMovements().then(town => {
         // trigger change manully, because sequalize can't detect it
-        if (this.doneBuildings.length) {
-          this.changed('buildings', true);
+          console.log('hmmz', town)
+          console.log('waawaw', town.changed)
+          if (doneBuildings.length) {
+            town.changed('buildings', true);
+          }
+          town.changed('units', true);
+          town.doneBuildings = doneBuildings;
+          town.doneUnits = doneUnits;
+          return town;
+        });
+      },
+      resolveAllMovements() {
+        if (this.MovementDestinationTown.length) {
+          const movement = this.MovementDestinationTown.shift();
+          return Town.resolveMovement(movement, this)
+            .then(() => Town.findById(this._id, { include: [{ all: true }] }))
+            .then(town => {
+              if (town.MovementDestinationTown.length) {
+                return town.resolveAllMovements();
+              }
+              return town;
+            });
+        } else if (this.MovementOriginTown.length) {
+          const movement = this.MovementOriginTown.shift();
+          return Town.findById(movement.MovementDestinationId)
+            .then(town => Town.resolveMovement(movement, town))
+            .then(() => Town.findById(this._id, { include: [{ all: true }] }))
+            .then(town => {
+              if (town.MovementOriginTown.length) {
+                return town.resolveAllMovements();
+              }
+              return town;
+            });
         }
-        if (this.doneUnits.length) {
-          this.changed('units', true);
-        }
-        if (this.doneOriginMovements.length) {
-          this.changed('units', true);
-        }
-
-        return this;
+        return Promise.resolve(this);
       }
     },
     classMethods: {
@@ -255,6 +260,7 @@ export default (sequelize, DataTypes) => {
             resolver = resolveSupport;
             break;
         }
+        console.log('hmmm', movement.type, movement.units, destinationTown)
         console.log('attempting to resolve', movement.type, movement.units, destinationTown.dataValues.units)
         return resolver(movement, destinationTown);
       },
@@ -272,7 +278,25 @@ export default (sequelize, DataTypes) => {
           const usedLocations = res.map(i => i.location.join(','));
           return allCoords.filter(c => !usedLocations.includes(c.join(',')));
         }),
-    }
+      offsetToCube: (coords) => {
+        const off = 1;
+        const x = coords[0] - Math.trunc((coords[1] + off * (coords[1] % 2)) / 2);
+        const z = coords[1];
+        return {
+          x, z,
+          y: -x - z
+        }
+      },
+      calculateDistance: (originCoords, targetCoords) => {
+      const origin = Town.offsetToCube(originCoords);
+      const target = Town.offsetToCube(targetCoords);
+        return Math.max(
+          Math.abs(origin.x - target.x),
+          Math.abs(origin.y - target.y),
+          Math.abs(origin.z - target.z)
+        );
+      },
+    },
   });
 
   return Town;

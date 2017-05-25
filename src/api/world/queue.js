@@ -15,7 +15,7 @@ class Queue {
       BuildingQueue.destroy({ where: { TownId: null } }),
       UnitQueue.destroy({ where: { TownId: null } })
     ])
-    .then(() => this.processQueue());
+    .catch(() => this.processQueue());
   }
 
   processQueue(targetTime) {
@@ -46,31 +46,26 @@ class Queue {
       }]
     })
     .then(towns => Promise.all(towns.map(town => this.processTown(town))))
-    .then(() => setTimeout(() => this.processQueue(time.getTime() + this.queueTick), this.queueTick))
-    .catch(err => console.log('Queue process error', err));
+    .catch(err => console.log('Queue process error', err))
+    .then(() => setTimeout(() => this.processQueue(time.getTime() + this.queueTick), this.queueTick));
   }
 
-  // non static due to being called from class instance
   processTown(town) {
-    console.log('town to process'/*, town.dataValues*/);
-    const procdTown = town.processQueues();
-
-    if (!procdTown.doneBuildings.length && !procdTown.doneUnits.length) {
-      return town;
-    }
-    return world.sequelize.transaction(transaction =>
-      BuildingQueue.destroy({
-        where: { _id: { $in: procdTown.doneBuildings } },
-        transaction
-      })
-      .then(() => UnitQueue.destroy({
-        where: { _id: { $in: procdTown.doneUnits } },
-        transaction
-      }))
-      .then(() => procdTown.save({ transaction }))
-    )
-    .then(updatedTown => updatedTown.notify({ type: 'update' }))
-    .catch(err => console.log('town process transaction error', err));
+    return town.processQueues().then(procdTown => {
+      return world.sequelize.transaction(transaction =>
+        BuildingQueue.destroy({
+          where: { _id: { $in: procdTown.doneBuildings } },
+          transaction
+        })
+        .then(() => UnitQueue.destroy({
+          where: { _id: { $in: procdTown.doneUnits } },
+          transaction
+        }))
+        .then(() => procdTown.save({ transaction }))
+      )
+      .then(updatedTown => updatedTown.notify({ type: 'update' }))
+      .catch(err => console.log('town process transaction error', err));
+    });
   }
 
 //   static processUnit(town, item) {

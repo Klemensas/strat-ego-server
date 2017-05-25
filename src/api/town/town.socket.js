@@ -18,33 +18,36 @@ function getTown(client, town) {
 }
 
 function tryBuilding(town, data) {
-  // check if building exists
   const target = town.buildings[data.building];
   if (target) {
     // Select next level latest queued or the current level;
     const level = target.queued || target.level;
-    const buildingData = worldData.buildingMap[data.building].data[level];
+    const targetBuilding = worldData.buildingMap[data.building];
+    const buildingData = targetBuilding.data[level];
 
-    // check if building has target level
-    // TODO: add and check requirements somewhere here
-    if (buildingData) {
-      town.resources.clay -= buildingData.costs.clay;
-      town.resources.wood -= buildingData.costs.wood;
-      town.resources.iron -= buildingData.costs.iron;
-      target.queued = level + 1;
-      // trigger buildings change manully, because sequalize can't detect it
-      town.changed('buildings', true);
-
-      return world.sequelize.transaction(transaction => {
-        return town.createBuildingQueue({
-          building: data.building,
-          buildTime: buildingData.buildTime,
-          endsAt: Date.now() + buildingData.buildTime,
-          level,
-        }, { transaction })
-          .then(() => town.save({ transaction }));
-      });
+    if (!town.checkBuildingRequirements(targetBuilding.requirements)) {
+      return Promise.reject('Requirements not met');
     }
+    if (!buildingData) {
+      return Promise.reject('Wrong building');
+    }
+
+    town.resources.clay -= buildingData.costs.clay;
+    town.resources.wood -= buildingData.costs.wood;
+    town.resources.iron -= buildingData.costs.iron;
+    target.queued = level + 1;
+    // trigger buildings change manully, because sequalize can't detect it
+    town.changed('buildings', true);
+
+    return world.sequelize.transaction(transaction => {
+      return town.createBuildingQueue({
+        building: data.building,
+        buildTime: buildingData.buildTime,
+        endsAt: Date.now() + buildingData.buildTime,
+        level,
+      }, { transaction })
+        .then(() => town.save({ transaction }));
+    });
   }
   // TODO: real error here
   return Promise.reject('target not found');
@@ -53,24 +56,30 @@ function tryBuilding(town, data) {
 function tryRecruiting(town, data) {
   const unitData = worldData.unitMap;
   const unitsToQueue = [];
-  const queueCreateTime = Date.now();
+  const queueCreateTime = new Date();
   const TownId = town._id;
+  const availablePopulation = town.getAvailablePopulation();
+  const recruitmentModifier = town.getRecruitmentModifier();
+  let usedPop = 0;
 
   for (const unit of data.units) {
-    if (!town.units.hasOwnProperty(unit.type)) {
+    const targetUnit = unitData[unit.type];
+    if (!town.units.hasOwnProperty(unit.type) || +unit.amount <= 0) {
       return Promise.reject('no such unit');
     }
-    // TODO: add unit requirement checking
-    town.resources.wood -= unitData[unit.type].costs.wood * unit.amount;
-    town.resources.clay -= unitData[unit.type].costs.clay * unit.amount;
-    town.resources.iron -= unitData[unit.type].costs.iron * unit.amount;
+    if (!town.checkBuildingRequirements(targetUnit.requirements)) {
+      return Promise.reject('requirements not met');
+    }
+    usedPop += unit.amount;
+    town.resources.wood -= targetUnit.costs.wood * unit.amount;
+    town.resources.clay -= targetUnit.costs.clay * unit.amount;
+    town.resources.iron -= targetUnit.costs.iron * unit.amount;
     town.units[unit.type].queued += unit.amount;
 
-    // TODO: test out changes
     const lastQueue = town.getLastQueue('UnitQueues');
     const startTime = lastQueue ? lastQueue.endsAt : queueCreateTime;
-    const recruitTime = unit.amount * unitData[unit.type].recruitTime;
-    const endsAt = startTime + recruitTime;
+    const recruitTime = unit.amount * targetUnit.recruitTime * recruitmentModifier;
+    const endsAt = startTime.getTime() + recruitTime;
     unitsToQueue.push({
       unit: unit.type,
       amount: unit.amount,
@@ -78,6 +87,10 @@ function tryRecruiting(town, data) {
       endsAt,
       TownId,
     });
+  }
+
+  if (usedPop > availablePopulation) {
+      return Promise.reject('Population limit exceeded');
   }
 
   town.changed('units', true);
@@ -93,31 +106,39 @@ function trySending(town, data) {
   const queueCreateTime = Date.now();
   let slowest = 0;
 
-  for (const unit of dataUnits) {
-    if (!town.units.hasOwnProperty(unit[0])) {
-      return Promise.reject('no such unit');
-    }
-    town.units[unit[0]].inside -= unit[1];
-    town.units[unit[0]].outside += unit[1];
-
-    slowest = Math.max(unitData[unit[0]].speed, slowest);
+  if (data.target === town._id) {
+    return Promise.reject('Can\'t attack your own town');
   }
 
-  town.changed('units', true);
-  return world.sequelize.transaction(transaction => {
-    // let queuedItem = null;
-    return town.createMovementOriginTown({
-      units: data.units,
-      type: data.type,
-      endsAt: queueCreateTime + slowest,
-      MovementDestinationId: data.target
-    }, { transaction })
-      .then(item => {
-        // queuedItem = item;
-        return town.save({ transaction });
-      });
-      // .then(() => queuedItem);
+  return world.Town.findById(data.target).then(targetTown => {
+    const distance = world.Town.calculateDistance(town.location, targetTown.location);
+
+    for (const unit of dataUnits) {
+      if (!town.units.hasOwnProperty(unit[0])) {
+        return Promise.reject('no such unit');
+      }
+      town.units[unit[0]].inside -= unit[1];
+      town.units[unit[0]].outside += unit[1];
+
+      slowest = Math.max(unitData[unit[0]].speed, slowest);
+    }
+
+    const movementTime = slowest * distance;
+    town.changed('units', true);
+    return world.sequelize.transaction(transaction => {
+      return town.createMovementOriginTown({
+        units: data.units,
+        type: data.type,
+        endsAt: queueCreateTime + movementTime,
+        MovementDestinationId: data.target
+      }, { transaction })
+        .then(item => {
+          return town.save({ transaction });
+        });
+    });
   });
+
+
 }
 
 function changeName(data) {
@@ -176,6 +197,8 @@ function update(data) {
       const time = Date.now();
       town.BuildingQueues = town.BuildingQueues.filter(item => time >= new Date(item.endsAt).getTime());
       town.UnitQueues = town.UnitQueues.filter(item => time >= new Date(item.endsAt).getTime());
+      town.MovementOriginTown = town.MovementOriginTown.filter(item => time >= new Date(item.endsAt).getTime());
+      town.MovementDestinationTown = town.MovementDestinationTown.filter(item => time >= new Date(item.endsAt).getTime());
       return town;
     })
     .then(town => Queue.processTown(town));

@@ -62,7 +62,7 @@ const unitList = [
     },
     requirements: [{
       item: 'barracks',
-      level: 5,
+      level: 4,
     }],
   }, {
     name: 'archer',
@@ -85,28 +85,30 @@ const unitList = [
     },
     requirements: [{
       item: 'barracks',
-      level: 10,
+      level: 6,
     }],
-  }, {
-    name: 'scout',
-    costs: {
-      wood: 50,
-      clay: 50,
-      iron: 20,
-    },
-    attackType: 'cavalry',
-    speed: 540,
-    recruitTime: 900,
-    haul: 0,
-    combat: {
-      attack: 0,
-      defense: {
-        general: 2,
-        cavalry: 1,
-        archer: 2,
-      },
-    },
-  }, {
+  },
+  // {
+  //   name: 'scout',
+  //   costs: {
+  //     wood: 50,
+  //     clay: 50,
+  //     iron: 20,
+  //   },
+  //   attackType: 'cavalry',
+  //   speed: 540,
+  //   recruitTime: 900,
+  //   haul: 0,
+  //   combat: {
+  //     attack: 0,
+  //     defense: {
+  //       general: 2,
+  //       cavalry: 1,
+  //       archer: 2,
+  //     },
+  //   },
+  // },
+  {
     name: 'lightCavalry',
     costs: {
       wood: 125,
@@ -125,6 +127,10 @@ const unitList = [
         archer: 30,
       },
     },
+    requirements: [{
+      item: 'barracks',
+      level: 10,
+    }],
   }, {
     name: 'mountedArcher',
     costs: {
@@ -144,6 +150,10 @@ const unitList = [
         archer: 50,
       },
     },
+    requirements: [{
+      item: 'barracks',
+      level: 10,
+    }],
   }, {
     name: 'heavyCavalry',
     costs: {
@@ -163,6 +173,10 @@ const unitList = [
         archer: 180,
       },
     },
+    requirements: [{
+      item: 'barracks',
+      level: 15,
+    }],
   }, {
     name: 'trebuchet',
     costs: {
@@ -175,13 +189,17 @@ const unitList = [
     recruitTime: 4800,
     haul: 0,
     combat: {
-      attack: 2,
+      attack: 200,
       defense: {
         general: 20,
         cavalry: 50,
         archer: 20,
       },
     },
+    requirements: [{
+      item: 'barracks',
+      level: 15,
+    }],
   // }, {
   //   name: 'catapult',
   //   costs: {
@@ -220,6 +238,10 @@ const unitList = [
         archer: 100,
       },
     },
+    requirements: [{
+      item: 'castle',
+      level: 1,
+    }],
   }, {
     name: 'commander',
     costs: {
@@ -232,13 +254,17 @@ const unitList = [
     recruitTime: 18000,
     haul: 100,
     combat: {
-      attack: 1000,
+      attack: 200,
       defense: {
         general: 100,
         cavalry: 100,
         archer: 100,
       },
     },
+    requirements: [{
+      item: 'barracks',
+      level: 20,
+    }],
   },
 ];
 export default (speed = 1, units = unitList) => units.map(unit => {
