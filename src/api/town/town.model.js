@@ -178,7 +178,7 @@ export default (sequelize, DataTypes) => {
         return worldData.buildingMap.storage.data[this.buildings.storage.level].storage;
       },
       getWallBonus() {
-        return worldData.buildingMap.wall.data[this.buildings.wall.level].defense
+        return worldData.buildingMap.wall.data[this.buildings.wall.level].defense || 1;
       },
       getRecruitmentModifier() {
         return worldData.buildingMap.barracks.data[this.buildings.barracks.level].recruitment

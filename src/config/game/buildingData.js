@@ -149,7 +149,7 @@ const buildingList = [
     timeFactor: 1.2,
     additional: {
       defense: {
-        base: 1.0,
+        base: 1.04,
         factor: 1.04,
       },
     },
@@ -248,12 +248,17 @@ export default (speed = 1, buildings = buildingList) => buildings.map(building =
     };
     if (building.additional) {
       Object.entries(building.additional).forEach(([key, value]) => {
-        const base = key === 'production' ? value.base * speed : value.base;
         const factor = i ? value.factor ** (i - 1) : 0;
-        data[key] = Math.ceil(base * factor);
+        let base = value.base;
+        data[key] = +(base * factor).toPrecision(3);
+        if (key === 'production') {
+          base *= speed;
+          data[key] = Math.ceil(data[key]);
+        }
       });
     }
     item.data.push(data);
   }
   return item;
 });
+1
