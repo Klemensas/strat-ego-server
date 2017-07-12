@@ -1,5 +1,5 @@
-import express from 'express';
-import passport from 'passport';
+import * as express from 'express';
+import * as passport from 'passport';
 import { signToken } from '../auth.service';
 
 const router = express.Router();

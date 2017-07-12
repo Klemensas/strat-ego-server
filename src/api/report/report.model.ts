@@ -1,11 +1,11 @@
-import { io } from '../../app';
+import { io } from '../../';
 
 export default (sequelize, DataTypes) => sequelize.define('Report', {
   _id: {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,
-    autoIncrement: true
+    autoIncrement: true,
   },
   outcome: {
     type: DataTypes.STRING,
@@ -20,16 +20,15 @@ export default (sequelize, DataTypes) => sequelize.define('Report', {
     allowNull: false,
   },
   haul: {
-    type: DataTypes.JSON
+    type: DataTypes.JSON,
   },
 }, {
   hooks: {
-    afterCreate: report => {
+    afterCreate: (report) => {
       io.sockets.in(report.ReportOriginTownId).emit('report', report);
       if (report.ReportDestinationPlayerId) {
         io.sockets.in(report.ReportDestinationTownId).emit('report', report);
       }
     },
-  }
+  },
 });
-

@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 const authTypes = ['github.', 'twitter', 'facebook', 'google'];
 
@@ -8,40 +8,40 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false,
       primaryKey: true,
-      autoIncrement: true
+      autoIncrement: true,
     },
     name: {
       type: DataTypes.STRING,
       allowNull: false,
       unique: {
-        msg: 'Specified username is already in use.'
+        msg: 'Specified username is already in use.',
       },
     },
     email: {
       type: DataTypes.STRING,
       unique: {
-        msg: 'The specified email address is already in use.'
+        msg: 'The specified email address is already in use.',
       },
       validate: {
-        isEmail: true
-      }
+        isEmail: true,
+      },
     },
     role: {
       type: DataTypes.STRING,
-      defaultValue: 'user'
+      defaultValue: 'user',
     },
     password: {
       type: DataTypes.STRING,
       validate: {
-        notEmpty: true
-      }
+        notEmpty: true,
+      },
     },
     provider: DataTypes.STRING,
     salt: DataTypes.STRING,
     facebook: DataTypes.JSON,
     twitter: DataTypes.JSON,
     google: DataTypes.JSON,
-    github: DataTypes.JSON
+    github: DataTypes.JSON,
 
   }, {
     // Virtual Getters
@@ -54,7 +54,7 @@ export default (sequelize, DataTypes) => {
       // Non-sensitive info we'll be putting in the token
       token: function tokenData() {
         return { _id: this._id, role: this.role };
-      }
+      },
     },
 
     /**
@@ -63,8 +63,8 @@ export default (sequelize, DataTypes) => {
     hooks: {
       beforeBulkCreate: (users, fields, fn) => {
         let totalUpdated = 0;
-        users.forEach(user => {
-          user.updatePassword(err => {
+        users.forEach((user) => {
+          user.updatePassword((err) => {
             if (err) {
               return fn(err);
             }
@@ -83,7 +83,7 @@ export default (sequelize, DataTypes) => {
           return user.updatePassword(fn);
         }
         fn();
-      }
+      },
     },
 
     /**
@@ -98,21 +98,19 @@ export default (sequelize, DataTypes) => {
        * @return {Boolean}
        * @api public
        */
-      authenticate: function(password, callback) {
+      authenticate(password, callback) {
         if (!callback) {
           return this.password === this.encryptPassword(password);
         }
 
-        var _this = this;
-        this.encryptPassword(password, function(err, pwdGen) {
+        this.encryptPassword(password, (err, pwdGen) => {
           if (err) {
             callback(err);
           }
 
-          if (_this.password === pwdGen) {
+          if (this.password === pwdGen) {
             callback(null, true);
-          }
-          else {
+          } else {
             callback(null, false);
           }
         });
@@ -126,14 +124,13 @@ export default (sequelize, DataTypes) => {
        * @return {String}
        * @api public
        */
-      makeSalt: function(byteSize, callback) {
-        var defaultByteSize = 16;
+      makeSalt(byteSize, callback) {
+        const defaultByteSize = 16;
 
         if (typeof arguments[0] === 'function') {
           callback = arguments[0];
           byteSize = defaultByteSize;
-        }
-        else if (typeof arguments[1] === 'function') {
+        } else if (typeof arguments[1] === 'function') {
           callback = arguments[1];
         }
 
@@ -145,7 +142,7 @@ export default (sequelize, DataTypes) => {
           return crypto.randomBytes(byteSize).toString('base64');
         }
 
-        return crypto.randomBytes(byteSize, function(err, salt) {
+        return crypto.randomBytes(byteSize, (err, salt) => {
           if (err) {
             callback(err);
           }
@@ -161,7 +158,7 @@ export default (sequelize, DataTypes) => {
        * @return {String}
        * @api public
        */
-      encryptPassword: function(password, callback) {
+      encryptPassword(password, callback) {
         if (!password || !this.salt) {
           if (!callback) {
             return null;
@@ -169,23 +166,22 @@ export default (sequelize, DataTypes) => {
           return callback(null);
         }
 
-        var defaultIterations = 10000;
-        var defaultKeyLength = 64;
-        var defaultDigest = 'sha256';
-        var salt = new Buffer(this.salt, 'base64');
+        const defaultIterations = 10000;
+        const defaultKeyLength = 64;
+        const defaultDigest = 'sha256';
+        const salt = new Buffer(this.salt, 'base64');
 
         if (!callback) {
           return crypto.pbkdf2Sync(password, salt, defaultIterations, defaultKeyLength, defaultDigest)
                        .toString('base64');
         }
 
-        return crypto.pbkdf2(password, salt, defaultIterations, defaultKeyLength, defaultDigest,
-          function(err, key) {
-            if (err) {
-              callback(err);
-            }
-            return callback(null, key.toString('base64'));
-          });
+        return crypto.pbkdf2(password, salt, defaultIterations, defaultKeyLength, defaultDigest, (err, key) => {
+          if (err) {
+            callback(err);
+          }
+          return callback(null, key.toString('base64'));
+        });
       },
 
       /**
@@ -195,7 +191,7 @@ export default (sequelize, DataTypes) => {
        * @return {String}
        * @api public
        */
-      updatePassword: function(fn) {
+      updatePassword(fn) {
         // Handle new/update passwords
         if (this.password) {
           if ((!this.password || !this.password.length) && authTypes.indexOf(this.provider) === -1) {
@@ -203,25 +199,24 @@ export default (sequelize, DataTypes) => {
           }
 
           // Make salt with a callback
-          var _this = this;
-          this.makeSalt(function(saltErr, salt) {
+          this.makeSalt((saltErr, salt) => {
             if (saltErr) {
               fn(saltErr);
             }
-            _this.salt = salt;
-            _this.encryptPassword(_this.password, function(encryptErr, hashedPassword) {
+            this.salt = salt;
+            this.encryptPassword(this.password, (encryptErr, hashedPassword) => {
               if (encryptErr) {
                 fn(encryptErr);
               }
-              _this.password = hashedPassword;
+              this.password = hashedPassword;
               fn(null);
             });
           });
         } else {
           fn(null);
         }
-      }
-    }
+      },
+    },
   });
 
   return User;

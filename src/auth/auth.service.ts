@@ -1,6 +1,6 @@
-import jwt from 'jsonwebtoken';
-import expressJwt from 'express-jwt';
-import compose from 'composable-middleware';
+import * as jwt from 'jsonwebtoken';
+import * as expressJwt from 'express-jwt';
+import * as compose from 'composable-middleware';
 import config from '../config/environment';
 import { main } from '../sqldb';
 
@@ -30,14 +30,14 @@ export function isAuthenticated() {
           model: UserWorlds,
         }],
       })
-        .then(user => {
+        .then((user) => {
           if (!user) {
             return res.status(401).end();
           }
           req.user = user;
           return next();
         })
-        .catch(err => next(err));
+        .catch((err) => next(err));
     });
 }
 

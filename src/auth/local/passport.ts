@@ -1,4 +1,4 @@
-import passport from 'passport';
+import * as passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
 
 function localAuthenticate(User, email, password, done) {
@@ -7,7 +7,7 @@ function localAuthenticate(User, email, password, done) {
       email: email.toLowerCase(),
     },
   })
-    .then(user => {
+    .then((user) => {
       if (!user) {
         return done(null, false, {
           message: 'This email is not registered.',
@@ -23,7 +23,7 @@ function localAuthenticate(User, email, password, done) {
         return done(null, user);
       });
     })
-    .catch(err => {
+    .catch((err) => {
       console.log('error', err);
       return done(err);
     });

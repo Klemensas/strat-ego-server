@@ -1,4 +1,4 @@
-import express from 'express';
+import * as express from 'express';
 // import passport from 'passport';
 import config from '../config/environment';
 import { main } from '../sqldb';

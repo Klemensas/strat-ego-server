@@ -1,16 +1,16 @@
-import worldData from '../../components/worlds';
+import WorldData from '../../components/world';
 import { world } from '../../sqldb';
 import Queue from '../world/queue';
 
 function joinTownRoom(socket) {
   if (socket.player && socket.player.Towns.length) {
-    socket.player.Towns.forEach(town => socket.join(town._id));
+    socket.player.Towns.forEach((town) => socket.join(town._id));
     socket.log(`${socket.username} joined town rooms`);
   }
 }
 
 function getTown(client, town) {
-  const targetTown = client.player.Towns.find(t => town === t._id);
+  const targetTown = client.player.Towns.find((t) => town === t._id);
   if (targetTown) {
     return targetTown.reload({ include: [{ all: true }] });
   }
@@ -22,7 +22,7 @@ function tryBuilding(town, data) {
   if (target) {
     // Select next level latest queued or the current level;
     const level = target.queued || target.level;
-    const targetBuilding = worldData.buildingMap[data.building];
+    const targetBuilding = WorldData.buildingMap[data.building];
     const buildingData = targetBuilding.data[level];
 
     if (!town.checkBuildingRequirements(targetBuilding.requirements)) {
@@ -39,7 +39,7 @@ function tryBuilding(town, data) {
     // trigger buildings change manully, because sequalize can't detect it
     town.changed('buildings', true);
 
-    return world.sequelize.transaction(transaction => {
+    return world.sequelize.transaction((transaction) => {
       return town.createBuildingQueue({
         building: data.building,
         buildTime: buildingData.buildTime,
@@ -54,7 +54,7 @@ function tryBuilding(town, data) {
 }
 
 function tryRecruiting(town, data) {
-  const unitData = worldData.unitMap;
+  const unitData = WorldData.unitMap;
   const unitsToQueue = [];
   const queueCreateTime = new Date();
   const TownId = town._id;
@@ -94,14 +94,14 @@ function tryRecruiting(town, data) {
   }
 
   town.changed('units', true);
-  return world.sequelize.transaction(transaction => {
+  return world.sequelize.transaction((transaction) => {
     return world.UnitQueue.bulkCreate(unitsToQueue, { transaction })
       .then(() => town.save({ transaction }));
   });
 }
 
 function trySending(town, data) {
-  const unitData = worldData.unitMap;
+  const unitData = WorldData.unitMap;
   const dataUnits = Object.entries(data.units);
   const queueCreateTime = Date.now();
   let slowest = 0;
@@ -110,7 +110,7 @@ function trySending(town, data) {
     return Promise.reject('Can\'t attack your own town');
   }
 
-  return world.Town.findById(data.target).then(targetTown => {
+  return world.Town.findById(data.target).then((targetTown) => {
     const distance = world.Town.calculateDistance(town.location, targetTown.location);
 
     for (const unit of dataUnits) {
@@ -125,20 +125,18 @@ function trySending(town, data) {
 
     const movementTime = slowest * distance;
     town.changed('units', true);
-    return world.sequelize.transaction(transaction => {
+    return world.sequelize.transaction((transaction) => {
       return town.createMovementOriginTown({
         units: data.units,
         type: data.type,
         endsAt: queueCreateTime + movementTime,
-        MovementDestinationId: data.target
+        MovementDestinationId: data.target,
       }, { transaction })
-        .then(item => {
+        .then((item) => {
           return town.save({ transaction });
         });
     });
   });
-
-
 }
 
 function changeName(data) {
@@ -148,12 +146,12 @@ function changeName(data) {
   }
   this.log(`${this.username} attempting to change town name to ${data.name} in ${data.town}`);
   getTown(this, data.town)
-    .then(town => {
+    .then((town) => {
       town.name = data.name;
       return town.save();
     })
-    .then(town => town.notify({ type: 'name' }))
-    .catch(err => {
+    .then((town) => town.notify({ type: 'name' }))
+    .catch((err) => {
       console.log('SOCKET, CHANGE NAME FAIL', err);
     });
 }
@@ -165,9 +163,9 @@ function build(data) {
   }
   this.log(`${this.username} attempting to build ${data.building} in ${data.town}`);
   getTown(this, data.town)
-    .then(town => tryBuilding(town, data))
-    .then(town => town.notify({ type: 'build' }))
-    .catch(error => {
+    .then((town) => tryBuilding(town, data))
+    .then((town) => town.notify({ type: 'build' }))
+    .catch((error) => {
       console.log('SOCKET BUILD ERROR', error);
     });
 }
@@ -178,9 +176,9 @@ function recruit(data) {
   }
   this.log(`${this.username} attempting to recruit ${data.units} in ${data.town}`);
   getTown(this, data.town)
-    .then(town => tryRecruiting(town, data))
-    .then(town => town.notify({ type: 'recruit' }))
-    .catch(err => {
+    .then((town) => tryRecruiting(town, data))
+    .then((town) => town.notify({ type: 'recruit' }))
+    .catch((err) => {
       console.log('SOCKET RECRUIT ERROR', err);
     });
 }
@@ -192,16 +190,18 @@ function update(data) {
   // TODO: use town method instead of queue?
   this.log(`${this.username} attempting to update queue in ${data.town}`);
   getTown(this, data.town)
-    .then(town => {
+    .then((town) => {
       console.log('updatin town', town.dataValues);
       const time = Date.now();
-      town.BuildingQueues = town.BuildingQueues.filter(item => time >= new Date(item.endsAt).getTime());
-      town.UnitQueues = town.UnitQueues.filter(item => time >= new Date(item.endsAt).getTime());
-      town.MovementOriginTown = town.MovementOriginTown.filter(item => time >= new Date(item.endsAt).getTime());
-      town.MovementDestinationTown = town.MovementDestinationTown.filter(item => time >= new Date(item.endsAt).getTime());
+      town.BuildingQueues = town.BuildingQueues.filter((item) => time >= new Date(item.endsAt).getTime());
+      town.UnitQueues = town.UnitQueues.filter((item) => time >= new Date(item.endsAt).getTime());
+      town.MovementOriginTown = town.MovementOriginTown.filter((item) =>
+        time >= new Date(item.endsAt).getTime());
+      town.MovementDestinationTown = town.MovementDestinationTown.filter((item) =>
+        time >= new Date(item.endsAt).getTime());
       return town;
     })
-    .then(town => Queue.processTown(town));
+    .then((town) => Queue.processTown(town));
 }
 
 function troopMovement(data) {
@@ -211,12 +211,12 @@ function troopMovement(data) {
   }
 
   getTown(this, data.town)
-    .then(town => trySending(town, data))
-    .then(town => town.notify({ type: 'movement' }))
-    .catch(error => console.log('SOCKET MOVE ERROR', error));
+    .then((town) => trySending(town, data))
+    .then((town) => town.notify({ type: 'movement' }))
+    .catch((error) => console.log('SOCKET MOVE ERROR', error));
 }
 
-export default socket => {
+export default (socket) => {
   joinTownRoom(socket);
 
   socket.on('town:name', changeName);
@@ -226,4 +226,3 @@ export default socket => {
   socket.on('town:moveTroops', troopMovement);
   return socket;
 };
-// 

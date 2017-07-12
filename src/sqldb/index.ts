@@ -1,7 +1,28 @@
 import Sequelize from 'sequelize';
 import config from '../config/environment';
 
-const db = {
+interface Db {
+  Sequelize: Sequelize;
+  main: {
+    sequelize: any,
+    User?: any,
+    World?: any,
+    UserWorlds?: any,
+  };
+  world: {
+    sequelize: any,
+    Building?: any,
+    Unit?: any,
+    Player?: any,
+    Town?: any,
+    Movement?: any,
+    BuildingQueue?: any,
+    UnitQueue?: any,
+    Report?: any,
+  };
+}
+
+const db: Db = {
   Sequelize,
   main: { sequelize: new Sequelize(config.sequelize.main, config.sequelize.options) },
   world: { sequelize: new Sequelize(config.sequelize.world, config.sequelize.options) },
@@ -38,53 +59,53 @@ db.world.Town.belongsTo(db.world.Player);
 
 db.world.Town.hasMany(db.world.Movement, {
   as: 'MovementOriginTown',
-  foreignKey: 'MovementOriginId'
+  foreignKey: 'MovementOriginId',
 });
 db.world.Town.hasMany(db.world.Movement, {
   as: 'MovementDestinationTown',
-  foreignKey: 'MovementDestinationId'
+  foreignKey: 'MovementDestinationId',
 });
 db.world.Movement.belongsTo(db.world.Town, {
   as: 'MovementOriginTown',
-  foreignKey: 'MovementOriginId'
+  foreignKey: 'MovementOriginId',
 });
 db.world.Movement.belongsTo(db.world.Town, {
   as: 'MovementDestinationTown',
-  foreignKey: 'MovementDestinationId'
+  foreignKey: 'MovementDestinationId',
 });
 
 db.world.Town.hasMany(db.world.Report, {
   as: 'ReportOriginTown',
-  foreignKey: 'ReportOriginTownId'
+  foreignKey: 'ReportOriginTownId',
 });
 db.world.Town.hasMany(db.world.Report, {
   as: 'ReportDestinationTown',
-  foreignKey: 'ReportDestinationTownId'
+  foreignKey: 'ReportDestinationTownId',
 });
 db.world.Report.belongsTo(db.world.Town, {
   as: 'ReportOriginTown',
-  foreignKey: 'ReportOriginTownId'
+  foreignKey: 'ReportOriginTownId',
 });
 db.world.Report.belongsTo(db.world.Town, {
   as: 'ReportDestinationTown',
-  foreignKey: 'ReportDestinationTownId'
+  foreignKey: 'ReportDestinationTownId',
 });
 
 db.world.Player.hasMany(db.world.Report, {
   as: 'ReportOriginPlayer',
-  foreignKey: 'ReportOriginPlayerId'
+  foreignKey: 'ReportOriginPlayerId',
 });
 db.world.Player.hasMany(db.world.Report, {
   as: 'ReportDestinationPlayer',
-  foreignKey: 'ReportDestinationPlayerId'
+  foreignKey: 'ReportDestinationPlayerId',
 });
 db.world.Report.belongsTo(db.world.Player, {
   as: 'ReportOriginPlayer',
-  foreignKey: 'ReportOriginPlayerId'
+  foreignKey: 'ReportOriginPlayerId',
 });
 db.world.Report.belongsTo(db.world.Player, {
   as: 'ReportDestinationPlayer',
-  foreignKey: 'ReportDestinationPlayerId'
+  foreignKey: 'ReportDestinationPlayerId',
 });
 
 db.world.Town.hasMany(db.world.UnitQueue);

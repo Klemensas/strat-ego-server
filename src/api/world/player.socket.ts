@@ -1,5 +1,5 @@
 import { world, main } from '../../sqldb';
-import * as map from '../../components/map';
+import MapManager from '../../components/map';
 
 const UserWorlds = main.UserWorlds;
 const Player = world.Player;
@@ -9,8 +9,8 @@ const Report = world.Report;
 
 function createPlayer(socket) {
   socket.log(`creating player for ${socket.username}, on ${socket.world}`);
-  return map.chooseLocation(socket.world)
-    .then(location => Player.create({
+  return MapManager.chooseLocation()
+    .then((location) => Player.create({
       name: socket.username,
       UserId: socket.userId,
       Towns: [{
@@ -20,7 +20,7 @@ function createPlayer(socket) {
     }, {
       include: [{ all: true }],
     }))
-    .then(newPlayer => {
+    .then((newPlayer) => {
       return UserWorlds.create({
         UserId: socket.userId,
         World: socket.world,
@@ -30,12 +30,12 @@ function createPlayer(socket) {
     });
 }
 
-export default socket => Player.findOne({
+export default (socket) => Player.findOne({
   where: { UserId: socket.userId },
   include: [{
     model: Town,
     include: [{
-      all: true
+      all: true,
     }, {
       model: Movement,
       as: 'MovementDestinationTown',
@@ -86,9 +86,9 @@ export default socket => Player.findOne({
       as: 'ReportDestinationTown',
       attributes: ['_id', 'name', 'location'],
     }],
-  }]
+  }],
 })
-  .then(player => {
+  .then((player) => {
     if (!player) {
       return createPlayer(socket);
     }
@@ -100,7 +100,7 @@ export default socket => Player.findOne({
     return player;
   })
   // .then(createPlayer(socket))
-  .then(player => {
+  .then((player) => {
     socket.player = player;
     socket.emit('player', player);
     return socket;

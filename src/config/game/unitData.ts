@@ -1,4 +1,29 @@
-const unitList = [
+interface IUnit {
+  name: string;
+  costs: {
+    wood: number;
+    clay: number;
+    iron: number;
+  };
+  attackType: string;
+  speed: number;
+  recruitTime: number;
+  haul: number;
+  combat: {
+    attack: number;
+    defense: {
+      general: number;
+      cavalry: number;
+      archer: number;
+    }
+  };
+  requirements?: [{
+    item: string;
+    level: number;
+  }];
+}
+
+const unitList: IUnit[] = [
   {
     name: 'axe',
     costs: {
@@ -267,7 +292,7 @@ const unitList = [
     }],
   },
 ];
-export default (speed = 1, units = unitList) => units.map(unit => {
+export default (speed = 1, units = unitList) => units.map((unit) => {
   unit.speed /= speed / 1000;
   unit.recruitTime /= speed / 1000;
   return unit;

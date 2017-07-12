@@ -1,6 +1,6 @@
-import socketJwt from 'socketio-jwt';
+import * as socketJwt from 'socketio-jwt';
 import config from './environment';
-import worldData from '../components/worlds';
+import WorldData from '../components/world';
 import initializePlayerSocket from '../api/world/player.socket';
 import initializeTownSocket from '../api/town/town.socket';
 import initializeMapSocket from '../api/map/map.socket';
@@ -8,7 +8,7 @@ import initializeMapSocket from '../api/map/map.socket';
 function onConnect(client) {
   client.log(`${client.username} connected`);
   // Disconnect client if sent world not found
-  if (worldData.config.name === client.world) {
+  if (WorldData.world.name === client.world) {
     client.log(`${client.username} disconnect, dattempted world: ${client.world}`);
     client.disconnect();
     return;
@@ -17,7 +17,7 @@ function onConnect(client) {
   initializePlayerSocket(client)
     .then(initializeTownSocket)
     .then(initializeMapSocket)
-    .catch(error => {
+    .catch((error) => {
       console.log('SOCKET ON CONNECT ERROR', error);
     });
 }
@@ -25,12 +25,12 @@ function onDisconnect(client) {
   client.log(`${client.username} disconnected`);
 }
 
-export default socketio => {
+export default (socketio) => {
   socketio.use(socketJwt.authorize({
     secret: config.secrets.session,
     handshake: true,
   }));
-  socketio.on('connection', client => {
+  socketio.on('connection', (client) => {
     client.address = `${client.request.connection.remoteAddress}:${client.request.connection.remotePort}`;
     client.connectedAt = new Date();
     client.world = client.handshake.query.world;

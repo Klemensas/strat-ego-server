@@ -1,4 +1,27 @@
-const buildingList = [
+interface IBuilding {
+  name: string;
+  levels: number;
+  min: number;
+  costs: {
+    wood: { base: number; factor?: number; };
+    clay: { base: number; factor?: number; };
+    iron: { base: number; factor?: number; };
+  };
+  baseTime: number;
+  timeFactor: number;
+  additional?: {
+    [key: string]: {
+      base: number;
+      factor: number;
+    };
+  };
+  requirements?: [{
+    item: string;
+    level: number;
+  }];
+}
+
+const buildingList: IBuilding[] = [
   {
     name: 'headquarters',
     levels: 15,
@@ -43,7 +66,7 @@ const buildingList = [
       recruitment: {
         base: 1,
         factor: 0.96,
-      }
+      },
     },
     requirements: [{
       item: 'headquarters',
@@ -229,7 +252,7 @@ const buildingList = [
   },
 ];
 
-export default (speed = 1, buildings = buildingList) => buildings.map(building => {
+export default (speed = 1, buildings = buildingList) => buildings.map((building) => {
   const item = {
     name: building.name,
     levels: { max: building.levels, min: building.min },
@@ -261,4 +284,3 @@ export default (speed = 1, buildings = buildingList) => buildings.map(building =
   }
   return item;
 });
-1

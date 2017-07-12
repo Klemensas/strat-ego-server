@@ -5,13 +5,13 @@ const User = main.User;
 const UserWorlds = main.UserWorlds;
 
 function validationError(res, statusCode = 422) {
-  return err => {
+  return (err) => {
     res.status(statusCode).json(err);
   };
 }
 
 function handleError(res, statusCode = 500) {
-  return err => {
+  return (err) => {
     res.status(statusCode).send(err);
   };
 }
@@ -22,7 +22,7 @@ function handleError(res, statusCode = 500) {
  */
 export function index(req, res) {
   return User.find({}, '-salt -password')
-    .then(users => {
+    .then((users) => {
       res.status(200).json(users);
     })
     .catch(handleError(res));
@@ -37,7 +37,7 @@ export function create(req, res) {
   newUser.provider = 'local';
   newUser.role = 'user';
   User.create(newUser)
-    .then(user => {
+    .then((user) => {
       res.json({ token: signToken(user) });
     })
     .catch(validationError(res));
@@ -50,14 +50,14 @@ export function show(req, res, next) {
   const userId = req.params.id;
 
   return User.findById(userId).exec()
-    .then(user => {
+    .then((user) => {
       if (!user) {
         res.status(404).end();
         return;
       }
       res.json(user.profile);
     })
-    .catch(err => next(err));
+    .catch((err) => next(err));
 }
 
 /**
@@ -82,7 +82,7 @@ export function changePassword(req, res) {
   const newPass = String(req.body.newPassword);
 
   return User.findById(userId).exec()
-    .then(user => {
+    .then((user) => {
       if (user.authenticate(oldPass)) {
         user.password = newPass;
         return user.save()
@@ -109,11 +109,11 @@ export function me(req, res, next) {
   })
   // , '-salt -password').populate('gameData.towns').exec()
     // .then(user => user.getWorlds())
-    .then(user => { // don't ever give out the password or salt
+    .then((user) => { // don't ever give out the password or salt
       if (!user) {
         return res.status(401).end();
       }
       return res.json(user);
     })
-    .catch(err => next(err));
+    .catch((err) => next(err));
 }
