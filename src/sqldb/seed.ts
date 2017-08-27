@@ -2,6 +2,7 @@ import { main, world } from './index';
 import buildingData from '../config/game/buildingData';
 import unitData from '../config/game/unitData';
 import MapManager from '../components/map';
+import WorldData from '../components/world';
 
 export default () => {
   const User = main.User;
@@ -75,6 +76,7 @@ export default () => {
     Building.bulkCreate(buildingData(worldData.speed)),
     Unit.bulkCreate(unitData(worldData.speed)),
   ]))
+  .then(() => WorldData.readWorld('Megapolis'))
   .then(() => Town.bulkCreate(seedTowns(
     MapManager.getCoordsInRange(
       townGenerationData.area,

@@ -44,7 +44,7 @@ routing(app);
 
 main.sequelize.sync()
   .then(() => world.sequelize.sync())
-  .then(() => (config.seedDB ? seedWorld : null))
+  .then(() => (config.seedDB ? seedWorld() : null))
   .then(() => WorldData.readWorld('Megapolis'))
   .then(() => initSocket(io));
 
