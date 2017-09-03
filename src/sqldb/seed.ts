@@ -84,6 +84,8 @@ export default () => {
       townGenerationData.size,
     ),
     townGenerationData.percent)))
+  .then(() => Town.findAll({ include: [{ all: true }] }))
+  .then((towns) => MapManager.addTown(...towns))
   .then(() => console.log('Seeding done.'))
   .catch((error) => console.log('Seeding error', error));
 };

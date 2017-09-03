@@ -30,67 +30,71 @@ function createPlayer(socket) {
     });
 }
 
-export default (socket) => Player.findOne({
-  where: { UserId: socket.userId },
-  include: [{
-    model: Town,
+function getPlayer(socket) {
+  return Player.findOne({
+    where: { UserId: socket.userId },
     include: [{
-      all: true,
+      model: Town,
+      include: [{
+        all: true,
+      }, {
+        model: Movement,
+        as: 'MovementDestinationTown',
+        attributes: { exclude: ['createdAt', 'updatedAt', 'units'] },
+        include: [{
+          model: Town,
+          as: 'MovementOriginTown',
+          attributes: ['_id', 'name', 'location'],
+        }, {
+          model: Town,
+          as: 'MovementDestinationTown',
+          attributes: ['_id', 'name', 'location'],
+        }],
+      }, {
+        model: Movement,
+        as: 'MovementOriginTown',
+        include: [{
+          model: Town,
+          as: 'MovementOriginTown',
+          attributes: ['_id', 'name', 'location'],
+        }, {
+          model: Town,
+          as: 'MovementDestinationTown',
+          attributes: ['_id', 'name', 'location'],
+        }],
+      }],
     }, {
-      model: Movement,
-      as: 'MovementDestinationTown',
-      attributes: { exclude: ['createdAt', 'updatedAt', 'units'] },
+      model: Report,
+      as: 'ReportDestinationPlayer',
       include: [{
         model: Town,
-        as: 'MovementOriginTown',
+        as: 'ReportOriginTown',
         attributes: ['_id', 'name', 'location'],
       }, {
         model: Town,
-        as: 'MovementDestinationTown',
+        as: 'ReportDestinationTown',
         attributes: ['_id', 'name', 'location'],
       }],
     }, {
-      model: Movement,
-      as: 'MovementOriginTown',
+      model: Report,
+      as: 'ReportOriginPlayer',
       include: [{
         model: Town,
-        as: 'MovementOriginTown',
+        as: 'ReportOriginTown',
         attributes: ['_id', 'name', 'location'],
       }, {
         model: Town,
-        as: 'MovementDestinationTown',
+        as: 'ReportDestinationTown',
         attributes: ['_id', 'name', 'location'],
       }],
     }],
-  }, {
-    model: Report,
-    as: 'ReportDestinationPlayer',
-    include: [{
-      model: Town,
-      as: 'ReportOriginTown',
-      attributes: ['_id', 'name', 'location'],
-    }, {
-      model: Town,
-      as: 'ReportDestinationTown',
-      attributes: ['_id', 'name', 'location'],
-    }],
-  }, {
-    model: Report,
-    as: 'ReportOriginPlayer',
-    include: [{
-      model: Town,
-      as: 'ReportOriginTown',
-      attributes: ['_id', 'name', 'location'],
-    }, {
-      model: Town,
-      as: 'ReportDestinationTown',
-      attributes: ['_id', 'name', 'location'],
-    }],
-  }],
-})
+  });
+}
+
+export default (socket) => getPlayer(socket)
   .then((player) => {
     if (!player) {
-      return createPlayer(socket);
+      return createPlayer(socket).then(() => getPlayer(socket));
     }
     console.log('should process town data before sending');
     // TODO: process queues here before sending?

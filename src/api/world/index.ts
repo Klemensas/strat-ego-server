@@ -2,7 +2,7 @@ import { Router } from 'express';
 import controller from './world.controller';
 // import * as auth from '../../auth/auth.service';
 
-const router = new Router();
+const router = Router();
 
 router.get('/', controller.worlds);
 // router.get('/:world', auth.isAuthenticated(), controller.worldData);

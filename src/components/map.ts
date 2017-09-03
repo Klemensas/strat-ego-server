@@ -5,18 +5,22 @@ export interface MapTown {
   _id: number;
   name: string;
   location: number[];
+  owner: string;
 }
 
 class MapManager {
   public mapData: { [name: string]: MapTown } = {};
 
-  public addTown(town) {
-     // const owner = town
-     this.mapData[town.location.join(',')] = {
-       _id: town._id,
-       name: town.name,
-       location: town.location,
-     };
+  public addTown(...towns) {
+     towns.forEach((town) => {
+       const owner = town.Player ? town.Player.name : null;
+       this.mapData[town.location.join(',')] = {
+         _id: town._id,
+         name: town.name,
+         owner,
+         location: town.location,
+       };
+     });
    }
 
   public getRingCoords(size, ring) {
@@ -88,6 +92,10 @@ class MapManager {
       return coords;
     })
     .then((coords) => coords[Math.round(Math.random() * (coords.length - 1))]);
+  }
+
+  public getAllData() {
+    return this.mapData;
   }
 }
 

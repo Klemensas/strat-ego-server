@@ -18,7 +18,7 @@ export default {
         paranoid: false,
       },
     },
-    main: process.env.DB_MAIN || 'postgres://ffe:test@localhost:5432/ffe',
-    world: process.env.DB_WORLD || 'postgres://ffe:test@localhost:5432/ffeWorld',
+    main: process.env.DB_MAIN || 'postgres://stratego:supasecretpassword@localhost:5432/stratego',
+    world: process.env.DB_WORLD || 'postgres://stratego:supasecretpassword@localhost:5432/strategoWorld',
   },
 };
