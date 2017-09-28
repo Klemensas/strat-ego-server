@@ -1,95 +1,83 @@
-import { world } from '../../sqldb';
-import { socket } from '../../app';
+import { Sequelize, world } from '../../sqldb';
 
 const Town = world.Town;
 const BuildingQueue = world.BuildingQueue;
 const UnitQueue = world.UnitQueue;
+const Movement = world.Movement;
 
 class Queue {
   constructor() {
-    this.items = {};
-
-    BuildingQueue
-      .destroy({ where: { TownId: null } })
-      .then(() => UnitQueue.destroy({ where: { TownId: null } }))
-      .then(() => BuildingQueue.findAll())
-      .then(items => items.forEach(item => this.queueItem(item, 'building')))
-      .then(() => UnitQueue.findAll())
-      .then(items => items.forEach(item => this.queueItem(item, 'unit')));
+    this.queueTick = 30000;
   }
 
-  processItem(townId) {
-    const queueItem = this.items[townId].nextItem;
-    const queueAction = queueItem.type === 'building' ? this.processBuilding : this.processUnit;
-    return Town.findOne({ where: { _id: townId } }, { include: { all: true } })
-      .then(town => queueAction(town, queueItem))
-      .then(town => {
-        return world.sequelize.transaction(transaction => {
-          return queueItem.destroy({ transaction })
-            .then(() => town.save({ transaction }));
+  init() {
+    Promise.all([
+      BuildingQueue.destroy({ where: { TownId: null } }),
+      UnitQueue.destroy({ where: { TownId: null } })
+    ])
+    .catch(() => this.processQueue());
+  }
+
+  processQueue(targetTime) {
+    const time = new Date();
+    if (targetTime) {
+      console.log(`Queue delay is ${time - targetTime}`);
+    }
+
+    return Town.findAll({
+      where: {
+        $or: [
+          { '$BuildingQueues.endsAt$': { $lte: time } },
+          { '$UnitQueues.endsAt$': { $lte: time } },
+          { '$MovementDestinationTown.endsAt$': { $lte: time } },
+          { '$MovementOriginTown.endsAt$': { $lte: time } }
+        ]
+      },
+      include: [{
+        model: BuildingQueue,
+      }, {
+        model: UnitQueue,
+      }, {
+        model: Movement,
+        as: 'MovementOriginTown',
+      }, {
+        model: Movement,
+        as: 'MovementDestinationTown',
+      }]
+    })
+    .then(towns => Promise.all(towns.map(town => this.processTown(town))))
+    .catch(err => console.log('Queue process error', err))
+    .then(() => setTimeout(() => this.processQueue(time.getTime() + this.queueTick), this.queueTick));
+  }
+
+  processTown(town) {
+    return town.processQueues().then(procdTown => {
+      return world.sequelize.transaction(transaction =>
+        BuildingQueue.destroy({
+          where: { _id: { $in: procdTown.doneBuildings } },
+          transaction
         })
-        .then(() => this.updateQueue(townId, queueItem));
-      })
-      // TODO: test and handle concurrency
-      .catch(error => console.log(`PROCESS ERROR: ${error}`));
+        .then(() => UnitQueue.destroy({
+          where: { _id: { $in: procdTown.doneUnits } },
+          transaction
+        }))
+        .then(() => procdTown.save({ transaction }))
+      )
+      .then(updatedTown => updatedTown.notify({ type: 'update' }))
+      .catch(err => console.log('town process transaction error', err));
+    });
   }
 
-  processBuilding(town, item) {
-    const building = town.buildings[item.building];
-    building.level++;
-    // Set queued to 0 if queue is empty for building
-    if (building.queued === building.level) {
-      building.queued = 0;
-    }
-    // trigger buildings change manully, because sequalize can't detect it
-    town.changed('buildings', true);
-    return town;
-  }
-
-  processUnit(town, item) {
-    const unit = town.units[item.unit];
-    unit.amount += item.amount;
-    unit.queued -= item.amount;
-    // trigger units change manully, because sequalize can't detect it
-    town.changed('units', true);
-    return town;
-  }
-
-  updateQueue(id, item) {
-    const townQueue = this.items[id];
-    if (townQueue.nextItem === item) {
-      townQueue.items.splice(0, 1);
-      townQueue.nextItem = townQueue.items[0];
-      if (townQueue.nextItem) {
-        townQueue.timer = setTimeout(() => this.processItem(id), townQueue.nextItem.endsAt - Date.now());
-        return;
-      }
-    }
-    const position = townQueue.items.findIndex(q => q === item);
-    townQueue.items.splice(position, 1);
-  }
-
-  queueItem(item, type) {
-    const town = item.TownId;
-    let townQueue = this.items[town];
-    item.endsAt = new Date(item.endsAt).getTime();
-    item.type = type;
-
-    if (townQueue && townQueue.nextItem) {
-      townQueue.items.push(item);
-      townQueue.items.sort((a, b) => a.endsAt - b.endsAt);
-      if (townQueue.nextItem === townQueue.items[0]) {
-        return;
-      }
-      clearTimeout(townQueue.timer);
-      townQueue.nextItem = townQueue.items[0];
-    } else {
-      this.items[town] = townQueue = {
-        nextItem: item,
-        items: [item],
-      };
-    }
-    townQueue.timer = setTimeout(() => this.processItem(town), townQueue.nextItem.endsAt - Date.now());
-  }
+//   static processUnit(town, item) {
+//     const unit = town.units[item.unit];
+//     unit.amount += item.amount;
+//     unit.queued -= item.amount;
+//     // trigger units change manully, because sequalize can't detect it
+//     town.changed('units', true);
+//     return town;
+//   }
 }
-export const queue = new Queue();
+
+const queue = new Queue();
+
+export default queue;

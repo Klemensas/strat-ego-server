@@ -1,5 +1,4 @@
 class MapData {
-
   constructor() {
     // this.redisClient  = null;
     this.data = {
@@ -19,7 +18,7 @@ class MapData {
 
   getAllData() {
     return this.data.townLocations;
-  }
+  } 
 
   addTown(town) {
     const owner = town.Player ? town.Player.name : town['Player.name'];
@@ -51,6 +50,7 @@ class MapData {
           };
           return data;
         }, {});
+        console.log(`stored ${towns.length} town map data`);
       })
       .catch(err => {
         console.log('ERROR IN REDIS OP', err);
@@ -59,5 +59,4 @@ class MapData {
 
 }
 
-
-export const mapData = new MapData();
+export default new MapData();
