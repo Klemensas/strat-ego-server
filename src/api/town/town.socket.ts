@@ -102,18 +102,17 @@ function tryRecruiting(town, data) {
 
 function trySending(town, data) {
   const unitData = WorldData.unitMap;
-  const dataUnits = Object.entries(data.units);
   const queueCreateTime = Date.now();
   let slowest = 0;
 
-  if (data.target === town._id) {
+  if (data.target === town.location) {
     return Promise.reject('Can\'t attack your own town');
   }
 
-  return world.Town.findById(data.target).then((targetTown) => {
+  return world.Town.findOne({ where: { location: data.target } }).then((targetTown) => {
     const distance = world.Town.calculateDistance(town.location, targetTown.location);
 
-    for (const unit of dataUnits) {
+    for (const unit of data.units) {
       if (!town.units.hasOwnProperty(unit[0])) {
         return Promise.reject('no such unit');
       }
@@ -127,10 +126,10 @@ function trySending(town, data) {
     town.changed('units', true);
     return world.sequelize.transaction((transaction) => {
       return town.createMovementOriginTown({
-        units: data.units,
+        units: data.units.reduce((result, [name, count]) => ({ ...result, [name]: count }), {}),
         type: data.type,
         endsAt: queueCreateTime + movementTime,
-        MovementDestinationId: data.target,
+        MovementDestinationId: targetTown._id,
       }, { transaction })
         .then((item) => {
           return town.save({ transaction });
@@ -218,7 +217,6 @@ function troopMovement(data) {
 
 export default (socket) => {
   joinTownRoom(socket);
-
   socket.on('town:name', changeName);
   socket.on('town:build', build);
   socket.on('town:recruit', recruit);

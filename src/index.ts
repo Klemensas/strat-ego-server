@@ -17,6 +17,7 @@ import config from './config/environment';
 import { main, world } from './sqldb';
 import seedWorld from './sqldb/seed';
 import WorldData from './components/world';
+import MapManager from './components/map';
 import routing from './routes';
 import initSocket from './config/socket';
 
@@ -46,6 +47,7 @@ main.sequelize.sync()
   .then(() => world.sequelize.sync())
   .then(() => (config.seedDB ? seedWorld() : null))
   .then(() => WorldData.readWorld('Megapolis'))
+  .then(() => MapManager.initialize())
   .then(() => initSocket(io));
 
 if (env === 'development' || env === 'test') {

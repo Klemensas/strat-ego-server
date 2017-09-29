@@ -11,6 +11,13 @@ export interface MapTown {
 class MapManager {
   public mapData: { [name: string]: MapTown } = {};
 
+  public initialize() {
+    return world.Town.findAll({
+      include: { model: world.Player }
+    })
+      .then(towns => this.addTown(...towns));
+  }
+
   public addTown(...towns) {
      towns.forEach((town) => {
        const owner = town.Player ? town.Player.name : null;
