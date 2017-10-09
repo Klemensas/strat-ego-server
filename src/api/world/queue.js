@@ -1,9 +1,8 @@
 import { Sequelize, world } from '../../sqldb';
-
-const Town = world.Town;
-const BuildingQueue = world.BuildingQueue;
-const UnitQueue = world.UnitQueue;
-const Movement = world.Movement;
+import { Town } from '../town/Town.model';
+import { Movement } from '../town/Movement.model';
+import { BuildingQueue } from './BuildingQueue.model';
+import { UnitQueue } from './UnitQueue.model';
 
 class Queue {
   constructor() {

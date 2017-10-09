@@ -1,8 +1,7 @@
 import { signToken } from '../../auth/auth.service';
-import { main } from '../../sqldb';
-
-const User = main.User;
-const UserWorlds = main.UserWorlds;
+import { User } from '../world/User.model';
+import { UserWorld } from '../world/UserWorld.model';
+import { World } from '../world/World.model';
 
 function validationError(res, statusCode = 422) {
   return (err) => {
@@ -21,7 +20,7 @@ function handleError(res, statusCode = 500) {
  * restriction: 'admin'
  */
 export function index(req, res) {
-  return User.find({}, '-salt -password')
+  return User.find({ attributes: { exclude: ['salt', 'password'] }})
     .then((users) => {
       res.status(200).json(users);
     })
@@ -49,7 +48,7 @@ export function create(req, res) {
 export function show(req, res, next) {
   const userId = req.params.id;
 
-  return User.findById(userId).exec()
+  return User.findById(userId)
     .then((user) => {
       if (!user) {
         res.status(404).end();
@@ -65,7 +64,7 @@ export function show(req, res, next) {
  * restriction: 'admin'
  */
 export function destroy(req, res) {
-  return User.findByIdAndRemove(req.params.id)
+  return User.destroy({ where: { _id: req.params.id }})
     .then(() => {
       res.status(204).end();
     })
@@ -81,7 +80,7 @@ export function changePassword(req, res) {
   const oldPass = String(req.body.oldPassword);
   const newPass = String(req.body.newPassword);
 
-  return User.findById(userId).exec()
+  return User.findById(userId)
     .then((user) => {
       if (user.authenticate(oldPass)) {
         user.password = newPass;
@@ -103,8 +102,11 @@ export function me(req, res, next) {
   const userId = req.user._id;
   return User.findOne({
     where: { _id: userId },
+    attributes: {
+      exclude: ['salt', 'password'],
+    },
     include: [{
-      model: UserWorlds,
+      model: World,
     }],
   })
   // , '-salt -password').populate('gameData.towns').exec()

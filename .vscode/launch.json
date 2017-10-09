@@ -12,10 +12,14 @@
             "cwd": "${workspaceRoot}"
         },
         {
+            "name": "Current TS File",
             "type": "node",
-            "request": "attach",
-            "name": "Attach to Process",
-            "port": 5858
+            "request": "launch",
+            "args": ["${relativeFile}"],
+            "runtimeArgs": ["--nolazy", "-r", "ts-node/register"],
+            "sourceMaps": true,
+            "cwd": "${workspaceRoot}",
+            "protocol": "inspector"
         }
     ]
 }

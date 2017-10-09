@@ -4,16 +4,17 @@ import unitData from '../config/game/unitData';
 import MapManager from '../components/map';
 import WorldData from '../components/world';
 
+import { User } from '../api/world/User.model';
+import { World } from '../api/world/World.model';
+import { UserWorld } from '../api/world/UserWorld.model';
+import { Player } from '../api/world/Player.model';
+import { Town } from '../api/town/Town.model';
+import { Building } from '../api/world/Building.model';
+import { Unit } from '../api/world/Unit.model';
+import { Movement } from '../api/town/Movement.model';
+import { Report } from '../api/report/Report.model';
+
 export default () => {
-  const User = main.User;
-  const World = main.World;
-  const UserWorlds = main.UserWorlds;
-  const Player = world.Player;
-  const Town = world.Town;
-  const Building = world.Building;
-  const Unit = world.Unit;
-  const Movement = world.Movement;
-  const Report = world.Report;
   const worldData = {
     name: 'Megapolis',
     baseProduction: 500,
@@ -64,7 +65,7 @@ export default () => {
     Building.sync().then(() => Building.destroy({ where: {} })),
     Unit.sync().then(() => Unit.destroy({ where: {} })),
     Player.sync().then(() => Player.destroy({ where: {} })),
-    UserWorlds.sync().then(() => UserWorlds.destroy({ where: {} })),
+    UserWorld.sync().then(() => UserWorld.destroy({ where: {} })),
     Town.sync().then(() => Town.destroy({ where: {} })),
     User.sync().then(() => User.destroy({ where: {} })),
     Movement.sync().then(() => Movement.destroy({ where: {} })),

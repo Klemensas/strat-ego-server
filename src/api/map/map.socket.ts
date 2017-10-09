@@ -2,7 +2,7 @@ import MapManager from '../../components/map';
 
 function sendMapData(/* data */) {
   this.emit('map', MapManager.getAllData());
-  console.log(JSON.stringify(MapManager.getAllData()));
+  // console.log(JSON.stringify(MapManager.getAllData()));
   this.log(`sending map data ${this.username} on ${this.world}`);
 }
 

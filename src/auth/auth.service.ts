@@ -2,10 +2,10 @@ import * as jwt from 'jsonwebtoken';
 import * as expressJwt from 'express-jwt';
 import * as compose from 'composable-middleware';
 import config from '../config/environment';
-import { main } from '../sqldb';
+import { User } from '../api/world/User.model';
+import { UserWorld } from '../api/world/UserWorld.model';
+import { World } from '../api/world/World.model';
 
-const User = main.User;
-const UserWorlds = main.UserWorlds;
 const validateJwt = expressJwt({
   secret: config.secrets.session,
 });
@@ -27,7 +27,7 @@ export function isAuthenticated() {
           _id: req.user._id,
         },
         include: [{
-          model: UserWorlds,
+          model: World,
         }],
       })
         .then((user) => {

@@ -1,11 +1,12 @@
-import { world, main } from '../../sqldb';
+import { world } from '../../sqldb';
 import MapManager from '../../components/map';
-
-const UserWorlds = main.UserWorlds;
-const Player = world.Player;
-const Town = world.Town;
-const Movement = world.Movement;
-const Report = world.Report;
+import { Town } from '../town/Town.model';
+import { Player } from './Player.model';
+import { UnitQueue } from './UnitQueue.model';
+import { BuildingQueue } from './BuildingQueue.model';
+import { Movement } from '../town/Movement.model';
+import { Report } from '../report/Report.model';
+import { UserWorld } from './UserWorld.model';
 
 function createPlayer(socket) {
   socket.log(`creating player for ${socket.username}, on ${socket.world}`);
@@ -20,8 +21,8 @@ function createPlayer(socket) {
     }, {
       include: [{ all: true }],
     }))
-    .then((newPlayer) => {
-      return UserWorlds.create({
+    .then((newPlayer: Player) => {
+      return UserWorld.create({
         UserId: socket.userId,
         World: socket.world,
         PlayerId: newPlayer._id,
@@ -35,6 +36,7 @@ function getPlayer(socket) {
     where: { UserId: socket.userId },
     include: [{
       model: Town,
+      as: 'Towns',
       include: [{
         all: true,
       }, {
@@ -92,19 +94,20 @@ function getPlayer(socket) {
 }
 
 export default (socket) => getPlayer(socket)
-  .then((player) => {
+  .then((player: Player) => {
     if (!player) {
       return createPlayer(socket).then(() => getPlayer(socket));
     }
-    console.log('should process town data before sending');
-    // TODO: process queues here before sending?
-    // player.Towns.map(town => {
-    //   console.log('t', town.dataValues, typeof town.processQueues);
-    // });
     return player;
   })
-  // .then(createPlayer(socket))
   .then((player) => {
+    return Promise.all(player.Towns.map((town) => Town.processTownQueues(town._id)))
+      .then((towns: Town[]) => {
+        player.Towns = towns;
+        return player;
+      });
+  })
+  .then((player: Player) => {
     socket.player = player;
     socket.emit('player', player);
     return socket;

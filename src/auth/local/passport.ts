@@ -1,7 +1,8 @@
 import * as passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
+import { User } from '../../api/world/User.model';
 
-function localAuthenticate(User, email, password, done) {
+function localAuthenticate(email, password, done) {
   User.findOne({
     where: {
       email: email.toLowerCase(),
@@ -13,15 +14,13 @@ function localAuthenticate(User, email, password, done) {
           message: 'This email is not registered.',
         });
       }
-      return user.authenticate(password, (authError, authenticated) => {
-        if (authError) {
-          return done(authError);
-        }
-        if (!authenticated) {
-          return done(null, false, { message: 'This password is not correct.' });
-        }
-        return done(null, user);
-      });
+      return user.authenticate(password)
+        .then((auth) => {
+          if (!auth) {
+            return done(null, false, { message: 'This password is not correct.' });
+          }
+          return done(null, user);
+        });
     })
     .catch((err) => {
       console.log('error', err);
@@ -29,9 +28,9 @@ function localAuthenticate(User, email, password, done) {
     });
 }
 
-export default (User, config) => {
+export default () => {
   passport.use(new LocalStrategy({
     usernameField: 'email',
     passwordField: 'password', // this is the virtual field on the model
-  }, (email, password, done) => localAuthenticate(User, email, password, done)));
+  }, (email, password, done) => localAuthenticate(email, password, done)));
 };

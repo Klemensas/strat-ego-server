@@ -2,42 +2,39 @@ import { Sequelize, Model, DataTypes, BelongsTo } from 'sequelize';
 import { Resources, Requirements, Combat } from '../util.model';
 import { world } from '../../sqldb';
 
-export class Movement extends Model {
+export class UnitQueue extends Model {
   public static associations: {
-    MovementDestinationTown: BelongsTo;
-    MovementOriginTown: BelongsTo;
+    Town: BelongsTo;
   };
 
   public _id: number;
-  public units: { [name: string]: number };
-  public haul: Resources;
-  public type: string;
+  public unit: string;
+  public amount: number;
+  public recruitTime: number;
   public endsAt: Date;
-  public createdAt: Date;
 
   // Associations
-  public MovementOriginId: number;
-  public MovementOriginTown: Town;
-  public MovementDestinationId: number;
-  public MovementDestinationTown: Town;
+  public TownId: number;
+  public Town: Town;
 }
 
-Movement.init({
+UnitQueue.init({
   _id: {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,
     autoIncrement: true,
   },
-  units: {
-    type: DataTypes.JSON,
+  unit: {
+    type: DataTypes.STRING,
     allowNull: false,
   },
-  haul: {
-    type: DataTypes.JSON,
+  amount: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
   },
-  type: {
-    type: DataTypes.STRING,
+  recruitTime: {
+    type: DataTypes.INTEGER,
     allowNull: false,
   },
   endsAt: {

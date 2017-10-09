@@ -1,4 +1,7 @@
 import WorldData from '../../components/world';
+import { Town } from './Town.model';
+import { UnitQueue } from '../world/UnitQueue.model';
+import { BuildingQueue } from '../world/BuildingQueue.model';
 import { world } from '../../sqldb';
 import Queue from '../world/queue';
 
@@ -17,7 +20,7 @@ function getTown(client, town) {
   return Promise.reject('No town found');
 }
 
-function tryBuilding(town, data) {
+function tryBuilding(town: Town, data) {
   const target = town.buildings[data.building];
   if (target) {
     // Select next level latest queued or the current level;
@@ -32,6 +35,8 @@ function tryBuilding(town, data) {
       return Promise.reject('Wrong building');
     }
 
+    const time = Date.now();
+    town = town.updateRes(time) ;
     town.resources.clay -= buildingData.costs.clay;
     town.resources.wood -= buildingData.costs.wood;
     town.resources.iron -= buildingData.costs.iron;
@@ -43,7 +48,7 @@ function tryBuilding(town, data) {
       return town.createBuildingQueue({
         building: data.building,
         buildTime: buildingData.buildTime,
-        endsAt: Date.now() + buildingData.buildTime,
+        endsAt: time + buildingData.buildTime,
         level,
       }, { transaction })
         .then(() => town.save({ transaction }));
@@ -54,6 +59,7 @@ function tryBuilding(town, data) {
 }
 
 function tryRecruiting(town, data) {
+  const time = Date.now();
   const unitData = WorldData.unitMap;
   const unitsToQueue = [];
   const queueCreateTime = new Date();
@@ -71,6 +77,7 @@ function tryRecruiting(town, data) {
       return Promise.reject('requirements not met');
     }
     usedPop += unit.amount;
+
     town.resources.wood -= targetUnit.costs.wood * unit.amount;
     town.resources.clay -= targetUnit.costs.clay * unit.amount;
     town.resources.iron -= targetUnit.costs.iron * unit.amount;
@@ -95,7 +102,7 @@ function tryRecruiting(town, data) {
 
   town.changed('units', true);
   return world.sequelize.transaction((transaction) => {
-    return world.UnitQueue.bulkCreate(unitsToQueue, { transaction })
+    return UnitQueue.bulkCreate(unitsToQueue, { transaction })
       .then(() => town.save({ transaction }));
   });
 }
@@ -109,8 +116,8 @@ function trySending(town, data) {
     return Promise.reject('Can\'t attack your own town');
   }
 
-  return world.Town.findOne({ where: { location: data.target } }).then((targetTown) => {
-    const distance = world.Town.calculateDistance(town.location, targetTown.location);
+  return Town.findOne({ where: { location: data.target } }).then((targetTown) => {
+    const distance = Town.calculateDistance(town.location, targetTown.location);
 
     for (const unit of data.units) {
       if (!town.units.hasOwnProperty(unit[0])) {
@@ -188,19 +195,21 @@ function update(data) {
   }
   // TODO: use town method instead of queue?
   this.log(`${this.username} attempting to update queue in ${data.town}`);
-  getTown(this, data.town)
-    .then((town) => {
-      console.log('updatin town', town.dataValues);
-      const time = Date.now();
-      town.BuildingQueues = town.BuildingQueues.filter((item) => time >= new Date(item.endsAt).getTime());
-      town.UnitQueues = town.UnitQueues.filter((item) => time >= new Date(item.endsAt).getTime());
-      town.MovementOriginTown = town.MovementOriginTown.filter((item) =>
-        time >= new Date(item.endsAt).getTime());
-      town.MovementDestinationTown = town.MovementDestinationTown.filter((item) =>
-        time >= new Date(item.endsAt).getTime());
-      return town;
-    })
-    .then((town) => Queue.processTown(town));
+  Town.processTownQueues(data.town)
+    .then((town) => town.notify({ type: 'update' }));
+  // getTown(this, data.town)
+  //   .then((town) => {
+  //     console.log('updatin town', town.get());
+  //     const time = Date.now();
+  //     town.BuildingQueues = town.BuildingQueues.filter((item) => time >= new Date(item.endsAt).getTime());
+  //     town.UnitQueues = town.UnitQueues.filter((item) => time >= new Date(item.endsAt).getTime());
+  //     town.MovementOriginTown = town.MovementOriginTown.filter((item) =>
+  //       time >= new Date(item.endsAt).getTime());
+  //     town.MovementDestinationTown = town.MovementDestinationTown.filter((item) =>
+  //       time >= new Date(item.endsAt).getTime());
+  //     return town;
+  //   })
+  //   .then((town) => Queue.processTown(town));
 }
 
 function troopMovement(data) {

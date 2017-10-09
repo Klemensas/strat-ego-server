@@ -9,13 +9,14 @@ export default {
     session: process.env.APP_SECRET || 'secret',
   },
   userRoles: ['user', 'admin'],
-  seedDB: process.env.SEED_DATA || true,
+  seedDB: process.env.SEED_DATA || false,
   sequelize: {
     options: {
       logging: false/* console.log*/,
       define: {
         timestamps: true,
         paranoid: false,
+        version: true,
       },
     },
     main: process.env.DB_MAIN || 'postgres://stratego:supasecretpassword@localhost:5432/stratego',

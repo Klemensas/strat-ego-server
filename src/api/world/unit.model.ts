@@ -1,4 +1,20 @@
-export default (sequelize, DataTypes) => sequelize.define('Unit', {
+import { Sequelize, Model, DataTypes } from 'sequelize';
+import { Resources, Requirements, Combat } from '../util.model';
+import { world } from '../../sqldb';
+
+export class Unit extends Model {
+  public _id: number;
+  public name: string;
+  public attackType: string;
+  public speed: number;
+  public recruitTime: number;
+  public haul: number;
+  public requirements: Requirements[];
+  public costs: Resources;
+  public combat: Combat;
+}
+
+Unit.init({
   _id: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -36,4 +52,4 @@ export default (sequelize, DataTypes) => sequelize.define('Unit', {
     type: DataTypes.JSON,
     allowNull: false,
   },
-});
+}, { sequelize: world.sequelize });

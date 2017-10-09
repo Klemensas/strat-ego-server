@@ -1,4 +1,6 @@
-import { main, world } from '../sqldb';
+import { World } from '../api/world/World.model';
+import { Building } from '../api/world/Building.model';
+import { Unit } from '../api/world/Unit.model';
 
 class WorldData {
   public world: any = {};
@@ -8,12 +10,12 @@ class WorldData {
   public buildingMap: any = {};
 
   public readWorld(name) {
-    return main.World.findOne({ where: { name }, raw: true })
+    return World.findOne({ where: { name }, raw: true })
       .then((config) => {
         this.world = config;
         return Promise.all([
-          world.Building.findAll({ raw: true }),
-          world.Unit.findAll({ raw: true }),
+          Building.findAll({ raw: true }),
+          Unit.findAll({ raw: true }),
         ]);
       })
       .then(([buildings, units]: [any, any]) => {

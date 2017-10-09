@@ -1,6 +1,6 @@
-import { world } from '../../../sqldb';
+import { Report } from '../../report/Report.model';
 
-export default (transaction, outcome, origin, destination, haul = null) => world.Report.create({
+export default (transaction, outcome, origin, destination, haul = null) => Report.create({
   haul,
   outcome,
   origin: {

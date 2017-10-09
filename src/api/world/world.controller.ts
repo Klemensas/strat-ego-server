@@ -1,16 +1,8 @@
-import { main, world } from '../../sqldb';
-import * as map from '../../components/map';
 import WorldData from '../../components/world';
-
-const UserWorlds = main.UserWorlds;
-const Player = world.Player;
-const Town = world.Town;
 
 function worlds(req, res) {
   const data = [];
-  [WorldData].forEach((world) => {
-    data.push(world);
-  });
+  [WorldData].forEach((world) => data.push(world));
   res.status(200).json(data);
 }
 

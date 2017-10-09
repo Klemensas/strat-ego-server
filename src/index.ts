@@ -48,7 +48,8 @@ main.sequelize.sync()
   .then(() => (config.seedDB ? seedWorld() : null))
   .then(() => WorldData.readWorld('Megapolis'))
   .then(() => MapManager.initialize())
-  .then(() => initSocket(io));
+  .then(() => initSocket(io))
+  .then(() => console.log('server ready!'));
 
 if (env === 'development' || env === 'test') {
   app.use(statusMonitor());

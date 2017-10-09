@@ -1,5 +1,6 @@
 import WorldData from './world';
-import { world } from '../sqldb';
+import { Town } from '../api/town/Town.model';
+import { Player } from '../api/world/Player.model';
 
 export interface MapTown {
   _id: number;
@@ -12,10 +13,10 @@ class MapManager {
   public mapData: { [name: string]: MapTown } = {};
 
   public initialize() {
-    return world.Town.findAll({
-      include: { model: world.Player }
+    return Town.findAll({
+      include: [{ model: Player, as: 'Player' }],
     })
-      .then(towns => this.addTown(...towns));
+      .then((towns) => this.addTown(...towns));
   }
 
   public addTown(...towns) {
@@ -89,13 +90,13 @@ class MapManager {
   }
 
   public chooseLocation() {
-    return world.Town.getAvailableCoords(this.getCoordsInRange(
+    return Town.getAvailableCoords(this.getCoordsInRange(
       WorldData.world.generationArea,
       WorldData.world.currentRing,
       Math.ceil(WorldData.world.size / 2),
     ))
     .then((coords) => {
-      console.log('available coords:', coords);
+      console.log('available coords:', coords, coords[Math.round(Math.random() * (coords.length - 1))]);
       return coords;
     })
     .then((coords) => coords[Math.round(Math.random() * (coords.length - 1))]);
