@@ -9,6 +9,8 @@ interface IBuilding {
   };
   baseTime: number;
   timeFactor: number;
+  scoreBase: number;
+  scoreFactor: number;
   additional?: {
     [key: string]: {
       base: number;
@@ -42,6 +44,8 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 20,
     timeFactor: 1.4,
+    scoreBase: 4,
+    scoreFactor: 1.4,
   }, {
     name: 'barracks',
     levels: 20,
@@ -62,6 +66,8 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 30,
     timeFactor: 1.2,
+    scoreBase: 4,
+    scoreFactor: 1.4,
     additional: {
       recruitment: {
         base: 1,
@@ -92,6 +98,8 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 15,
     timeFactor: 1.2,
+    scoreBase: 4,
+    scoreFactor: 1.4,
     additional: {
       production: {
         base: 30,
@@ -118,6 +126,8 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 15,
     timeFactor: 1.2,
+    scoreBase: 4,
+    scoreFactor: 1.4,
     additional: {
       production: {
         base: 30,
@@ -144,6 +154,8 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 18,
     timeFactor: 1.2,
+    scoreBase: 4,
+    scoreFactor: 1.4,
     additional: {
       production: {
         base: 30,
@@ -170,6 +182,8 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 60,
     timeFactor: 1.2,
+    scoreBase: 4,
+    scoreFactor: 1.4,
     additional: {
       defense: {
         base: 1.04,
@@ -196,6 +210,8 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 17,
     timeFactor: 1.2,
+    scoreBase: 4,
+    scoreFactor: 1.4,
     additional: {
       storage: {
         base: 1000,
@@ -222,6 +238,8 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 20,
     timeFactor: 1.2,
+    scoreBase: 4,
+    scoreFactor: 1.4,
     additional: {
       population: {
         base: 240,
@@ -245,6 +263,8 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 14400,
     timeFactor: 1,
+    scoreBase: 4,
+    scoreFactor: 1.4,
     requirements: [{
       item: 'headquarters',
       level: 15,
@@ -262,6 +282,7 @@ export default (speed = 1, buildings = buildingList) => buildings.map((building)
 
   for (let i = 0; i <= item.levels.max; i++) {
     const data = {
+      score: Math.ceil(building.scoreBase * (building.scoreFactor ** i)),
       buildTime: Math.ceil((building.baseTime * (building.timeFactor ** i)) / speed) * 1000,
       costs: {
         wood: Math.ceil(building.costs.wood.base * (building.costs.wood.factor ** i)),

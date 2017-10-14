@@ -73,6 +73,10 @@ export default (sequelize, DataTypes) => {
         },
       },
     },
+    score: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    }
   }, {
     hooks: {
       beforeBulkCreate: (towns) => {
@@ -94,6 +98,7 @@ export default (sequelize, DataTypes) => {
           town.units = units;
           town.resources = resources;
           town.production = town.calculateProduction();
+          town.score = town.calculateScore();
           return town;
         });
       },
@@ -115,6 +120,7 @@ export default (sequelize, DataTypes) => {
         };
         town.buildings = buildings;
         town.production = town.calculateProduction();
+        town.score = town.calculateScore();
         town.units = units;
       },
       beforeUpdate: (town) => {
@@ -126,6 +132,7 @@ export default (sequelize, DataTypes) => {
         // Recalculate production if buildings updated
         if (town.changed('buildings')) {
           town.production = town.calculateProduction();
+          town.score = town.calculateScore();
         }
       },
       // afterUpdate: town => {
@@ -177,6 +184,14 @@ export default (sequelize, DataTypes) => {
           clay: WorldData.world.baseProduction + buildingData.clay.data[this.buildings.clay.level].production,
           iron: WorldData.world.baseProduction + buildingData.iron.data[this.buildings.iron.level].production,
         };
+      },
+      calculateScore() {
+        const buildingData = WorldData.buildings;
+        return buildingData.reduce((value, building) => {
+          const buildingLevel = this.buildings[building.name].level;
+          return value + building.data[buildingLevel].score;
+        }, 0);
+
       },
       getLastQueue(queue) {
         return this[queue].sort((a, b) => b.endsAt.getTime() - a.endsAt.getTime())[0];
