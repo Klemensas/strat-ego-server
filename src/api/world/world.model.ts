@@ -17,6 +17,9 @@ export class World extends Model {
   public timeQouta: number;
   public generationArea: number;
   public currentRing: number;
+  public initialLoyalty: number;
+  public loyaltyRegeneration: number;
+  public loyaltyReductionRange: number[];
 
   // Associations
   public Users: User[];
@@ -59,6 +62,15 @@ World.init({
   },
   currentRing: {
     type: DataTypes.INTEGER,
+  },
+  initialLoyalty: {
+    type: DataTypes.INTEGER,
+  },
+  loyaltyRegeneration: {
+    type: DataTypes.INTEGER,
+  },
+  loyaltyReductionRange: {
+    type: DataTypes.ARRAY(DataTypes.INTEGER),
   },
 }, { sequelize: main.sequelize });
 

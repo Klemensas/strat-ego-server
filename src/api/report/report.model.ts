@@ -26,6 +26,7 @@ export class Report extends Model {
   public origin: CombatCasualties;
   public destination: CombatCasualties;
   public haul: Haul;
+  public loyaltyChange: number[];
 
   // Associations
   public ReportOriginTownId: number;
@@ -60,12 +61,15 @@ Report.init({
   haul: {
     type: DataTypes.JSON,
   },
+  loyaltyChange: {
+    type: DataTypes.ARRAY(DataTypes.INTEGER),
+  },
 }, { sequelize: world.sequelize });
 
 Report.afterCreate((report: Report) => {
-  io.sockets.in(report.ReportOriginTownId).emit('report', report);
+  io.sockets.in(report.ReportOriginTownId as any).emit('report', report);
   if (report.ReportDestinationPlayerId) {
-    io.sockets.in(report.ReportDestinationTownId).emit('report', report);
+    io.sockets.in(report.ReportDestinationTownId as any).emit('report', report);
   }
 });
 

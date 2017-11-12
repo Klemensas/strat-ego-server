@@ -3,7 +3,7 @@ import { Building } from '../api/world/Building.model';
 import { Unit } from '../api/world/Unit.model';
 
 class WorldData {
-  public world: any = {};
+  public world: World;
   public units = [];
   public unitMap = {};
   public buildings = [];

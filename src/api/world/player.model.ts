@@ -9,6 +9,39 @@ export class Player extends Model {
     ReportOriginPlayer: HasMany,
   };
 
+  static getPlayer = (UserId: number) => Player.findOne({
+    where: { UserId },
+    include: [{
+      model: Town,
+      as: 'Towns',
+      include: townIncludes,
+    }, {
+      model: Report,
+      as: 'ReportDestinationPlayer',
+      include: [{
+        model: Town,
+        as: 'ReportOriginTown',
+        attributes: ['_id', 'name', 'location'],
+      }, {
+        model: Town,
+        as: 'ReportDestinationTown',
+        attributes: ['_id', 'name', 'location'],
+      }],
+    }, {
+      model: Report,
+      as: 'ReportOriginPlayer',
+      include: [{
+        model: Town,
+        as: 'ReportOriginTown',
+        attributes: ['_id', 'name', 'location'],
+      }, {
+        model: Town,
+        as: 'ReportDestinationTown',
+        attributes: ['_id', 'name', 'location'],
+      }],
+    }],
+  })
+
   public _id: number;
   public UserId: number;
   public name: string;
@@ -35,7 +68,7 @@ Player.init({
   },
 }, { sequelize: world.sequelize });
 
-import { Town } from '../town/Town.model';
+import { Town, townIncludes } from '../town/Town.model';
 import { Report } from '../report/Report.model';
 
 export const PlayerOriginReports = Player.hasMany(Report, { as: 'ReportOriginPlayer', foreignKey: 'ReportOriginPlayerId' });

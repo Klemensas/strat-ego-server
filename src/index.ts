@@ -20,6 +20,7 @@ import WorldData from './components/world';
 import MapManager from './components/map';
 import routing from './routes';
 import initSocket from './config/socket';
+import queue from './api/world/queue';
 
 const app = express();
 const env = app.get('env');
@@ -49,9 +50,15 @@ main.sequelize.sync()
   .then(() => WorldData.readWorld('Megapolis'))
   .then(() => MapManager.initialize())
   .then(() => initSocket(io))
-  .then(() => console.log('server ready!'));
+  .then(() => console.log('server ready!'))
+  .then(() => queue.go());
 
 if (env === 'development' || env === 'test') {
   app.use(statusMonitor());
-  app.use(errorHandler()); // Error handler - has to be last
+  app.use(errorHandler({ log: errorNotification }));
+}
+
+function errorNotification(error, str, req) {
+  console.log('unhandled error', error, str, req);
+  return null;
 }

@@ -17,8 +17,8 @@ import { Report } from '../api/report/Report.model';
 export default () => {
   const worldData = {
     name: 'Megapolis',
-    baseProduction: 500,
-    speed: 10,
+    baseProduction: 5000,
+    speed: 100,
     size: 999,
     regionSize: 27,
     fillTime: (90 * 24 * 60 * 60 * 1000),
@@ -27,6 +27,9 @@ export default () => {
     timeQouta: 0.4,
     generationArea: 9,
     currentRing: 1,
+    initialLoyalty: 30,
+    loyaltyRegeneration: 1,
+    loyaltyReductionRange: [100, 105],
   };
   const userData = [
     {

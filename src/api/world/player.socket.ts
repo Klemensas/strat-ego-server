@@ -31,84 +31,23 @@ function createPlayer(socket) {
     });
 }
 
-function getPlayer(socket) {
-  return Player.findOne({
-    where: { UserId: socket.userId },
-    include: [{
-      model: Town,
-      as: 'Towns',
-      include: [{
-        all: true,
-      }, {
-        model: Movement,
-        as: 'MovementDestinationTown',
-        attributes: { exclude: ['createdAt', 'updatedAt', 'units'] },
-        include: [{
-          model: Town,
-          as: 'MovementOriginTown',
-          attributes: ['_id', 'name', 'location'],
-        }, {
-          model: Town,
-          as: 'MovementDestinationTown',
-          attributes: ['_id', 'name', 'location'],
-        }],
-      }, {
-        model: Movement,
-        as: 'MovementOriginTown',
-        include: [{
-          model: Town,
-          as: 'MovementOriginTown',
-          attributes: ['_id', 'name', 'location'],
-        }, {
-          model: Town,
-          as: 'MovementDestinationTown',
-          attributes: ['_id', 'name', 'location'],
-        }],
-      }],
-    }, {
-      model: Report,
-      as: 'ReportDestinationPlayer',
-      include: [{
-        model: Town,
-        as: 'ReportOriginTown',
-        attributes: ['_id', 'name', 'location'],
-      }, {
-        model: Town,
-        as: 'ReportDestinationTown',
-        attributes: ['_id', 'name', 'location'],
-      }],
-    }, {
-      model: Report,
-      as: 'ReportOriginPlayer',
-      include: [{
-        model: Town,
-        as: 'ReportOriginTown',
-        attributes: ['_id', 'name', 'location'],
-      }, {
-        model: Town,
-        as: 'ReportDestinationTown',
-        attributes: ['_id', 'name', 'location'],
-      }],
-    }],
-  });
-}
-
-export default (socket) => getPlayer(socket)
+export default (socket) => Player.getPlayer(socket.userId)
   .then((player: Player) => {
     if (!player) {
-      return createPlayer(socket).then(() => getPlayer(socket));
+      return createPlayer(socket).then(() => Player.getPlayer(socket.userId));
     }
     return player;
   })
   .then((player) => {
     return Promise.all(player.Towns.map((town) => Town.processTownQueues(town._id)))
-      .then((towns: Town[]) => {
-        player.Towns = towns;
+      .then((processedTowns) => {
+        player.Towns = processedTowns.map(({ town }) => town);
         return player;
       });
   })
-  .then((player: Player) => {
+  .then((player) => {
     socket.player = player;
+    socket.join(`player.${player._id}`);
     socket.emit('player', player);
     return socket;
   });

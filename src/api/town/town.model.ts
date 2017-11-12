@@ -20,6 +20,13 @@ export interface Resources {
   iron?: number;
 }
 
+export type ProcessedQueues = any[];
+
+export interface ProcessedTown {
+  town: Town;
+  processed: ProcessedQueues;
+}
+
 export type Coords = [number, number];
 
 export interface CubeCoords {
@@ -43,7 +50,9 @@ export class Town extends Model {
   static getAvailableCoords: (coords: any[]) => Bluebird<any[]>;
   static offsetToCube: (coords: Coords) => CubeCoords;
   static calculateDistance: (originCoords: Coords, taretCoords: Coords) => number;
-  static processTownQueues: (id: number, time?: Date) => Bluebird<Town>;
+  static processTownQueues: (id: number, time?: Date, processed?: ProcessedQueues) =>
+    Bluebird<ProcessedTown>;
+  static setInitialUnits: () => TownUnits;
 
   public _id: number;
   public name: string;
@@ -69,18 +78,12 @@ export class Town extends Model {
   public createMovementOriginTown: HasManyCreateAssociationMixin<Movement>;
   public createBuildingQueue: HasManyCreateAssociationMixin<BuildingQueue>;
 
-  public notfySave(event, transaction) {
-    return this.save({ transaction })
-      .then((town) => town.reload({ include: [{ all: true }] }))
-      .then((town) => {
-        io.sockets.in(town._id).emit('town', { town, event });
-        return town;
-      });
-  }
-
   public notify(event) {
-    return this.reload({ include: [{ all: true }] })
-    .then((town) => io.sockets.in(town._id).emit('town', { town, event }));
+    return this.reload({ include: townIncludes })
+     .then((town) => {
+       console.log('haha', town, town.production);
+       io.sockets.in(town._id as any).emit('town', { town, event });
+     });
   }
 
   public updateRes(now, previous = this.updatedAt) {
@@ -94,6 +97,18 @@ export class Town extends Model {
       wood: Math.min(maxRes, wood),
       iron: Math.min(maxRes, iron),
     };
+    return this;
+  }
+
+  public getLoyaltyGrowth(now, previous = this.updatedAt) {
+    if (this.loyalty === 100) {
+      return this;
+    }
+
+    const growthPerHour = WorldData.world.loyaltyRegeneration;
+    const timePast = (now - new Date(previous).getTime()) / 1000 / 60 / 60;
+    const growth = growthPerHour * timePast;
+    this.loyalty = Math.min(100, this.loyalty + growth);
     return this;
   }
 
@@ -136,37 +151,48 @@ export class Town extends Model {
     return total - used;
   }
 
-  public process(queues, finish?, error?) {
-    if (!finish) {
-      return new Promise((resolve, reject) => this.process(queues, resolve, reject));
+  public process(
+    queues,
+    resolvePromise?,
+    rejectPromise?,
+    processed?,
+  ): Promise<{ town: Town, processed: ProcessedQueues }> {
+    if (!resolvePromise) {
+      return new Promise((resolve, reject) => this.process(queues, resolve, reject, processed));
     }
     if (!queues.length) {
-      return finish(this);
+      console.log('done processing', processed);
+      return resolvePromise({ town: this, processed });
     }
 
     const item = queues.shift();
     const queueType: QueueType = item.constructor.name;
     return this[`process${queueType}`](item)
-      .then((town: Town) => town.process(queues, finish, error));
+      .then((town: Town) => town.process(queues, resolvePromise, rejectPromise, [ ...processed, item ]))
+      .catch((error) => {
+        rejectPromise({ error, processed })
+      });
   }
 
   public processUnitQueue(item: UnitQueue) {
-    this.units[item.unit].inside += item.amount;
-    this.units[item.unit].queued -= item.amount;
-    this.changed('units', true);
+    const town = this;
+    town.units[item.unit].inside += item.amount;
+    town.units[item.unit].queued -= item.amount;
+    town.changed('units', true);
     return world.sequelize.transaction((transaction) => item.destroy({ transaction})
-      .then(() => this.save({ transaction })));
+      .then(() => town.save({ transaction })));
   }
 
   public processBuildingQueue(item: BuildingQueue) {
-    const building = this.buildings[item.building];
+    const town = this;
+    const building = town.buildings[item.building];
     building.level++;
     if (building.queued === building.level) {
       building.queued = 0;
     }
-    this.changed('buildings', true);
+    town.changed('buildings', true);
     return world.sequelize.transaction((transaction) => item.destroy({ transaction })
-      .then(() => this.save({ transaction })));
+      .then(() => town.save({ transaction })));
   }
 
   public processMovement(item: Movement) {
@@ -189,7 +215,7 @@ Town.init({
     },
     defaultValue: 'Abandoned Town',
   },
-  loaylty: {
+  loyalty: {
     type: DataTypes.INTEGER,
     allowNull: false,
     defaultValue: 100,
@@ -234,10 +260,7 @@ Town.beforeBulkCreate((towns: Town[]) => {
     map[item.name] = { level: item.levels.min, queued: 0 };
     return map;
   }, {});
-  const units = WorldData.units.reduce((map, item) => {
-    map[item.name] = { inside: 0, outside: 0, queued: 0 };
-    return map;
-  }, {});
+  const units = Town.setInitialUnits();
   const resources = {
     wood: 800,
     clay: 800,
@@ -256,10 +279,7 @@ Town.beforeCreate((town: Town) => {
     map[item.name] = { level: item.levels.min, queued: 0 };
     return map;
   }, {});
-  const units = WorldData.units.reduce((map, item) => {
-    map[item.name] = { inside: 0, outside: 0, queued: 0 };
-    return map;
-  }, {});
+  const units = Town.setInitialUnits();
 
   // Town.resources
   town.resources = {
@@ -271,8 +291,9 @@ Town.beforeCreate((town: Town) => {
   town.production = town.calculateProduction();
   town.units = units;
 });
-Town.beforeValidate((town: Town) => {
+Town.beforeValidate((town: Town, {}) => {
   // Update res if not marked as changed
+  town.name = 'watafak is dis';
   if (town.isNewRecord) {
     return;
   }
@@ -283,6 +304,13 @@ Town.beforeValidate((town: Town) => {
   if (town.changed('buildings')) {
     town.production = town.calculateProduction();
   }
+
+  if (!town.changed('loyalty') && town.loyalty !== 100) {
+    town.getLoyaltyGrowth(town.updatedAt, town.previous('updatedAt'));
+  }
+});
+Town.beforeUpdate((town: Town) => {
+  console.log('before update', town, town.production);
 });
 // afterUpdate: town => {
 //   town.getBuildingQueues()
@@ -295,6 +323,13 @@ Town.afterCreate((town: Town) => {
   town.reload({ include: [{ all: true }] })
     .then((fullTown) => MapManager.addTown(fullTown));
 });
+
+Town.setInitialUnits = () => {
+  return WorldData.units.reduce((map, item) => {
+    map[item.name] = { inside: 0, outside: 0, queued: 0 };
+    return map;
+  }, {});
+};
 
 Town.getAvailableCoords = (allCoords) => {
   return Town.findAll({
@@ -311,6 +346,7 @@ Town.getAvailableCoords = (allCoords) => {
     return allCoords.filter((c) => !usedLocations.includes(c.join(',')));
   });
 };
+
 Town.offsetToCube = (coords) => {
   const off = 1;
   const x = coords[0] - Math.trunc((coords[1] + off * (coords[1] % 2)) / 2);
@@ -332,7 +368,7 @@ Town.calculateDistance = (originCoords, targetCoords) => {
   );
 };
 
-Town.processTownQueues = (id: number, time?: Date) => {
+Town.processTownQueues = (id: number, time?: Date, processed = []) => {
   const queueTime = time || new Date();
   return Town.findById(id, {
     include: [{
@@ -367,12 +403,12 @@ Town.processTownQueues = (id: number, time?: Date) => {
     .sort((a, b) => a.endsAt.getTime() - b.endsAt.getTime());
 
     if (!queues.length) {
-      return town.updateRes(queueTime);
+      return { town, processed };
     }
-    return town.process(queues)
-      .catch((error) => {
+    return town.process(queues, processed)
+      .catch(({ error, processedQueues }) => {
         if (error.constructor.name === 'OptimisticLockingError') {
-          return Town.processTownQueues(id, time);
+          return Town.processTownQueues(id, time, [ ...processed, ...processedQueues]);
         }
       });
   });
@@ -383,3 +419,36 @@ import { Report } from '../report/Report.model';
 import { Movement } from './Movement.model';
 import { BuildingQueue } from '../world/BuildingQueue.model';
 import { UnitQueue } from '../world/UnitQueue.model';
+
+export const townIncludes = [{
+  model: Movement,
+  as: 'MovementDestinationTown',
+  attributes: { exclude: ['createdAt', 'updatedAt', 'units'] },
+  include: [{
+    model: Town,
+    as: 'MovementOriginTown',
+    attributes: ['_id', 'name', 'location'],
+  }, {
+    model: Town,
+    as: 'MovementDestinationTown',
+    attributes: ['_id', 'name', 'location'],
+  }],
+}, {
+  model: Movement,
+  as: 'MovementOriginTown',
+  include: [{
+    model: Town,
+    as: 'MovementOriginTown',
+    attributes: ['_id', 'name', 'location'],
+  }, {
+    model: Town,
+    as: 'MovementDestinationTown',
+    attributes: ['_id', 'name', 'location'],
+  }],
+}, {
+  model: BuildingQueue,
+  as: 'BuildingQueues',
+}, {
+  model: UnitQueue,
+  as: 'UnitQueues',
+}];

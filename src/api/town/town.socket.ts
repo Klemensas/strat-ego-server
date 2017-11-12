@@ -1,5 +1,6 @@
 import WorldData from '../../components/world';
-import { Town } from './Town.model';
+import { Town, townIncludes } from './Town.model';
+import { Player } from '../world/Player.model';
 import { UnitQueue } from '../world/UnitQueue.model';
 import { BuildingQueue } from '../world/BuildingQueue.model';
 import { world } from '../../sqldb';
@@ -15,7 +16,7 @@ function joinTownRoom(socket) {
 function getTown(client, town) {
   const targetTown = client.player.Towns.find((t) => town === t._id);
   if (targetTown) {
-    return targetTown.reload({ include: [{ all: true }] });
+    return targetTown.reload({ include: townIncludes });
   }
   return Promise.reject('No town found');
 }
@@ -195,8 +196,16 @@ function update(data) {
   }
   // TODO: use town method instead of queue?
   this.log(`${this.username} attempting to update queue in ${data.town}`);
-  Town.processTownQueues(data.town)
-    .then((town) => town.notify({ type: 'update' }));
+  return Town.processTownQueues(data.town)
+    .then(({ town, processed }) => {
+      const processedAttack = processed.some((queue) =>
+        queue.constuctor.name === 'Movement' && queue.type === 'attack');
+      if (!processedAttack) {
+        return town.notify({ type: 'update' });
+      }
+      return Player.getPlayer(this.userId)
+        .then((player) => this.emit('player', player));
+    });
   // getTown(this, data.town)
   //   .then((town) => {
   //     console.log('updatin town', town.get());

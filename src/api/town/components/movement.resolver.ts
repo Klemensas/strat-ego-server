@@ -35,7 +35,8 @@ export default class MovementResolver {
     const missingTown = isOrigin ? movement.MovementDestinationId : movement.MovementOriginId;
 
     return world.sequelize['models'].Town.processTownQueues(missingTown, movement.endsAt)
-      .then((otherTown) => {
+      .then((processedTown) => {
+        const otherTown = processedTown.town;
         if (isOrigin) {
           return MovementResolver.resolveAttack(movement, otherTown, town);
         }
@@ -133,8 +134,12 @@ export default class MovementResolver {
       return outcome;
     }, { survivors: {}, attackingUnits: {}, losses: {}, maxHaul: 0, actualLosses: false });
 
+    destinationTown
+      .updateRes(movement.endsAt)
+      .getLoyaltyGrowth(movement.endsAt);
     const { resourcesLeft, haul } = MovementResolver.getHaul(destinationTown.resources, maxHaul);
     destinationTown.resources = resourcesLeft;
+    const loyaltyChange = MovementResolver.getLoyaltyChange(survivors.noble);
 
     const defenseUnits = {};
     destinationTown.units = unitArrays.defense.reduce((units, [key, val]) => {
@@ -144,6 +149,15 @@ export default class MovementResolver {
       return units;
     }, {});
     destinationTown.changed('units', true);
+    const townLoyalty = destinationTown.loyalty;
+    const changedLoyalty = destinationTown.loyalty - loyaltyChange;
+    const destinationPlayerId = destinationTown.PlayerId;
+    destinationTown.loyalty = changedLoyalty;
+    if (changedLoyalty <= 0) {
+      destinationTown.loyalty = WorldData.world.initialLoyalty;
+      destinationTown.PlayerId = originTown.PlayerId;
+      destinationTown.units = Town.setInitialUnits();
+    }
 
     const movementTime = movement.endsAt.getTime() - movement.createdAt.getTime();
     return world.sequelize.transaction((transaction: Transaction) => {
@@ -180,13 +194,14 @@ export default class MovementResolver {
           },
           {
             townId: movement.MovementDestinationId,
-            playerId: destinationTown.PlayerId,
+            playerId: destinationPlayerId,
             units: defenseUnits,
             losses: defenseUnits,
           }, {
             maxHaul,
             haul,
           },
+          [townLoyalty, changedLoyalty],
         ))
         .then((report: Report) => ({ report, originTown, destinationTown }));
     });
@@ -286,5 +301,14 @@ export default class MovementResolver {
 
   static calculateLoss(winner: number, loser: number): number {
     return 1 - (((loser / winner) ** 0.5) / (winner / loser));
+  }
+
+  static getLoyaltyChange(units) {
+    let change = 0;
+    const changeRange = WorldData.world.loyaltyReductionRange[1] - WorldData.world.loyaltyReductionRange[0];
+    for (let i = 0; i < units; i++) {
+      change += WorldData.world.loyaltyReductionRange[0] + Math.round(Math.random() * changeRange);
+    }
+    return change;
   }
 }
