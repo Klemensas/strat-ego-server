@@ -1,6 +1,8 @@
 import WorldData from './world';
 import { Town } from '../api/town/Town.model';
 import { Player } from '../api/world/Player.model';
+import { World } from '../api/world/World.model';
+import { logger } from '../';
 
 export interface MapTown {
   _id: number;
@@ -11,8 +13,10 @@ export interface MapTown {
 
 class MapManager {
   public mapData: { [name: string]: MapTown } = {};
+  public world: string;
 
-  public initialize() {
+  public initialize(world: string) {
+    this.world = world;
     return Town.findAll({
       include: [{ model: Player, as: 'Player' }],
     })
@@ -96,10 +100,14 @@ class MapManager {
       Math.ceil(WorldData.world.size / 2),
     ))
     .then((coords) => {
-      console.log('available coords:', coords, coords[Math.round(Math.random() * (coords.length - 1))]);
-      return coords;
+      if (!coords.length) {
+        return WorldData.increaseRing(this.world)
+          .then(() => this.chooseLocation());
+      }
+      // TODO: handle running out of locationsx`
+      logger.info('available coords:', coords, coords[Math.round(Math.random() * (coords.length - 1))]);
+      return coords[Math.round(Math.random() * (coords.length - 1))];
     })
-    .then((coords) => coords[Math.round(Math.random() * (coords.length - 1))]);
   }
 
   public getAllData() {

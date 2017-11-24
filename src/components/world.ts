@@ -1,3 +1,4 @@
+import * as Bluebird from 'bluebird';
 import { World } from '../api/world/World.model';
 import { Building } from '../api/world/Building.model';
 import { Unit } from '../api/world/Unit.model';
@@ -32,6 +33,14 @@ class WorldData {
         }, {});
       })
       .catch((err) => logger.error(err, 'Error read world.'));
+  }
+
+  public increaseRing(name: string, ring = this.world.currentRing): Bluebird<void> {
+    return World.update({ currentRing: ring + 1 }, { where: { name } })
+      .then(() => {
+        this.world.currentRing += 1;
+        logger.info('increased current ring');
+      });
   }
 }
 

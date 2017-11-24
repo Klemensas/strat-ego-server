@@ -14,6 +14,7 @@ export class Movement extends Model {
   public type: string;
   public endsAt: Date;
   public createdAt: Date;
+  public updatedAt: Date;
 
   // Associations
   public MovementOriginId: number;
