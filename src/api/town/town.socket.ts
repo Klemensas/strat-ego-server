@@ -158,9 +158,7 @@ function changeName(data) {
       return town.save();
     })
     .then((town) => town.notify({ type: 'name' }))
-    .catch((err) => {
-      console.log('SOCKET, CHANGE NAME FAIL', err);
-    });
+    .catch((err) => this.log(err, 'SOCKET CHANGE NAME ERROR'));
 }
 
 function build(data) {
@@ -172,9 +170,7 @@ function build(data) {
   getTown(this, data.town)
     .then((town) => tryBuilding(town, data))
     .then((town) => town.notify({ type: 'build' }))
-    .catch((error) => {
-      console.log('SOCKET BUILD ERROR', error);
-    });
+    .catch((err) => this.log(err, 'SOCKET BUILD ERROR'));
 }
 
 function recruit(data) {
@@ -185,9 +181,7 @@ function recruit(data) {
   getTown(this, data.town)
     .then((town) => tryRecruiting(town, data))
     .then((town) => town.notify({ type: 'recruit' }))
-    .catch((err) => {
-      console.log('SOCKET RECRUIT ERROR', err);
-    });
+    .catch((err) => this.log(err, 'SOCKET RECRUIT ERROR'));
 }
 
 function update(data) {
@@ -208,7 +202,6 @@ function update(data) {
     });
   // getTown(this, data.town)
   //   .then((town) => {
-  //     console.log('updatin town', town.get());
   //     const time = Date.now();
   //     town.BuildingQueues = town.BuildingQueues.filter((item) => time >= new Date(item.endsAt).getTime());
   //     town.UnitQueues = town.UnitQueues.filter((item) => time >= new Date(item.endsAt).getTime());
@@ -230,7 +223,7 @@ function troopMovement(data) {
   getTown(this, data.town)
     .then((town) => trySending(town, data))
     .then((town) => town.notify({ type: 'movement' }))
-    .catch((error) => console.log('SOCKET MOVE ERROR', error));
+    .catch((err) => this.log(err, 'SOCKET MOVE ERROR'));
 }
 
 export default (socket) => {

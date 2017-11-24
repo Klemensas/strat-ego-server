@@ -1,6 +1,7 @@
 import * as passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
 import { User } from '../../api/world/User.model';
+import { logger } from '../../';
 
 function localAuthenticate(email, password, done) {
   User.findOne({
@@ -23,7 +24,7 @@ function localAuthenticate(email, password, done) {
         });
     })
     .catch((err) => {
-      console.log('error', err);
+      logger.error(err, 'Auth error');
       return done(err);
     });
 }

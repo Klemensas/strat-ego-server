@@ -4,6 +4,7 @@ import WorldData from '../components/world';
 import initializePlayerSocket from '../api/world/player.socket';
 import initializeTownSocket from '../api/town/town.socket';
 import initializeMapSocket from '../api/map/map.socket';
+import { logger } from '../';
 
 function onConnect(client) {
   client.log(`${client.username} connected`);
@@ -17,9 +18,7 @@ function onConnect(client) {
   initializePlayerSocket(client)
     .then(initializeTownSocket)
     .then(initializeMapSocket)
-    .catch((error) => {
-      console.log('SOCKET ON CONNECT ERROR', error);
-    });
+    .catch((err) => client.log(err, 'SOCKET CHANGE NAME ERROR'));
 }
 function onDisconnect(client) {
   client.log(`${client.username} disconnected`);
@@ -37,7 +36,7 @@ export default (socketio) => {
     client.userId = client.decoded_token._id;
     client.username = client.decoded_token.name;
     client.log = (...data) => {
-      console.log(`SocketIO ${client.nsp.name} [${client.address}]`, ...data);
+      logger.info(...data, `SocketIO ${client.nsp.name} [${client.address}]`);
     };
 
     // Call onDisconnect.

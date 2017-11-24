@@ -7,6 +7,7 @@ import MapManager from '../../components/map';
 import MovementResolver from './components/movement.resolver';
 import { TownBuildings, TownUnits } from '../util.model';
 import { world } from '../../sqldb';
+import { logger } from '../../';
 
 export interface TownUnits {
   outside: number;
@@ -309,14 +310,14 @@ Town.beforeValidate((town: Town, {}) => {
     town.getLoyaltyGrowth(town.updatedAt, town.previous('updatedAt'));
   }
 });
-Town.beforeUpdate((town: Town) => {
-  console.log('before update', town, town.production);
-});
+// Town.beforeUpdate((town: Town) => {
+//   logger.info('before update', town, town.production);
+// });
 // afterUpdate: town => {
 //   town.getBuildingQueues()
 //     .then(queues => {
 //       town.setDataValue('BuildingQueues', queues);
-//       console.log(`Town ${town._id} updated, sending data to sockets`);
+//       logger.info(`Town ${town._id} updated, sending data to sockets`);
 //     });
 // },
 Town.afterCreate((town: Town) => {
@@ -407,6 +408,7 @@ Town.processTownQueues = (id: number, time?: Date, processed = []) => {
     }
     return town.process(queues, processed)
       .catch(({ error, processedQueues }) => {
+        logger.error(error, processedQueues);
         if (error.constructor.name === 'OptimisticLockingError') {
           return Town.processTownQueues(id, time, [ ...processed, ...processedQueues]);
         }

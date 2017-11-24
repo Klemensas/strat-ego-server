@@ -1,6 +1,7 @@
 import { World } from '../api/world/World.model';
 import { Building } from '../api/world/Building.model';
 import { Unit } from '../api/world/Unit.model';
+import { logger } from '../';
 
 class WorldData {
   public world: World;
@@ -30,7 +31,7 @@ class WorldData {
           return map;
         }, {});
       })
-      .catch((error) => console.log('Error read world.', error));
+      .catch((err) => logger.error(err, 'Error read world.'));
   }
 }
 

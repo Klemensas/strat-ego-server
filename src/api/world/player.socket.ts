@@ -50,4 +50,5 @@ export default (socket) => Player.getPlayer(socket.userId)
     socket.join(`player.${player._id}`);
     socket.emit('player', player);
     return socket;
-  });
+  })
+  .catch((err) => socket.log(err, 'SOCKET FATAL ERROR'));

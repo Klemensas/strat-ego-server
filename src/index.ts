@@ -10,6 +10,7 @@ import * as compression from 'compression';
 import * as methodOverride from 'method-override';
 import * as errorHandler from 'errorhandler';
 import * as passport from 'passport';
+import * as bunyan from 'bunyan';
 
 import * as statusMonitor from 'express-status-monitor';
 
@@ -25,6 +26,19 @@ import queue from './api/world/queue';
 const app = express();
 const env = app.get('env');
 const server = http.createServer(app);
+const worldName = 'Megapolis';
+
+export const logger = bunyan.createLogger({
+  name: 'app',
+  streams: [{
+    level: 'info',
+    stream: process.stdout,
+  }, {
+    level: 'error',
+    path: 'error.log',
+  }],
+});
+
 export const io = socket(server, {
   path: '/socket.io-client',
   serveClient: config.env !== 'production',
@@ -47,10 +61,10 @@ routing(app);
 main.sequelize.sync()
   .then(() => world.sequelize.sync())
   .then(() => (config.seedDB ? seedWorld() : null))
-  .then(() => WorldData.readWorld('Megapolis'))
-  .then(() => MapManager.initialize())
+  .then(() => WorldData.readWorld(worldName))
+  .then(() => MapManager.initialize(worldName))
   .then(() => initSocket(io))
-  .then(() => console.log('server ready!'))
+  .then(() => logger.info('server ready!'))
   .then(() => queue.go());
 
 if (env === 'development' || env === 'test') {
@@ -58,7 +72,7 @@ if (env === 'development' || env === 'test') {
   app.use(errorHandler({ log: errorNotification }));
 }
 
-function errorNotification(error, str, req) {
-  console.log('unhandled error', error, str, req);
+function errorNotification(err, str, req) {
+  logger.error(err, 'unhandled error', str, req);
   return null;
 }
