@@ -1,4 +1,4 @@
-import { Sequelize, Model, DataTypes, HasMany } from 'sequelize';
+import { Sequelize, Model, DataTypes, HasMany, HasManyCreateAssociationMixin } from 'sequelize';
 import { Resources, Requirements, Combat } from '../util.model';
 import { world } from '../../sqldb';
 
@@ -40,6 +40,23 @@ export class Player extends Model {
         attributes: ['_id', 'name', 'location'],
       }],
     }],
+  }).then((player) => {
+    if (!player) {
+      return;
+    }
+    player.Towns = player.Towns.map((town) => {
+      // town.MovementDestinationTown = town.MovementDestinationTown.map((movement) => movement);
+      town.MovementDestinationTown = town.MovementDestinationTown.map((movement) => {
+        if (movement.type !== 'attack') {
+          delete movement.units;
+          delete movement.createdAt;
+          delete movement.updatedAt;
+        }
+        return movement;
+      });
+      return town;
+    });
+    return player;
   })
 
   public _id: number;
@@ -50,6 +67,8 @@ export class Player extends Model {
   public Towns: Town[];
   public ReportDestinationPlayer: Report[];
   public ReportOriginPlayer: Report[];
+
+  public createTown: HasManyCreateAssociationMixin<Town>;
 }
 Player.init({
   _id: {

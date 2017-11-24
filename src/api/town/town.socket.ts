@@ -22,6 +22,7 @@ function getTown(client, town) {
 }
 
 function tryBuilding(town: Town, data) {
+  const time = Date.now();
   const target = town.buildings[data.building];
   if (target) {
     // Select next level latest queued or the current level;
@@ -36,8 +37,7 @@ function tryBuilding(town: Town, data) {
       return Promise.reject('Wrong building');
     }
 
-    const time = Date.now();
-    town = town.updateRes(time) ;
+    town = town.updateRes(time);
     town.resources.clay -= buildingData.costs.clay;
     town.resources.wood -= buildingData.costs.wood;
     town.resources.iron -= buildingData.costs.iron;
@@ -79,6 +79,7 @@ function tryRecruiting(town, data) {
     }
     usedPop += unit.amount;
 
+    town = town.updateRes(time);
     town.resources.wood -= targetUnit.costs.wood * unit.amount;
     town.resources.clay -= targetUnit.costs.clay * unit.amount;
     town.resources.iron -= targetUnit.costs.iron * unit.amount;

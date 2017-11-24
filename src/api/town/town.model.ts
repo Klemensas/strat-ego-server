@@ -81,10 +81,20 @@ export class Town extends Model {
 
   public notify(event) {
     return this.reload({ include: townIncludes })
-     .then((town) => {
-       console.log('haha', town, town.production);
-       io.sockets.in(town._id as any).emit('town', { town, event });
-     });
+      .then((town) => {
+        town.MovementDestinationTown = town.MovementDestinationTown.map((movement) => {
+          if (movement.type !== 'attack') {
+            delete movement.units;
+            delete movement.createdAt;
+            delete movement.updatedAt;
+          }
+          return movement;
+        });
+        return town;
+      })
+      .then((town) => {
+        io.sockets.in(town._id as any).emit('town', { town, event });
+      });
   }
 
   public updateRes(now, previous = this.updatedAt) {
@@ -154,25 +164,22 @@ export class Town extends Model {
 
   public process(
     queues,
+    processed = [],
     resolvePromise?,
     rejectPromise?,
-    processed?,
   ): Promise<{ town: Town, processed: ProcessedQueues }> {
     if (!resolvePromise) {
-      return new Promise((resolve, reject) => this.process(queues, resolve, reject, processed));
+      return new Promise((resolve, reject) => this.process(queues, processed, resolve, reject));
     }
     if (!queues.length) {
-      console.log('done processing', processed);
       return resolvePromise({ town: this, processed });
     }
 
     const item = queues.shift();
     const queueType: QueueType = item.constructor.name;
     return this[`process${queueType}`](item)
-      .then((town: Town) => town.process(queues, resolvePromise, rejectPromise, [ ...processed, item ]))
-      .catch((error) => {
-        rejectPromise({ error, processed })
-      });
+      .then((town: Town) => town.process(queues, [ ...processed, item ], resolvePromise, rejectPromise))
+      .catch((error) => rejectPromise({ error, processed }));
   }
 
   public processUnitQueue(item: UnitQueue) {
@@ -292,12 +299,12 @@ Town.beforeCreate((town: Town) => {
   town.production = town.calculateProduction();
   town.units = units;
 });
-Town.beforeValidate((town: Town, {}) => {
-  // Update res if not marked as changed
-  town.name = 'watafak is dis';
+// Town.beforeValidate((town: Town, {}) => {
+Town.beforeUpdate((town: Town, {}) => {
   if (town.isNewRecord) {
     return;
   }
+  // Update res if not marked as changed
   if (!town.changed('resources')) {
     town.updateRes(town.updatedAt, town.previous('updatedAt'));
   }
@@ -425,7 +432,6 @@ import { UnitQueue } from '../world/UnitQueue.model';
 export const townIncludes = [{
   model: Movement,
   as: 'MovementDestinationTown',
-  attributes: { exclude: ['createdAt', 'updatedAt', 'units'] },
   include: [{
     model: Town,
     as: 'MovementOriginTown',
