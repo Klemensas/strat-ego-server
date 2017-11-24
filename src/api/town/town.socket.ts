@@ -6,17 +6,27 @@ import { BuildingQueue } from '../world/BuildingQueue.model';
 import { world } from '../../sqldb';
 import Queue from '../world/queue';
 
-function joinTownRoom(socket) {
+export function joinTownRoom(socket) {
   if (socket.player && socket.player.Towns.length) {
     socket.player.Towns.forEach((town) => socket.join(town._id));
     socket.log(`${socket.username} joined town rooms`);
   }
 }
 
-function getTown(client, town) {
-  const targetTown = client.player.Towns.find((t) => town === t._id);
+function getTown(client, townId) {
+  const targetTown = client.player.Towns.find((t) => townId === t._id);
   if (targetTown) {
-    return targetTown.reload({ include: townIncludes });
+    return targetTown.reload({ include: townIncludes })
+      .then((town) => {
+        town.MovementDestinationTown = town.MovementDestinationTown.map((movement) => {
+          if (movement.type !== 'attack') {
+            delete movement.units;
+            delete movement.createdAt;
+            delete movement.updatedAt;
+          }
+        });
+        return town;
+      });
   }
   return Promise.reject('No town found');
 }
@@ -194,12 +204,15 @@ function update(data) {
   return Town.processTownQueues(data.town)
     .then(({ town, processed }) => {
       const processedAttack = processed.some((queue) =>
-        queue.constuctor.name === 'Movement' && queue.type === 'attack');
+        queue.constructor.name === 'Movement' && queue.type === 'attack');
       if (!processedAttack) {
         return town.notify({ type: 'update' });
       }
       return Player.getPlayer(this.userId)
-        .then((player) => this.emit('player', player));
+        .then((player) => {
+          this.player = player;
+          this.emit('player', player);
+        });
     });
   // getTown(this, data.town)
   //   .then((town) => {

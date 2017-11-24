@@ -117,22 +117,22 @@ export default class MovementResolver {
     destinationTown: Town,
     originTown: Town,
   ): Bluebird<{ report: Report, originTown: Town, destinationTown: Town}> {
-    const {
+    let {
       maxHaul,
       survivors,
       attackingUnits,
       losses,
-      actualLosses,
+      unitChange,
     } = unitArrays.attack.reduce((outcome, [key, val]) => {
       const survived = Math.round(val * winnerLoss);
       const loss = val - survived;
       outcome.attackingUnits[key] = val;
-      outcome.actualLosses = outcome.actualLosses || !!loss;
+      outcome.unitChange = outcome.unitChange || !!loss;
       outcome.survivors[key] = survived;
       outcome.losses[key] = loss;
       outcome.maxHaul += outcome.survivors[key] * WorldData.unitMap[key].haul;
       return outcome;
-    }, { survivors: {}, attackingUnits: {}, losses: {}, maxHaul: 0, actualLosses: false });
+    }, { survivors: {}, attackingUnits: {}, losses: {}, maxHaul: 0, unitChange: false });
 
     destinationTown
       .updateRes(movement.endsAt)
@@ -157,6 +157,9 @@ export default class MovementResolver {
       destinationTown.loyalty = WorldData.world.initialLoyalty;
       destinationTown.PlayerId = originTown.PlayerId;
       destinationTown.units = Town.setInitialUnits();
+      originTown.units.noble.outside -= 1;
+      unitChange = true;
+      survivors.noble--;
     }
 
     const movementTime = movement.endsAt.getTime() - movement.createdAt.getTime();
@@ -172,7 +175,7 @@ export default class MovementResolver {
         .then(() => destinationTown.save({ transaction }))
         .then((updatedDestinationTown) => {
           destinationTown = updatedDestinationTown;
-          if (!actualLosses) {
+          if (!unitChange) {
             return originTown;
           }
 
@@ -214,16 +217,16 @@ export default class MovementResolver {
     destinationTown: Town,
     originTown: Town,
   ): Bluebird<{ report: Report, originTown: Town, destinationTown: Town}> {
-    const { survivors, actualLosses, defenseUnits, losses } = unitArrays.defense.reduce((outcome, [key, val]) => {
+    const { survivors, unitChange, defenseUnits, losses } = unitArrays.defense.reduce((outcome, [key, val]) => {
       const survived = Math.round(val.inside * winnerLoss);
       const loss = val.inside - survived;
       outcome.defenseUnits[key] = val.inside;
       outcome.losses = loss;
-      outcome.actualLosses = outcome.actualLosses || !!loss;
+      outcome.unitChange = outcome.unitChange || !!loss;
       outcome.survivors[key] = val;
       outcome.survivors[key].inside = survived;
       return outcome;
-    }, { survivors: {}, actualLosses: false, defenseUnits: {}, losses: {} });
+    }, { survivors: {}, unitChange: false, defenseUnits: {}, losses: {} });
 
     const attackingUnits = {};
 
@@ -239,7 +242,7 @@ export default class MovementResolver {
       })
       .then((updatedOriginTown: Town) => {
         originTown = updatedOriginTown;
-        if (!actualLosses) {
+        if (!unitChange) {
           return destinationTown;
         }
         destinationTown.units = survivors;

@@ -7,6 +7,7 @@ import { BuildingQueue } from './BuildingQueue.model';
 import { Movement } from '../town/Movement.model';
 import { Report } from '../report/Report.model';
 import { UserWorld } from './UserWorld.model';
+import { joinTownRoom } from '../town/town.socket';
 
 function createPlayer(socket) {
   socket.log(`creating player for ${socket.username}, on ${socket.world}`);
@@ -31,6 +32,25 @@ function createPlayer(socket) {
     });
 }
 
+function restart() {
+  this.log(`player ${this.username} restarting`);
+  return Player.getPlayer(this.userId)
+    .then((player) => {
+      if (player.Towns.length) {
+        return Promise.reject('Can\'t restart.');
+      }
+      return MapManager.chooseLocation()
+        .then((location) => player.createTown({ location, name: `${player.name}s Town` })
+        .then(() => Player.getPlayer(this.userId)));
+    })
+    .then((player) => {
+      this.player = player;
+      joinTownRoom(this);
+      this.emit('player', player);
+    })
+    .catch((err) => this.log(err, 'SOCKET RESTART ERROR'));
+}
+
 export default (socket) => Player.getPlayer(socket.userId)
   .then((player: Player) => {
     if (!player) {
@@ -49,6 +69,8 @@ export default (socket) => Player.getPlayer(socket.userId)
     socket.player = player;
     socket.join(`player.${player._id}`);
     socket.emit('player', player);
+
+    socket.on('player:restart', restart);
     return socket;
   })
   .catch((err) => socket.log(err, 'SOCKET FATAL ERROR'));

@@ -67,10 +67,10 @@ Report.init({
 }, { sequelize: world.sequelize });
 
 Report.afterCreate((report: Report) => {
-  io.sockets.in(report.ReportOriginTownId as any).emit('report', report);
-  if (report.ReportDestinationPlayerId) {
-    io.sockets.in(report.ReportDestinationTownId as any).emit('report', report);
-  }
+  // io.sockets.in(report.ReportOriginTownId as any).emit('report', report);
+  // if (report.ReportDestinationPlayerId) {
+  //   io.sockets.in(report.ReportDestinationTownId as any).emit('report', report);
+  // }
 });
 
 import { Town } from '../town/Town.model';
