@@ -8,7 +8,7 @@ export class Movement extends Model {
     MovementOriginTown: BelongsTo;
   };
 
-  public _id: number;
+  public id: number;
   public units: { [name: string]: number };
   public haul: Resources;
   public type: string;
@@ -24,7 +24,7 @@ export class Movement extends Model {
 }
 
 Movement.init({
-  _id: {
+  id: {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,

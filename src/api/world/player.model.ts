@@ -21,11 +21,11 @@ export class Player extends Model {
       include: [{
         model: Town,
         as: 'ReportOriginTown',
-        attributes: ['_id', 'name', 'location'],
+        attributes: ['id', 'name', 'location'],
       }, {
         model: Town,
         as: 'ReportDestinationTown',
-        attributes: ['_id', 'name', 'location'],
+        attributes: ['id', 'name', 'location'],
       }],
     }, {
       model: Report,
@@ -33,11 +33,11 @@ export class Player extends Model {
       include: [{
         model: Town,
         as: 'ReportOriginTown',
-        attributes: ['_id', 'name', 'location'],
+        attributes: ['id', 'name', 'location'],
       }, {
         model: Town,
         as: 'ReportDestinationTown',
-        attributes: ['_id', 'name', 'location'],
+        attributes: ['id', 'name', 'location'],
       }],
     }],
   }).then((player) => {
@@ -59,7 +59,7 @@ export class Player extends Model {
     return player;
   })
 
-  public _id: number;
+  public id: number;
   public UserId: number;
   public name: string;
 
@@ -71,7 +71,7 @@ export class Player extends Model {
   public createTown: HasManyCreateAssociationMixin<Town>;
 }
 Player.init({
-  _id: {
+  id: {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,

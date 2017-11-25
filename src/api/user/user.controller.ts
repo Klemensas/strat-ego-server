@@ -64,7 +64,7 @@ export function show(req, res, next) {
  * restriction: 'admin'
  */
 export function destroy(req, res) {
-  return User.destroy({ where: { _id: req.params.id }})
+  return User.destroy({ where: { id: req.params.id }})
     .then(() => {
       res.status(204).end();
     })
@@ -76,7 +76,7 @@ export function destroy(req, res) {
  */
 // export function changePassword(req, res, next) {
 export function changePassword(req, res) {
-  const userId = req.user._id;
+  const userId = req.user.id;
   const oldPass = String(req.body.oldPassword);
   const newPass = String(req.body.newPassword);
 
@@ -99,9 +99,9 @@ export function changePassword(req, res) {
  * Get my info
  */
 export function me(req, res, next) {
-  const userId = req.user._id;
+  const userId = req.user.id;
   return User.findOne({
-    where: { _id: userId },
+    where: { id: userId },
     attributes: {
       exclude: ['salt', 'password'],
     },

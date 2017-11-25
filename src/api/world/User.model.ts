@@ -8,12 +8,12 @@ const cryptoPromise: any = Promise.promisifyAll(crypto);
 const authTypes = ['github.', 'twitter', 'facebook', 'google'];
 
 export interface Token {
-  _id: number;
+  id: number;
   role: string;
 }
 
 export interface Profile {
-  _id: number;
+  id: number;
   name: string;
 }
 
@@ -22,7 +22,7 @@ export class User extends Model {
     Worlds: HasMany;
   };
 
-  public _id: number;
+  public id: number;
   public name: string;
   public email: string;
   public role: string;
@@ -38,11 +38,11 @@ export class User extends Model {
   public Worlds: World[];
 
   public get token(): Token {
-    return { _id: this._id, role: this.role };
+    return { id: this.id, role: this.role };
   }
 
   public get profile(): Profile {
-    return { _id: this._id, name: this.name };
+    return { id: this.id, name: this.name };
   }
 
   public authenticate(password: string): Promise<boolean> {
@@ -83,7 +83,7 @@ export class User extends Model {
 }
 
 User.init({
-  _id: {
+  id: {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,

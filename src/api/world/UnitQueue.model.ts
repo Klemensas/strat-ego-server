@@ -7,7 +7,7 @@ export class UnitQueue extends Model {
     Town: BelongsTo;
   };
 
-  public _id: number;
+  public id: number;
   public unit: string;
   public amount: number;
   public recruitTime: number;
@@ -19,7 +19,7 @@ export class UnitQueue extends Model {
 }
 
 UnitQueue.init({
-  _id: {
+  id: {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,

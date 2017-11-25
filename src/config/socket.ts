@@ -33,7 +33,7 @@ export default (socketio) => {
     client.address = `${client.request.connection.remoteAddress}:${client.request.connection.remotePort}`;
     client.connectedAt = new Date();
     client.world = client.handshake.query.world;
-    client.userId = client.decoded_token._id;
+    client.userId = client.decoded_token.id;
     client.username = client.decoded_token.name;
     client.log = (...data) => {
       logger.info(...data, `SocketIO ${client.nsp.name} [${client.address}]`);

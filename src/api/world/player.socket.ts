@@ -26,7 +26,7 @@ function createPlayer(socket) {
       return UserWorld.create({
         UserId: socket.userId,
         World: socket.world,
-        PlayerId: newPlayer._id,
+        PlayerId: newPlayer.id,
       })
       .then(() => newPlayer);
     });
@@ -59,7 +59,7 @@ export default (socket) => Player.getPlayer(socket.userId)
     return player;
   })
   .then((player) => {
-    return Promise.all(player.Towns.map((town) => Town.processTownQueues(town._id)))
+    return Promise.all(player.Towns.map((town) => Town.processTownQueues(town.id)))
       .then((processedTowns) => {
         player.Towns = processedTowns.map(({ town }) => town);
         return player;
@@ -67,7 +67,7 @@ export default (socket) => Player.getPlayer(socket.userId)
   })
   .then((player) => {
     socket.player = player;
-    socket.join(`player.${player._id}`);
+    socket.join(`player.${player.id}`);
     socket.emit('player', player);
 
     socket.on('player:restart', restart);

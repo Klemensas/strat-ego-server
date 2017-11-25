@@ -3,7 +3,7 @@ import { Resources, Requirements, Combat } from '../util.model';
 import { world } from '../../sqldb';
 
 export class Unit extends Model {
-  public _id: number;
+  public id: number;
   public name: string;
   public attackType: string;
   public speed: number;
@@ -15,7 +15,7 @@ export class Unit extends Model {
 }
 
 Unit.init({
-  _id: {
+  id: {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,

@@ -13,7 +13,7 @@ function worlds(req, res) {
 //   }
 //   return Player.findOne({
 //     where: {
-//       UserId: req.user._id,
+//       UserId: req.user.id,
 //     },
 //     include: {
 //       model: Town,
@@ -42,7 +42,7 @@ function worlds(req, res) {
 //     return UserWorlds.create({
 //       UserId: userId,
 //       World: targetWorld,
-//       PlayerId: player._id,
+//       PlayerId: player.id,
 //     })
 //     .then(() => player);
 //   });
@@ -68,7 +68,7 @@ function worlds(req, res) {
 //   }
 //   return Player.findOne({
 //     where: {
-//       UserId: req.user._id,
+//       UserId: req.user.id,
 //     },
 //     include: {
 //       model: Restaurant,

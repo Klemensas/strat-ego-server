@@ -3,7 +3,7 @@ import { Resources, Requirements } from '../util.model';
 import { world } from '../../sqldb';
 
 export class Building extends Model {
-  public _id: number;
+  public id: number;
   public name: string;
   public levels: {
     max: number;
@@ -22,7 +22,7 @@ export class Building extends Model {
 }
 
 Building.init({
-  _id: {
+  id: {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,

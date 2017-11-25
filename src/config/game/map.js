@@ -24,7 +24,7 @@ class MapData {
     const owner = town.Player ? town.Player.name : town['Player.name'];
 
     this.data.townLocations[town.location] = {
-      _id: town._id,
+      id: town.id,
       name: town.name,
       location: town.location,
       owner,
@@ -33,7 +33,7 @@ class MapData {
 
   storeData() {
     return this.worldDB.Town.findAll({
-      attributes: ['_id', 'name', 'location'],
+      attributes: ['id', 'name', 'location'],
       include: [{
         model: this.worldDB.Player,
         attributes: ['name'],
@@ -43,7 +43,7 @@ class MapData {
       .then(towns => {
         this.data.townLocations = towns.reduce((data, town) => {
           data[town.location] = {
-            _id: town._id,
+            id: town.id,
             name: town.name,
             location: town.location,
             owner: town['Player.name'],

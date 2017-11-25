@@ -55,7 +55,7 @@ export class Town extends Model {
     Bluebird<ProcessedTown>;
   static setInitialUnits: () => TownUnits;
 
-  public _id: number;
+  public id: number;
   public name: string;
   public loyalty: number;
   public location: [number, number];
@@ -93,7 +93,7 @@ export class Town extends Model {
         return town;
       })
       .then((town) => {
-        io.sockets.in(town._id as any).emit('town', { town, event });
+        io.sockets.in(town.id as any).emit('town', { town, event });
       });
   }
 
@@ -209,7 +209,7 @@ export class Town extends Model {
 }
 
 Town.init({
-  _id: {
+  id: {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,
@@ -324,7 +324,7 @@ Town.beforeUpdate((town: Town, {}) => {
 //   town.getBuildingQueues()
 //     .then(queues => {
 //       town.setDataValue('BuildingQueues', queues);
-//       logger.info(`Town ${town._id} updated, sending data to sockets`);
+//       logger.info(`Town ${town.id} updated, sending data to sockets`);
 //     });
 // },
 Town.afterCreate((town: Town) => {
@@ -435,11 +435,11 @@ export const townIncludes = [{
   include: [{
     model: Town,
     as: 'MovementOriginTown',
-    attributes: ['_id', 'name', 'location'],
+    attributes: ['id', 'name', 'location'],
   }, {
     model: Town,
     as: 'MovementDestinationTown',
-    attributes: ['_id', 'name', 'location'],
+    attributes: ['id', 'name', 'location'],
   }],
 }, {
   model: Movement,
@@ -447,11 +447,11 @@ export const townIncludes = [{
   include: [{
     model: Town,
     as: 'MovementOriginTown',
-    attributes: ['_id', 'name', 'location'],
+    attributes: ['id', 'name', 'location'],
   }, {
     model: Town,
     as: 'MovementDestinationTown',
-    attributes: ['_id', 'name', 'location'],
+    attributes: ['id', 'name', 'location'],
   }],
 }, {
   model: BuildingQueue,

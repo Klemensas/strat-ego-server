@@ -7,7 +7,7 @@ export class UserWorld extends Model {
     Town: BelongsTo;
   };
 
-  public _id: number;
+  public id: number;
   public PlayerId: number;
 
   // Associations
@@ -18,7 +18,7 @@ export class UserWorld extends Model {
 }
 
 UserWorld.init({
-  _id: {
+  id: {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,

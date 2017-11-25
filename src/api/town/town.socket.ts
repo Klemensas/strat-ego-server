@@ -8,13 +8,13 @@ import Queue from '../world/queue';
 
 export function joinTownRoom(socket) {
   if (socket.player && socket.player.Towns.length) {
-    socket.player.Towns.forEach((town) => socket.join(town._id));
+    socket.player.Towns.forEach((town) => socket.join(town.id));
     socket.log(`${socket.username} joined town rooms`);
   }
 }
 
 function getTown(client, townId) {
-  const targetTown = client.player.Towns.find((t) => townId === t._id);
+  const targetTown = client.player.Towns.find((t) => townId === t.id);
   if (targetTown) {
     return targetTown.reload({ include: townIncludes })
       .then((town) => {
@@ -74,7 +74,7 @@ function tryRecruiting(town, data) {
   const unitData = WorldData.unitMap;
   const unitsToQueue = [];
   const queueCreateTime = new Date();
-  const TownId = town._id;
+  const TownId = town.id;
   const availablePopulation = town.getAvailablePopulation();
   const recruitmentModifier = town.getRecruitmentModifier();
   let usedPop = 0;
@@ -148,7 +148,7 @@ function trySending(town, data) {
         units: data.units.reduce((result, [name, count]) => ({ ...result, [name]: count }), {}),
         type: data.type,
         endsAt: queueCreateTime + movementTime,
-        MovementDestinationId: targetTown._id,
+        MovementDestinationId: targetTown.id,
       }, { transaction })
         .then((item) => {
           return town.save({ transaction });

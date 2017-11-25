@@ -31,7 +31,7 @@ export default class MovementResolver {
   }
 
   static fetchTownAndResolveAttack(movement: Movement, town: Town) {
-    const isOrigin = movement.MovementOriginId === town._id;
+    const isOrigin = movement.MovementOriginId === town.id;
     const missingTown = isOrigin ? movement.MovementDestinationId : movement.MovementOriginId;
 
     return world.sequelize['models'].Town.processTownQueues(missingTown, movement.endsAt)

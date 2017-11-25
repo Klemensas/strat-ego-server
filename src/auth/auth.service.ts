@@ -24,7 +24,7 @@ export function isAuthenticated() {
     .use((req, res, next) => {
       User.findOne({
         where: {
-          _id: req.user._id,
+          id: req.user.id,
         },
         include: [{
           model: World,
@@ -60,7 +60,7 @@ export function hasRole(roleRequired) {
 export function signToken(data) {
   const tokenData = {
     name: data.name,
-    _id: data._id,
+    id: data.id,
     role: data.role,
   };
   return jwt.sign(tokenData, config.secrets.session, {

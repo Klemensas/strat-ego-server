@@ -7,7 +7,7 @@ export class BuildingQueue extends Model {
     Town: BelongsTo;
   };
 
-  public _id: number;
+  public id: number;
   public building: string;
   public level: number;
   public buildTime: number;
@@ -19,7 +19,7 @@ export class BuildingQueue extends Model {
 }
 
 BuildingQueue.init({
-  _id: {
+  id: {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,

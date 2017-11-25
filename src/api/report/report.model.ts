@@ -21,7 +21,7 @@ export class Report extends Model {
     ReportOriginPlayer: BelongsTo;
   };
 
-  public _id: number;
+  public id: number;
   public outcome: string;
   public origin: CombatCasualties;
   public destination: CombatCasualties;
@@ -40,7 +40,7 @@ export class Report extends Model {
 }
 
 Report.init({
-  _id: {
+  id: {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,

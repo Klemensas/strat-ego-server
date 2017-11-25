@@ -5,7 +5,7 @@ import { World } from '../api/world/World.model';
 import { logger } from '../';
 
 export interface MapTown {
-  _id: number;
+  id: number;
   name: string;
   location: number[];
   owner: string;
@@ -27,7 +27,7 @@ class MapManager {
      towns.forEach((town) => {
        const owner = town.Player ? town.Player.name : null;
        this.mapData[town.location.join(',')] = {
-         _id: town._id,
+         id: town.id,
          name: town.name,
          owner,
          location: town.location,

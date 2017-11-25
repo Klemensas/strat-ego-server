@@ -22,7 +22,7 @@ for (const e in events) {
 
 function emitEvent(event) {
   return (doc, options, done) => {
-    PlayerEvents.emit(`${event}:${doc._id}`, doc);
+    PlayerEvents.emit(`${event}:${doc.id}`, doc);
     PlayerEvents.emit(event, doc);
     done(null);
   };
