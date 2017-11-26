@@ -37,6 +37,7 @@ import { Movement } from '../api/town/Movement.model';
 import { BuildingQueue } from '../api/world/BuildingQueue.model';
 import { UnitQueue } from '../api/world/UnitQueue.model';
 import { Report } from '../api/report/Report.model';
+import { Alliance } from '../api/world/Alliance.model';
 
 Town.belongsTo(Player, { as: 'Player', foreignKey: 'PlayerId' });
 Player.hasMany(Town, { as: 'Towns', foreignKey: 'PlayerId' });

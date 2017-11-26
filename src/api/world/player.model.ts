@@ -1,4 +1,4 @@
-import { Sequelize, Model, DataTypes, HasMany, HasManyCreateAssociationMixin } from 'sequelize';
+import { Sequelize, Model, DataTypes, HasMany, HasManyCreateAssociationMixin, BelongsTo } from 'sequelize';
 import { Resources, Requirements, Combat } from '../util.model';
 import { world } from '../../sqldb';
 
@@ -7,11 +7,23 @@ export class Player extends Model {
     Towns: HasMany;
     ReportDestinationPlayer: HasMany,
     ReportOriginPlayer: HasMany,
+    Alliance: BelongsTo;
+    AllianceInvitations: HasMany;
   };
 
-  static getPlayer = (UserId: number) => Player.findOne({
+  static getPlayer = (UserId: number) => {
+    console.log('hi', Player.associations);
+    return Player.findOne({
+  // static getPlayer = (UserId: number) => Player.findOne({
     where: { UserId },
     include: [{
+      model: Alliance,
+      as: 'Alliance',
+    }, {
+      model: Alliance,
+      as: 'Invitations',
+      attributes: ['id', 'name'],
+    }, {
       model: Town,
       as: 'Towns',
       include: townIncludes,
@@ -57,16 +69,21 @@ export class Player extends Model {
       return town;
     });
     return player;
-  })
+  })}
 
   public id: number;
   public UserId: number;
   public name: string;
+  public allianceName: string;
+  public allianceRole: string;
 
   // Associations
   public Towns: Town[];
   public ReportDestinationPlayer: Report[];
   public ReportOriginPlayer: Report[];
+  public AllianceId: number;
+  public Alliance: Alliance;
+  public AllianceInvitaitons: Alliance[];
 
   public createTown: HasManyCreateAssociationMixin<Town>;
 }
@@ -89,8 +106,13 @@ Player.init({
 
 import { Town, townIncludes } from '../town/Town.model';
 import { Report } from '../report/Report.model';
+import { Alliance } from './Alliance.model';
 
-export const PlayerOriginReports = Player.hasMany(Report, { as: 'ReportOriginPlayer', foreignKey: 'ReportOriginPlayerId' });
-export const PlayerDestinationReports = Player.hasMany(Report, { as: 'ReportDestinationPlayer', foreignKey: 'ReportDestinationPlayerId' });
-export const ReportDestinationPlayer = Report.belongsTo(Player, { as: 'ReportDestinationPlayer', foreignKey: 'ReportDestinationPlayerId' });
-export const ReportOriginPlayer = Report.belongsTo(Player, { as: 'ReportOriginPlayer', foreignKey: 'ReportOriginPlayerId' });
+Player.belongsToMany(Alliance, { through: 'AllianceInvitations', as: 'Invitations', foreignKey: 'PlayerId' });
+Alliance.belongsToMany(Player,   { through: 'AllianceInvitations', as: 'InvitedPlayers', foreignKey: 'AllianceId' });
+Alliance.hasMany(Player, { as: 'Players', foreignKey: 'AllianceId' });
+Player.belongsTo(Alliance, { as: 'Alliance', foreignKey: 'AllianceId' });
+Player.hasMany(Report, { as: 'ReportOriginPlayer', foreignKey: 'ReportOriginPlayerId' });
+Player.hasMany(Report, { as: 'ReportDestinationPlayer', foreignKey: 'ReportDestinationPlayerId' });
+Report.belongsTo(Player, { as: 'ReportDestinationPlayer', foreignKey: 'ReportDestinationPlayerId' });
+Report.belongsTo(Player, { as: 'ReportOriginPlayer', foreignKey: 'ReportOriginPlayerId' });
