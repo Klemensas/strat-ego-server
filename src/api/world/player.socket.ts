@@ -71,6 +71,7 @@ export default (socket) => Player.getPlayer(socket.userId)
     socket.emit('player', player);
 
     socket.on('player:restart', restart);
+    console.log('welp dis is weird', typeof socket);
     return socket;
   })
   .catch((err) => socket.log(err, 'SOCKET FATAL ERROR'));

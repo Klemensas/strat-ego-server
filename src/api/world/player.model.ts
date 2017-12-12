@@ -12,64 +12,66 @@ export class Player extends Model {
   };
 
   static getPlayer = (UserId: number) => {
-    console.log('hi', Player.associations);
     return Player.findOne({
-  // static getPlayer = (UserId: number) => Player.findOne({
-    where: { UserId },
-    include: [{
-      model: Alliance,
-      as: 'Alliance',
-    }, {
-      model: Alliance,
-      as: 'Invitations',
-      attributes: ['id', 'name'],
-    }, {
-      model: Town,
-      as: 'Towns',
-      include: townIncludes,
-    }, {
-      model: Report,
-      as: 'ReportDestinationPlayer',
+      where: { UserId },
       include: [{
-        model: Town,
-        as: 'ReportOriginTown',
-        attributes: ['id', 'name', 'location'],
+        model: Alliance,
+        as: 'Alliance',
+      }, {
+        model: Alliance,
+        as: 'Invitations',
+        attributes: ['id', 'name', 'createdAt'],
+        through: {
+          attributes: [],
+        },
       }, {
         model: Town,
-        as: 'ReportDestinationTown',
-        attributes: ['id', 'name', 'location'],
-      }],
-    }, {
-      model: Report,
-      as: 'ReportOriginPlayer',
-      include: [{
-        model: Town,
-        as: 'ReportOriginTown',
-        attributes: ['id', 'name', 'location'],
+        as: 'Towns',
+        include: townIncludes,
       }, {
-        model: Town,
-        as: 'ReportDestinationTown',
-        attributes: ['id', 'name', 'location'],
+        model: Report,
+        as: 'ReportDestinationPlayer',
+        include: [{
+          model: Town,
+          as: 'ReportOriginTown',
+          attributes: ['id', 'name', 'location'],
+        }, {
+          model: Town,
+          as: 'ReportDestinationTown',
+          attributes: ['id', 'name', 'location'],
+        }],
+      }, {
+        model: Report,
+        as: 'ReportOriginPlayer',
+        include: [{
+          model: Town,
+          as: 'ReportOriginTown',
+          attributes: ['id', 'name', 'location'],
+        }, {
+          model: Town,
+          as: 'ReportDestinationTown',
+          attributes: ['id', 'name', 'location'],
+        }],
       }],
-    }],
-  }).then((player) => {
-    if (!player) {
-      return;
-    }
-    player.Towns = player.Towns.map((town) => {
-      // town.MovementDestinationTown = town.MovementDestinationTown.map((movement) => movement);
-      town.MovementDestinationTown = town.MovementDestinationTown.map((movement) => {
-        if (movement.type !== 'attack') {
-          delete movement.units;
-          delete movement.createdAt;
-          delete movement.updatedAt;
-        }
-        return movement;
+    }).then((player) => {
+      if (!player) {
+        return;
+      }
+      player.Towns = player.Towns.map((town) => {
+        // town.MovementDestinationTown = town.MovementDestinationTown.map((movement) => movement);
+        town.MovementDestinationTown = town.MovementDestinationTown.map((movement) => {
+          if (movement.type !== 'attack') {
+            delete movement.units;
+            delete movement.createdAt;
+            delete movement.updatedAt;
+          }
+          return movement;
+        });
+        return town;
       });
-      return town;
+      return player;
     });
-    return player;
-  })}
+  }
 
   public id: number;
   public UserId: number;

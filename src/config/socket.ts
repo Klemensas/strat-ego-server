@@ -18,7 +18,7 @@ function onConnect(client) {
   initializePlayerSocket(client)
     .then(initializeTownSocket)
     .then(initializeMapSocket)
-    .catch((err) => client.log(err, 'SOCKET CHANGE NAME ERROR'));
+    .catch((err) => client.log(err, 'SOCKET INIT ERROR'));
 }
 function onDisconnect(client) {
   client.log(`${client.username} disconnected`);
@@ -36,7 +36,7 @@ export default (socketio) => {
     client.userId = client.decoded_token.id;
     client.username = client.decoded_token.name;
     client.log = (...data) => {
-      logger.info(...data, `SocketIO ${client.nsp.name} [${client.address}]`);
+      logger.error(...data, `SocketIO ${client.nsp.name} [${client.address}]`);
     };
 
     // Call onDisconnect.
