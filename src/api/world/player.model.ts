@@ -1,4 +1,14 @@
-import { Sequelize, Model, DataTypes, HasMany, HasManyCreateAssociationMixin, BelongsTo } from 'sequelize';
+import {
+  Sequelize,
+  Model,
+  DataTypes,
+  HasMany,
+  HasManyCreateAssociationMixin,
+  BelongsTo,
+  BelongsToSetAssociationMixin,
+  BelongsToCreateAssociationMixin,
+  BelongsToManyAddAssociationsMixin,
+} from 'sequelize';
 import { Resources, Requirements, Combat } from '../util.model';
 import { world } from '../../sqldb';
 
@@ -17,6 +27,15 @@ export class Player extends Model {
       include: [{
         model: Alliance,
         as: 'Alliance',
+        include: [{
+          model: Player,
+          as: 'Members',
+          attributes: ['id', 'name', 'allianceName', 'allianceRole'],
+        }, {
+          model: Player,
+          as: 'Invitations',
+          attributes: ['id', 'name', 'createdAt'],
+        }],
       }, {
         model: Alliance,
         as: 'Invitations',
@@ -88,6 +107,9 @@ export class Player extends Model {
   public AllianceInvitaitons: Alliance[];
 
   public createTown: HasManyCreateAssociationMixin<Town>;
+  public createAlliance: BelongsToCreateAssociationMixin<Alliance>;
+  public setAlliance: BelongsToSetAssociationMixin<Alliance, 'AllianceId'>;
+  public addInvitation: BelongsToManyAddAssociationsMixin<Alliance, 'AllianceId'>;
 }
 Player.init({
   id: {
@@ -104,6 +126,12 @@ Player.init({
     type: DataTypes.STRING,
     allowNull: false,
   },
+  allianceRole: {
+    type: DataTypes.STRING,
+  },
+  allianceName: {
+    type: DataTypes.STRING,
+  },
 }, { sequelize: world.sequelize });
 
 import { Town, townIncludes } from '../town/Town.model';
@@ -111,8 +139,8 @@ import { Report } from '../report/Report.model';
 import { Alliance } from './Alliance.model';
 
 Player.belongsToMany(Alliance, { through: 'AllianceInvitations', as: 'Invitations', foreignKey: 'PlayerId' });
-Alliance.belongsToMany(Player,   { through: 'AllianceInvitations', as: 'InvitedPlayers', foreignKey: 'AllianceId' });
-Alliance.hasMany(Player, { as: 'Players', foreignKey: 'AllianceId' });
+Alliance.belongsToMany(Player,   { through: 'AllianceInvitations', as: 'Invitations', foreignKey: 'AllianceId' });
+Alliance.hasMany(Player, { as: 'Members', foreignKey: 'AllianceId' });
 Player.belongsTo(Alliance, { as: 'Alliance', foreignKey: 'AllianceId' });
 Player.hasMany(Report, { as: 'ReportOriginPlayer', foreignKey: 'ReportOriginPlayerId' });
 Player.hasMany(Report, { as: 'ReportDestinationPlayer', foreignKey: 'ReportDestinationPlayerId' });

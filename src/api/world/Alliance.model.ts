@@ -1,25 +1,23 @@
 import { Sequelize, Model, DataTypes, HasMany } from 'sequelize';
 import { world } from '../../sqldb';
 
-export interface AllianceRole {
-  name: string;
-  permissions: string[];
+export interface AllianceRoles {
+  [role: string]: string[];
 }
 
 export class Alliance extends Model {
   public static associations: {
     Players: HasMany;
-    InvitedPlayers: HasMany;
+    Invitations: HasMany;
   };
 
   public id: number;
   public name: string;
-  public memberCount: number;
-  public roles: AllianceRole[];
+  public roles: AllianceRoles;
 
   // Associations
   public Players: Player[];
-  public InvitedPlayers: Player[];
+  public Invitations: Player[];
 }
 Alliance.init({
   id: {
@@ -31,14 +29,15 @@ Alliance.init({
   name: {
     type: DataTypes.STRING,
     allowNull: false,
-  },
-  memberCount: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
+    unique: true,
   },
   roles: {
-    type: DataTypes.ARRAY(DataTypes.JSON),
+    type: DataTypes.JSON,
     allowNull: false,
+    defaultValue: {
+      Member: [],
+      Owner: [],
+    },
   },
 }, { sequelize: world.sequelize });
 

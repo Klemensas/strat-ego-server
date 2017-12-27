@@ -8,6 +8,7 @@ import { Movement } from '../town/Movement.model';
 import { Report } from '../report/Report.model';
 import { UserWorld } from './UserWorld.model';
 import { joinTownRoom } from '../town/town.socket';
+import { Alliance } from './Alliance.model';
 
 function createPlayer(socket) {
   socket.log(`creating player for ${socket.username}, on ${socket.world}`);
@@ -71,7 +72,6 @@ export default (socket) => Player.getPlayer(socket.userId)
     socket.emit('player', player);
 
     socket.on('player:restart', restart);
-    console.log('welp dis is weird', typeof socket);
     return socket;
   })
   .catch((err) => socket.log(err, 'SOCKET FATAL ERROR'));

@@ -7,7 +7,6 @@ import { world } from '../../sqldb';
 import Queue from '../world/queue';
 
 export function joinTownRoom(socket) {
-  console.log('wasssup', socket)
   if (socket.player && socket.player.Towns.length) {
     socket.player.Towns.forEach((town) => socket.join(town.id));
     socket.log(`${socket.username} joined town rooms`);

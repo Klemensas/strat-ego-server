@@ -13,6 +13,7 @@ import { Building } from '../api/world/Building.model';
 import { Unit } from '../api/world/Unit.model';
 import { Movement } from '../api/town/Movement.model';
 import { Report } from '../api/report/Report.model';
+import { Alliance } from '../api/world/Alliance.model';
 
 export default () => {
   const worldData = {
@@ -64,6 +65,7 @@ export default () => {
   }
 
   return Promise.all([
+    Alliance.sync().then(() => Alliance.destroy({ where: {} })),
     World.sync().then(() => World.destroy({ where: {} })),
     Building.sync().then(() => Building.destroy({ where: {} })),
     Unit.sync().then(() => Unit.destroy({ where: {} })),
