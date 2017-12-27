@@ -2,6 +2,7 @@ import * as socketJwt from 'socketio-jwt';
 import config from './environment';
 import WorldData from '../components/world';
 import initializePlayerSocket from '../api/world/player.socket';
+import initializeAllianceSocket from '../api/world/alliance.socket';
 import initializeTownSocket from '../api/town/town.socket';
 import initializeMapSocket from '../api/map/map.socket';
 import { logger } from '../';
@@ -18,6 +19,7 @@ function onConnect(client) {
   initializePlayerSocket(client)
     .then(initializeTownSocket)
     .then(initializeMapSocket)
+    .then(initializeAllianceSocket)
     .catch((err) => client.log(err, 'SOCKET INIT ERROR'));
 }
 function onDisconnect(client) {
