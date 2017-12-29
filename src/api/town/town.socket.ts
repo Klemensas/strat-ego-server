@@ -208,7 +208,7 @@ function update(data) {
       if (!processedAttack) {
         return town.notify({ type: 'update' });
       }
-      return Player.getPlayer(this.userId)
+      return Player.getPlayer({ UserId: this.userId })
         .then((player) => {
           this.player = player;
           this.emit('player', player);

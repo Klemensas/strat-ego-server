@@ -1,4 +1,11 @@
-import { Sequelize, Model, DataTypes, HasMany } from 'sequelize';
+import {
+  Sequelize,
+  Model,
+  DataTypes,
+  HasMany,
+  BelongsToManyAddAssociationsMixin,
+  BelongsToManyRemoveAssociationMixin,
+} from 'sequelize';
 import { world } from '../../sqldb';
 
 export interface AllianceRoles {
@@ -6,8 +13,8 @@ export interface AllianceRoles {
 }
 
 export class Alliance extends Model {
-  public static associations: {
-    Players: HasMany;
+  static associations: {
+    Members: HasMany;
     Invitations: HasMany;
   };
 
@@ -16,8 +23,11 @@ export class Alliance extends Model {
   public roles: AllianceRoles;
 
   // Associations
-  public Players: Player[];
+  public Members: Player[];
   public Invitations: Player[];
+
+  public addInvitation: BelongsToManyAddAssociationsMixin<Player, number>;
+  public removeInvitation: BelongsToManyRemoveAssociationMixin<Player, number>;
 }
 Alliance.init({
   id: {

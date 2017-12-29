@@ -35,14 +35,14 @@ function createPlayer(socket) {
 
 function restart() {
   this.log(`player ${this.username} restarting`);
-  return Player.getPlayer(this.userId)
+  return Player.getPlayer({ UserId: this.userId })
     .then((player) => {
       if (player.Towns.length) {
         return Promise.reject('Can\'t restart.');
       }
       return MapManager.chooseLocation()
         .then((location) => player.createTown({ location, name: `${player.name}s Town` })
-        .then(() => Player.getPlayer(this.userId)));
+        .then(() => Player.getPlayer({ UserId: this.userId })));
     })
     .then((player) => {
       this.player = player;
@@ -52,10 +52,10 @@ function restart() {
     .catch((err) => this.log(err, 'SOCKET RESTART ERROR'));
 }
 
-export default (socket) => Player.getPlayer(socket.userId)
+export default (socket) => Player.getPlayer({ UserId: socket.userId })
   .then((player: Player) => {
     if (!player) {
-      return createPlayer(socket).then(() => Player.getPlayer(socket.userId));
+      return createPlayer(socket).then(() => Player.getPlayer({ UserId: socket.userId }));
     }
     return player;
   })
