@@ -141,9 +141,9 @@ Player.init({
   },
 }, { sequelize: world.sequelize });
 
-import { Town, townIncludes } from '../town/Town.model';
-import { Report } from '../report/Report.model';
-import { Alliance } from './Alliance.model';
+import { Town, townIncludes } from '../town/town.model';
+import { Report } from '../report/report.model';
+import { Alliance } from '../alliance/alliance.model';
 
 Player.belongsToMany(Alliance, { through: 'AllianceInvitations', as: 'Invitations', foreignKey: 'PlayerId' });
 Alliance.belongsToMany(Player, { through: 'AllianceInvitations', as: 'Invitations', foreignKey: 'AllianceId' });

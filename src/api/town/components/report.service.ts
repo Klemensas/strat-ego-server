@@ -1,4 +1,4 @@
-import { Report } from '../../report/Report.model';
+import { Report } from '../../report/report.model';
 
 export default (transaction, outcome, origin, destination, haul = null, loyaltyChange = []) => Report.create({
   haul,

@@ -1,7 +1,7 @@
 import * as Bluebird from 'bluebird';
-import { World } from '../api/world/World.model';
-import { Building } from '../api/world/Building.model';
-import { Unit } from '../api/world/Unit.model';
+import { World } from '../api/world/world.model';
+import { Building } from '../api/world/building.model';
+import { Unit } from '../api/world/unit.model';
 import { logger } from '../';
 
 class WorldData {

@@ -12,7 +12,7 @@ export default {
   seedDB: process.env.SEED_DATA || false,
   sequelize: {
     options: {
-      logging: /* false */console.log,
+      logging: false/* console.log */,
       define: {
         timestamps: true,
         paranoid: false,

@@ -21,7 +21,7 @@ import WorldData from './components/world';
 import MapManager from './components/map';
 import routing from './routes';
 import initSocket from './config/socket';
-import queue from './api/world/queue';
+// import queue from './api/world/queue';
 
 const app = express();
 const env = app.get('env');
@@ -65,7 +65,7 @@ main.sequelize.sync()
   .then(() => MapManager.initialize(worldName))
   .then(() => initSocket(io))
   .then(() => logger.info('server ready!'))
-  .then(() => queue.go());
+  // .then(() => queue.go());
 
 if (env === 'development' || env === 'test') {
   app.use(statusMonitor());

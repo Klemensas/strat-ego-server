@@ -1,7 +1,7 @@
 import WorldData from './world';
-import { Town } from '../api/town/Town.model';
-import { Player } from '../api/world/Player.model';
-import { World } from '../api/world/World.model';
+import { Town } from '../api/town/town.model';
+import { Player } from '../api/world/player.model';
+import { World } from '../api/world/world.model';
 import { logger } from '../';
 
 export interface MapTown {
@@ -107,7 +107,7 @@ class MapManager {
       // TODO: handle running out of locationsx`
       logger.info('available coords:', coords, coords[Math.round(Math.random() * (coords.length - 1))]);
       return coords[Math.round(Math.random() * (coords.length - 1))];
-    })
+    });
   }
 
   public getAllData() {

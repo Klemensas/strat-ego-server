@@ -1,14 +1,14 @@
 import { world } from '../../sqldb';
 import MapManager from '../../components/map';
-import { Town } from '../town/Town.model';
-import { Player } from './Player.model';
-import { UnitQueue } from './UnitQueue.model';
-import { BuildingQueue } from './BuildingQueue.model';
-import { Movement } from '../town/Movement.model';
-import { Report } from '../report/Report.model';
-import { UserWorld } from './UserWorld.model';
+import { Town } from '../town/town.model';
+import { Player } from './player.model';
+import { UnitQueue } from './unitQueue.model';
+import { BuildingQueue } from './buildingQueue.model';
+import { Movement } from '../town/movement.model';
+import { Report } from '../report/report.model';
+import { UserWorld } from './userWorld.model';
 import { joinTownRoom } from '../town/town.socket';
-import { Alliance } from './Alliance.model';
+import { Alliance } from '../alliance/alliance.model';
 
 function createPlayer(socket) {
   socket.log(`creating player for ${socket.username}, on ${socket.world}`);

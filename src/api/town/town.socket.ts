@@ -1,10 +1,10 @@
 import WorldData from '../../components/world';
-import { Town, townIncludes } from './Town.model';
-import { Player } from '../world/Player.model';
-import { UnitQueue } from '../world/UnitQueue.model';
-import { BuildingQueue } from '../world/BuildingQueue.model';
+import { Town, townIncludes } from './town.model';
+import { Player } from '../world/player.model';
+import { UnitQueue } from '../world/unitQueue.model';
+import { BuildingQueue } from '../world/buildingQueue.model';
 import { world } from '../../sqldb';
-import Queue from '../world/queue';
+// import Queue from '../world/queue';
 
 export function joinTownRoom(socket) {
   if (socket.player && socket.player.Towns.length) {

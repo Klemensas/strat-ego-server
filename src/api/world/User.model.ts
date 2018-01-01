@@ -134,8 +134,8 @@ User.beforeUpdate((user: User) => {
 });
 
 // import { UserWorld } from './UserWorld.model';
-import { World } from './World.model';
-import { UserWorld } from './UserWorld.model';
+import { World } from './world.model';
+import { UserWorld } from './userWorld.model';
 
 export const UserWorldUser = User.belongsToMany(World, { through: UserWorld });
 

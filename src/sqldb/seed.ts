@@ -4,16 +4,16 @@ import unitData from '../config/game/unitData';
 import MapManager from '../components/map';
 import WorldData from '../components/world';
 
-import { User } from '../api/world/User.model';
-import { World } from '../api/world/World.model';
-import { UserWorld } from '../api/world/UserWorld.model';
-import { Player } from '../api/world/Player.model';
-import { Town } from '../api/town/Town.model';
-import { Building } from '../api/world/Building.model';
-import { Unit } from '../api/world/Unit.model';
-import { Movement } from '../api/town/Movement.model';
-import { Report } from '../api/report/Report.model';
-import { Alliance } from '../api/world/Alliance.model';
+import { User } from '../api/world/user.model';
+import { World } from '../api/world/world.model';
+import { UserWorld } from '../api/world/userWorld.model';
+import { Player } from '../api/world/player.model';
+import { Town } from '../api/town/town.model';
+import { Building } from '../api/world/building.model';
+import { Unit } from '../api/world/unit.model';
+import { Movement } from '../api/town/movement.model';
+import { Report } from '../api/report/report.model';
+import { Alliance } from '../api/alliance/alliance.model';
 
 export default () => {
   const worldData = {

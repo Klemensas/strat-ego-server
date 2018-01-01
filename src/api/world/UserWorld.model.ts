@@ -31,8 +31,8 @@ UserWorld.init({
   },
 }, { sequelize: main.sequelize });
 
-import { User } from './User.model';
-import { World } from './World.model';
+import { User } from './user.model';
+import { World } from './world.model';
 
 export const UserWorldUser = User.belongsToMany(World, { through: UserWorld });
 export const UserWorldWorld = World.belongsToMany(User, { through: UserWorld });

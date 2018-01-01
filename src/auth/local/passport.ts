@@ -1,6 +1,6 @@
 import * as passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
-import { User } from '../../api/world/User.model';
+import { User } from '../../api/world/user.model';
 import { logger } from '../../';
 
 function localAuthenticate(email, password, done) {

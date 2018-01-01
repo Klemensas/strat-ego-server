@@ -16,6 +16,7 @@ export class Alliance extends Model {
   static associations: {
     Members: HasMany;
     Invitations: HasMany;
+    ForumCategories: HasMany;
   };
 
   public id: number;
@@ -25,6 +26,7 @@ export class Alliance extends Model {
   // Associations
   public Members: Player[];
   public Invitations: Player[];
+  public ForumCategories: AllianceForumCategory[];
 
   public addInvitation: BelongsToManyAddAssociationsMixin<Player, number>;
   public removeInvitation: BelongsToManyRemoveAssociationMixin<Player, number>;
@@ -36,7 +38,7 @@ Alliance.init({
     primaryKey: true,
     autoIncrement: true,
   },
-  name: {
+  name: { 
     type: DataTypes.STRING,
     allowNull: false,
     unique: true,
@@ -51,4 +53,5 @@ Alliance.init({
   },
 }, { sequelize: world.sequelize });
 
-import { Player } from './player.model';
+import { Player } from '../world/player.model';
+import { AllianceForumCategory } from 'api/alliance/allianceForumCategory.model';

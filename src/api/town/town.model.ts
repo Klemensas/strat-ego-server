@@ -423,11 +423,11 @@ Town.processTownQueues = (id: number, time?: Date, processed = []) => {
   });
 };
 
-import { Player } from '../world/Player.model';
-import { Report } from '../report/Report.model';
-import { Movement } from './Movement.model';
-import { BuildingQueue } from '../world/BuildingQueue.model';
-import { UnitQueue } from '../world/UnitQueue.model';
+import { Player } from '../world/player.model';
+import { Report } from '../report/report.model';
+import { Movement } from './movement.model';
+import { BuildingQueue } from '../world/buildingQueue.model';
+import { UnitQueue } from '../world/unitQueue.model';
 
 export const townIncludes = [{
   model: Movement,

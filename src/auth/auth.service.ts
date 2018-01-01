@@ -2,9 +2,9 @@ import * as jwt from 'jsonwebtoken';
 import * as expressJwt from 'express-jwt';
 import * as compose from 'composable-middleware';
 import config from '../config/environment';
-import { User } from '../api/world/User.model';
-import { UserWorld } from '../api/world/UserWorld.model';
-import { World } from '../api/world/World.model';
+import { User } from '../api/world/user.model';
+import { UserWorld } from '../api/world/userWorld.model';
+import { World } from '../api/world/world.model';
 
 const validateJwt = expressJwt({
   secret: config.secrets.session,

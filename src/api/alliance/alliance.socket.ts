@@ -1,6 +1,6 @@
 import { world } from '../../sqldb';
-import { Player } from './Player.model';
-import { Alliance } from './Alliance.model';
+import { Player } from '../world/player.model';
+import { Alliance } from './alliance.model';
 import { io } from '../../';
 import { WhereOptions, Transaction } from 'sequelize';
 

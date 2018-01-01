@@ -31,13 +31,13 @@ const db = {
 export const main = db.main;
 export const world = db.world;
 
-import { Player } from '../api/world/Player.model';
-import { Town } from '../api/town/Town.model';
-import { Movement } from '../api/town/Movement.model';
-import { BuildingQueue } from '../api/world/BuildingQueue.model';
-import { UnitQueue } from '../api/world/UnitQueue.model';
-import { Report } from '../api/report/Report.model';
-import { Alliance } from '../api/world/Alliance.model';
+import { Player } from '../api/world/player.model';
+import { Town } from '../api/town/town.model';
+import { Movement } from '../api/town/movement.model';
+import { BuildingQueue } from '../api/world/buildingQueue.model';
+import { UnitQueue } from '../api/world/unitQueue.model';
+import { Report } from '../api/report/report.model';
+import { Alliance } from '../api/alliance/alliance.model';
 
 Town.belongsTo(Player, { as: 'Player', foreignKey: 'PlayerId' });
 Player.hasMany(Town, { as: 'Towns', foreignKey: 'PlayerId' });

@@ -42,4 +42,4 @@ BuildingQueue.init({
   },
 }, { sequelize: world.sequelize });
 
-import { Town } from '../town/Town.model';
+import { Town } from '../town/town.model';

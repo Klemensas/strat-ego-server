@@ -1,7 +1,7 @@
 import { signToken } from '../../auth/auth.service';
-import { User } from '../world/User.model';
-import { UserWorld } from '../world/UserWorld.model';
-import { World } from '../world/World.model';
+import { User } from '../world/user.model';
+import { UserWorld } from '../world/userWorld.model';
+import { World } from '../world/world.model';
 
 function validationError(res, statusCode = 422) {
   return (err) => {

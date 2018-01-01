@@ -73,5 +73,5 @@ Report.afterCreate((report: Report) => {
   // }
 });
 
-import { Town } from '../town/Town.model';
-import { Player } from '../world/Player.model';
+import { Town } from '../town/town.model';
+import { Player } from '../world/player.model';
