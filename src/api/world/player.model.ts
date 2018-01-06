@@ -11,6 +11,7 @@ import {
   WhereOptions,
   Transaction,
   BelongsToManyRemoveAssociationMixin,
+  HasOne,
 } from 'sequelize';
 import { Resources, Requirements, Combat } from '../util.model';
 import { world } from '../../sqldb';
@@ -21,6 +22,7 @@ export class Player extends Model {
     ReportDestinationPlayer: HasMany,
     ReportOriginPlayer: HasMany,
     Alliance: BelongsTo;
+    AllianceRole: HasOne;
     Invitations: HasMany;
   };
 
@@ -34,12 +36,18 @@ export class Player extends Model {
         include: [{
           model: Player,
           as: 'Members',
-          attributes: ['id', 'name', 'allianceName', 'allianceRole'],
+          attributes: ['id', 'name', 'allianceName'],
         }, {
           model: Player,
           as: 'Invitations',
           attributes: ['id', 'name', 'createdAt'],
+        }, {
+          model: AllianceRole,
+          as: 'Roles',
         }],
+      }, {
+        model: AllianceRole,
+        as: 'AllianceRole',
       }, {
         model: Alliance,
         as: 'Invitations',
@@ -100,7 +108,6 @@ export class Player extends Model {
   public UserId: number;
   public name: string;
   public allianceName: string;
-  public allianceRole: string;
   public createdAt: string;
   public updatedAt: string;
 
@@ -110,6 +117,8 @@ export class Player extends Model {
   public ReportOriginPlayer: Report[];
   public AllianceId: number;
   public Alliance: Alliance;
+  public AllianceRoleId: number;
+  public AllianceRole: AllianceRole;
   public Invitations: Alliance[];
 
   public createTown: HasManyCreateAssociationMixin<Town>;
@@ -133,9 +142,6 @@ Player.init({
     type: DataTypes.STRING,
     allowNull: false,
   },
-  allianceRole: {
-    type: DataTypes.STRING,
-  },
   allianceName: {
     type: DataTypes.STRING,
   },
@@ -144,11 +150,22 @@ Player.init({
 import { Town, townIncludes } from '../town/town.model';
 import { Report } from '../report/report.model';
 import { Alliance } from '../alliance/alliance.model';
+import { AllianceRole } from '../alliance/allianceRole.model';
+
+Alliance.hasMany(Player, { as: 'Members', foreignKey: 'AllianceId' });
+Player.belongsTo(Alliance, { as: 'Alliance', foreignKey: 'AllianceId' });
 
 Player.belongsToMany(Alliance, { through: 'AllianceInvitations', as: 'Invitations', foreignKey: 'PlayerId' });
 Alliance.belongsToMany(Player, { through: 'AllianceInvitations', as: 'Invitations', foreignKey: 'AllianceId' });
-Alliance.hasMany(Player, { as: 'Members', foreignKey: 'AllianceId' });
-Player.belongsTo(Alliance, { as: 'Alliance', foreignKey: 'AllianceId' });
+
+Alliance.hasMany(AllianceRole, { as: 'Roles', foreignKey: 'AllianceId' });
+AllianceRole.belongsTo(Alliance, { as: 'Roles', foreignKey: 'AllianceId' });
+
+Alliance.belongsTo(AllianceRole, { as: 'DefaultRole', foreignKey: 'DefaultRoleId', constraints: false });
+
+AllianceRole.hasMany(Player, { as: 'AllianceRole', foreignKey: 'AllianceRoleId' });
+Player.belongsTo(AllianceRole, { as: 'AllianceRole', foreignKey: 'AllianceRoleId' });
+
 Player.hasMany(Report, { as: 'ReportOriginPlayer', foreignKey: 'ReportOriginPlayerId' });
 Player.hasMany(Report, { as: 'ReportDestinationPlayer', foreignKey: 'ReportDestinationPlayerId' });
 Report.belongsTo(Player, { as: 'ReportDestinationPlayer', foreignKey: 'ReportDestinationPlayerId' });

@@ -3,9 +3,7 @@ import {
   Model,
   DataTypes,
   HasMany,
-  BelongsToManyAddAssociationsMixin,
-  BelongsToManyRemoveAssociationMixin,
-  HasOne,
+  BelongsTo,
 } from 'sequelize';
 import { world } from '../../sqldb';
 
@@ -18,7 +16,7 @@ export type permissionNames =
   'editProfile';
 
 export type AlliancePermissions = {
-  [name in permissionNames]?: boolean;
+  [name in permissionNames]: boolean;
 };
 
 export const ALLIANCE_PERMISSIONS: permissionNames[] = [
@@ -30,29 +28,22 @@ export const ALLIANCE_PERMISSIONS: permissionNames[] = [
   'editProfile',
 ];
 
-export class Alliance extends Model {
+export class AllianceRole extends Model {
   static associations: {
-    Members: HasMany;
-    Invitations: HasMany;
-    ForumCategories: HasMany;
-    AllianceRoles: HasMany;
-    DefaultRole: HasOne;
+    Players: HasMany;
+    Alliance: BelongsTo;
   };
 
   public id: number;
   public name: string;
+  public permissions: AlliancePermissions;
 
   // Associations
-  public Roles: AllianceRole[];
-  public DefaultRole: AllianceRole;
-  public Members: Player[];
-  public Invitations: Player[];
-  public ForumCategories: AllianceForumCategory[];
-
-  public addInvitation: BelongsToManyAddAssociationsMixin<Player, number>;
-  public removeInvitation: BelongsToManyRemoveAssociationMixin<Player, number>;
+  public Players: Player[];
+  public AllianceId: number;
+  public Alliance: Alliance;
 }
-Alliance.init({
+AllianceRole.init({
   id: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -62,10 +53,20 @@ Alliance.init({
   name: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true,
+  },
+  permissions: {
+    type: DataTypes.JSON,
+    allowNull: false,
+    defaultValue: {
+      viewInvites: false,
+      editInvites: false,
+      viewManagement: false,
+      manageMinorRoles: false,
+      manageAllRoles: false,
+      editProfile: false,
+    },
   },
 }, { sequelize: world.sequelize });
 
 import { Player } from '../world/player.model';
-import { AllianceForumCategory } from './allianceForumCategory.model';
-import { AllianceRole } from './allianceRole.model';
+import { Alliance } from './alliance.model';
