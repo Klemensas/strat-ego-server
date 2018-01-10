@@ -1,35 +1,11 @@
 import { world } from '../../sqldb';
 import { Player } from '../world/player.model';
-import { Alliance } from './alliance.model';
+import { Alliance, allianceIncludes } from './alliance.model';
 import { io } from '../../';
 import { WhereOptions, Transaction } from 'sequelize';
 import { AllianceRole } from './allianceRole.model';
 
 // TODO: overiew permissions everywhere
-
-// TODO: Need a uniform solution with getPlayer (currently can't have both in a model file withiyt sequelize throwing)
-function getAlliance(where: WhereOptions, transaction?: Transaction) {
-  return Alliance.findOne({
-    where,
-    transaction,
-    include: [{
-      model: Player,
-      as: 'Members',
-      attributes: ['id', 'name', 'allianceName'],
-      include: [{
-        model: AllianceRole,
-        as: 'AllianceRole',
-      }],
-    }, {
-      model: Player,
-      as: 'Invitations',
-      attributes: ['id', 'name', 'createdAt'],
-    }, {
-      model: AllianceRole,
-      as: 'Roles',
-    }],
-  });
-}
 
 function joinAllianceRoom(socket) {
   if (socket.player && socket.player.Alliance) {
@@ -44,7 +20,8 @@ function isMember(members, id) {
 
 function createAlliance(data) {
   const targetName = data.name;
-  Player.getPlayer({ UserId: this.userId })
+
+  return Player.getPlayer({ UserId: this.userId })
     .then((player) => {
       if (player.Alliance) {
         return Promise.reject('Can\'t create alliance.');
@@ -71,6 +48,10 @@ function createAlliance(data) {
           transaction,
         })
         .then((alliance) => {
+          alliance.DefaultRoleId = alliance.Roles[1].id;
+          return alliance.save({ transaction });
+        })
+        .then((alliance) => {
           player.AllianceId = alliance.id;
           player.AllianceRoleId = alliance.Roles[0].id;
           return player.save({ transaction });
@@ -78,6 +59,7 @@ function createAlliance(data) {
       )
       .then(() => Player.getPlayer({ UserId: this.userId }))
       .then((updatedPlayer) => {
+        this.player = updatedPlayer;
         this.emit('player', updatedPlayer);
       });
   });
@@ -89,7 +71,7 @@ function invitePlayer(data) {
   const targetName = data.name;
 
   return world.sequelize.transaction((transaction) =>
-    getAlliance({ id: this.player.AllianceId }, transaction).then((alliance) => {
+    Alliance.getAlliance({ id: this.player.AllianceId }, transaction).then((alliance) => {
       // TODO: add additional permission check
       if (!alliance || !isMember(alliance.Members, this.player.id)) {
         return Promise.reject('Can\'t invite player.');
@@ -137,7 +119,7 @@ function cancelInvite(data) {
   const targetPlayer: number = data.playerId;
 
   return world.sequelize.transaction((transaction) =>
-    getAlliance({ id: this.player.AllianceId }, transaction).then((alliance) => {
+    Alliance.getAlliance({ id: this.player.AllianceId }, transaction).then((alliance) => {
       // TODO: add additional permission check
       if (!alliance || !isMember(alliance.Members, this.player.id)) { return Promise.reject('Wrong alliance.'); }
       inviteIndex = alliance.Invitations.findIndex((invite) => invite.id === targetPlayer);
@@ -178,7 +160,7 @@ function rejectInvite(data) {
       this.emit('player', player);
     }),
   )
-  .then(() => getAlliance({ id: targetAlliance }))
+  .then(() => Alliance.getAlliance({ id: targetAlliance }))
   .then((alliance) => io.sockets.in(`alliance.${alliance.id}`).emit('alliance', alliance));
 }
 
@@ -200,7 +182,7 @@ function acceptInvite(data) {
     .then(() => targetPlayer.setAlliance(targetAlliance, { transaction }))
     .then(() => targetPlayer.save({ transaction })),
   )
-  .then(() => getAlliance({ id: targetAlliance }))
+  .then(() => Alliance.getAlliance({ id: targetAlliance }))
   .then((alliance) => {
     const player: any = targetPlayer.get();
     player.Invitations.splice(inviteIndex, 1);
@@ -216,7 +198,7 @@ function acceptInvite(data) {
 function updateRoles(data) {
   const { roles, newRoles } = data;
   return world.sequelize.transaction((transaction) =>
-    getAlliance({ id: this.player.AllianceId }, transaction).then((alliance) => {
+    Alliance.getAlliance({ id: this.player.AllianceId }, transaction).then((alliance) => {
       if (!alliance) { return Promise.reject('Wrong alliance.'); }
 
       const actions = [];
@@ -236,9 +218,47 @@ function updateRoles(data) {
       }
 
       return Promise.all(actions);
-    }))
-      .then(() => getAlliance({ id: this.player.AllianceId }))
-      .then((alliance) => io.sockets.in(`alliance.${alliance.id}`).emit('alliance', alliance));
+    }),
+  )
+    .then(() => Alliance.getAlliance({ id: this.player.AllianceId }))
+    .then((alliance) => io.sockets.in(`alliance.${alliance.id}`).emit('alliance', alliance));
+}
+
+function removeRole(data) {
+  // const role = data;
+
+  return world.sequelize.transaction((transaction) =>
+    Alliance.getAlliance({ id: this.player.AllianceId }, transaction)
+      .then((alliance) => {
+        if (!alliance) { return Promise.reject('Wrong alliance.'); }
+
+        const target = alliance.Roles.find((role) => role.id === data.id);
+        if (!target) { return Promise.reject('Wrong role'); }
+
+        return Player.update(
+          { AllianceRoleId: alliance.DefaultRoleId },
+          { where: { AllianceRoleId: data.id, AllianceId: alliance.id }, transaction },
+        );
+      })
+      .then(() => AllianceRole.destroy({ where: { id: data.id }, transaction })),
+  )
+    .then(() => Alliance.getAlliance({ id: this.player.AllianceId }))
+    .then((alliance) => io.sockets.in(`alliance.${alliance.id}`).emit('alliance', alliance));
+}
+
+function destroyAlliance() {
+  const allianceId = this.player.AllianceId;
+  return world.sequelize.transaction((transaction) =>
+    AllianceRole.destroy({ where: { AllianceId: allianceId }, transaction })
+      .then(() => Alliance.destroy({ where: { id: allianceId }, transaction })),
+  )
+  .then(() => {
+    console.log('destroyed');
+    const room = `alliance.${allianceId}`;
+    io.sockets.in(room).emit('alliance:destroy');
+    Object.values(io.sockets.in(room).sockets).forEach((socket) => socket.leave(room));
+  })
+  .catch((r) => console.log('crashed', r));
 }
 
 export default (socket) => {
@@ -250,5 +270,8 @@ export default (socket) => {
   socket.on('alliance:acceptInvite', acceptInvite);
   socket.on('alliance:rejectInvite', rejectInvite);
   socket.on('alliance:updateRoles', updateRoles);
+  socket.on('alliance:updateRoles', updateRoles);
+  socket.on('alliance:removeRole', removeRole);
+  socket.on('alliance:destroy', destroyAlliance);
   return socket;
 };

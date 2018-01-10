@@ -33,18 +33,7 @@ export class Player extends Model {
       include: [{
         model: Alliance,
         as: 'Alliance',
-        include: [{
-          model: Player,
-          as: 'Members',
-          attributes: ['id', 'name', 'allianceName'],
-        }, {
-          model: Player,
-          as: 'Invitations',
-          attributes: ['id', 'name', 'createdAt'],
-        }, {
-          model: AllianceRole,
-          as: 'Roles',
-        }],
+        include: allianceIncludes,
       }, {
         model: AllianceRole,
         as: 'AllianceRole',
@@ -84,6 +73,16 @@ export class Player extends Model {
           attributes: ['id', 'name', 'location'],
         }],
       }],
+      order: [
+        [
+          // { model: Alliance, as: 'Alliance' },
+          // { model: AllianceRole, as: 'Roles' },
+          { model: Alliance, as: 'Alliance' } as any,
+          { model: AllianceRole, as: 'Roles' } as any,
+          'id',
+          'ASC',
+        ],
+      ],
     }).then((player) => {
       if (!player) {
         return;
@@ -149,7 +148,7 @@ Player.init({
 
 import { Town, townIncludes } from '../town/town.model';
 import { Report } from '../report/report.model';
-import { Alliance } from '../alliance/alliance.model';
+import { Alliance, allianceIncludes } from '../alliance/alliance.model';
 import { AllianceRole } from '../alliance/allianceRole.model';
 
 Alliance.hasMany(Player, { as: 'Members', foreignKey: 'AllianceId' });

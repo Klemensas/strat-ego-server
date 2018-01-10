@@ -6,6 +6,8 @@ import {
   BelongsToManyAddAssociationsMixin,
   BelongsToManyRemoveAssociationMixin,
   HasOne,
+  Transaction,
+  WhereOptions,
 } from 'sequelize';
 import { world } from '../../sqldb';
 
@@ -39,11 +41,23 @@ export class Alliance extends Model {
     DefaultRole: HasOne;
   };
 
+  static getAlliance = (where: WhereOptions, transaction?: Transaction) => {
+    return Alliance.findOne({
+      where,
+      transaction,
+      include: allianceIncludes,
+      order: [
+        [{ model: AllianceRole, as: 'Roles' }, 'id', 'ASC'],
+      ],
+    });
+  }
+
   public id: number;
   public name: string;
 
   // Associations
   public Roles: AllianceRole[];
+  public DefaultRoleId: number;
   public DefaultRole: AllianceRole;
   public Members: Player[];
   public Invitations: Player[];
@@ -69,3 +83,20 @@ Alliance.init({
 import { Player } from '../world/player.model';
 import { AllianceForumCategory } from './allianceForumCategory.model';
 import { AllianceRole } from './allianceRole.model';
+
+export const allianceIncludes = [{
+  model: Player,
+  as: 'Members',
+  attributes: ['id', 'name', 'allianceName'],
+  include: [{
+    model: AllianceRole,
+    as: 'AllianceRole',
+  }],
+}, {
+  model: Player,
+  as: 'Invitations',
+  attributes: ['id', 'name', 'createdAt'],
+}, {
+  model: AllianceRole,
+  as: 'Roles',
+}];
