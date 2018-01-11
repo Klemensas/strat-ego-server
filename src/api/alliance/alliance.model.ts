@@ -87,7 +87,7 @@ import { AllianceRole } from './allianceRole.model';
 export const allianceIncludes = [{
   model: Player,
   as: 'Members',
-  attributes: ['id', 'name', 'allianceName'],
+  attributes: ['id', 'name'],
   include: [{
     model: AllianceRole,
     as: 'AllianceRole',

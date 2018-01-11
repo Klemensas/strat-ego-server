@@ -106,7 +106,6 @@ export class Player extends Model {
   public id: number;
   public UserId: number;
   public name: string;
-  public allianceName: string;
   public createdAt: string;
   public updatedAt: string;
 
@@ -140,9 +139,6 @@ Player.init({
   name: {
     type: DataTypes.STRING,
     allowNull: false,
-  },
-  allianceName: {
-    type: DataTypes.STRING,
   },
 }, { sequelize: world.sequelize });
 

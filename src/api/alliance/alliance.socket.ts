@@ -4,6 +4,7 @@ import { Alliance, allianceIncludes } from './alliance.model';
 import { io } from '../../';
 import { WhereOptions, Transaction } from 'sequelize';
 import { AllianceRole } from './allianceRole.model';
+import { UserSocket } from 'config/socket';
 
 // TODO: overiew permissions everywhere
 
@@ -60,6 +61,7 @@ function createAlliance(data) {
       .then(() => Player.getPlayer({ UserId: this.userId }))
       .then((updatedPlayer) => {
         this.player = updatedPlayer;
+        joinAllianceRoom(this);
         this.emit('player', updatedPlayer);
       });
   });
@@ -253,12 +255,16 @@ function destroyAlliance() {
       .then(() => Alliance.destroy({ where: { id: allianceId }, transaction })),
   )
   .then(() => {
-    console.log('destroyed');
     const room = `alliance.${allianceId}`;
-    io.sockets.in(room).emit('alliance:destroy');
-    Object.values(io.sockets.in(room).sockets).forEach((socket) => socket.leave(room));
-  })
-  .catch((r) => console.log('crashed', r));
+    io.sockets.in(room).emit('alliance:destroyed');
+    Object.values(io.sockets.in(room).sockets).forEach((socket: UserSocket) => {
+      socket.player.AllianceId = null;
+      socket.player.Alliance = null;
+      socket.player.AllianceRoleId = null;
+      socket.player.AllianceRole = null;
+      socket.leave(room);
+    });
+  });
 }
 
 export default (socket) => {

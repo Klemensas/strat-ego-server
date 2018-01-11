@@ -6,6 +6,11 @@ import initializeAllianceSocket from '../api/alliance/alliance.socket';
 import initializeTownSocket from '../api/town/town.socket';
 import initializeMapSocket from '../api/map/map.socket';
 import { logger } from '../';
+import { Player } from 'api/world/player.model';
+
+export interface UserSocket extends SocketIO.Socket {
+  player: Player;
+}
 
 function onConnect(client) {
   client.log(`${client.username} connected`);
