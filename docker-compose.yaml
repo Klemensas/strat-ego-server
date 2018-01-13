@@ -1,11 +1,11 @@
 # volume container to provide consistent storage.
 postgres-data:
-  image: sameersbn/postgresql:9.4-12
+  image: sameersbn/postgresql:9.6-2
   command: /bin/true
 
 # a postgres container for providing database access.
 postgres:
-  image: sameersbn/postgresql:9.4-12
+  image: sameersbn/postgresql:9.6-2
   environment:
     - DB_USER=stratego
     - DB_PASS=supasecretpassword
