@@ -4,7 +4,7 @@ import { Building } from '../api/world/building.model';
 import { Unit } from '../api/world/unit.model';
 import { logger } from '../';
 
-class WorldData {
+export class WorldData {
   public world: World;
   public units = [];
   public unitMap = {};
@@ -44,4 +44,4 @@ class WorldData {
   }
 }
 
-export default new WorldData();
+export const WorldDataService = new WorldData();

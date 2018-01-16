@@ -25,7 +25,7 @@ export interface UserSocket extends SocketIO.Socket {
 function onConnect(client) {
   client.log(`${client.username} connected`);
   // Disconnect client if sent world not found
-  if (WorldData.world.name === client.world) {
+  if (WorldDataService.world.name === client.world) {
     client.log(`${client.username} disconnect, dattempted world: ${client.world}`);
     client.disconnect();
     return;

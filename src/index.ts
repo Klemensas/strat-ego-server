@@ -17,7 +17,7 @@ import * as statusMonitor from 'express-status-monitor';
 import config from './config/environment';
 import { main, world } from './sqldb';
 import seedWorld from './sqldb/seed';
-import WorldData from './components/world';
+import { WorldDataService } from './components/world';
 import MapManager from './components/map';
 import routing from './routes';
 import initSocket from './config/socket';
@@ -61,10 +61,10 @@ routing(app);
 main.sequelize.sync()
   .then(() => world.sequelize.sync())
   .then(() => (config.seedDB ? seedWorld() : null))
-  .then(() => WorldData.readWorld(worldName))
+  .then(() => WorldDataService.readWorld(worldName))
   .then(() => MapManager.initialize(worldName))
   .then(() => initSocket(io))
-  .then(() => logger.info('server ready!'))
+  .then(() => logger.info('server ready!'));
   // .then(() => queue.go());
 
 if (env === 'development' || env === 'test') {

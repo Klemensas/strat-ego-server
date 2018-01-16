@@ -2,7 +2,7 @@ import { main, world } from './index';
 import buildingData from '../config/game/buildingData';
 import unitData from '../config/game/unitData';
 import MapManager from '../components/map';
-import WorldData from '../components/world';
+import { WorldDataService } from '../components/world';
 
 import { User } from '../api/world/user.model';
 import { World } from '../api/world/world.model';
@@ -16,7 +16,7 @@ import { Report } from '../api/report/report.model';
 import { Alliance } from '../api/alliance/alliance.model';
 
 export default () => {
-  const worldData = {
+  const worldDataService = {
     name: 'Megapolis',
     baseProduction: 5000,
     speed: 100,
@@ -48,9 +48,9 @@ export default () => {
   ];
   const townGenerationData = {
     percent: 0.5,
-    furthestRing: worldData.generationArea,
-    area: worldData.generationArea,
-    size: Math.ceil(worldData.size / 2),
+    furthestRing: worldDataService.generationArea,
+    area: worldDataService.generationArea,
+    size: Math.ceil(worldDataService.size / 2),
   };
 
   function seedTowns(coords, factor) {
@@ -77,12 +77,12 @@ export default () => {
     Report.sync().then(() => Report.destroy({ where: {} })),
   ])
   .then(() => Promise.all([
-    World.create(worldData),
+    World.create(worldDataService),
     User.bulkCreate(userData),
-    Building.bulkCreate(buildingData(worldData.speed)),
-    Unit.bulkCreate(unitData(worldData.speed)),
+    Building.bulkCreate(buildingData(worldDataService.speed)),
+    Unit.bulkCreate(unitData(worldDataService.speed)),
   ]))
-  .then(() => WorldData.readWorld('Megapolis'))
+  .then(() => WorldDataService.readWorld('Megapolis'))
   .then(() => Town.bulkCreate(seedTowns(
     MapManager.getCoordsInRange(
       townGenerationData.area,

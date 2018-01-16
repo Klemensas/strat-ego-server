@@ -1,4 +1,4 @@
-import WorldData from './world';
+import { WorldDataService } from './world';
 import { Town } from '../api/town/town.model';
 import { Player } from '../api/world/player.model';
 import { World } from '../api/world/world.model';
@@ -95,13 +95,13 @@ class MapManager {
 
   public chooseLocation() {
     return Town.getAvailableCoords(this.getCoordsInRange(
-      WorldData.world.generationArea,
-      WorldData.world.currentRing,
-      Math.ceil(WorldData.world.size / 2),
+      WorldDataService.world.generationArea,
+      WorldDataService.world.currentRing,
+      Math.ceil(WorldDataService.world.size / 2),
     ))
     .then((coords) => {
       if (!coords.length) {
-        return WorldData.increaseRing(this.world)
+        return WorldDataService.increaseRing(this.world)
           .then(() => this.chooseLocation());
       }
       // TODO: handle running out of locationsx`

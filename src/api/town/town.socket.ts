@@ -1,4 +1,4 @@
-import WorldData from '../../components/world';
+import { WorldDataService } from '../../components/world';
 import { Town, townIncludes } from './town.model';
 import { Player } from '../world/player.model';
 import { UnitQueue } from '../world/unitQueue.model';
@@ -37,7 +37,7 @@ function tryBuilding(town: Town, data) {
   if (target) {
     // Select next level latest queued or the current level;
     const level = target.queued || target.level;
-    const targetBuilding = WorldData.buildingMap[data.building];
+    const targetBuilding = WorldDataService.buildingMap[data.building];
     const buildingData = targetBuilding.data[level];
 
     if (!town.checkBuildingRequirements(targetBuilding.requirements)) {
@@ -71,7 +71,7 @@ function tryBuilding(town: Town, data) {
 
 function tryRecruiting(town, data) {
   const time = Date.now();
-  const unitData = WorldData.unitMap;
+  const unitData = WorldDataService.unitMap;
   const unitsToQueue = [];
   const queueCreateTime = new Date();
   const TownId = town.id;
@@ -120,7 +120,7 @@ function tryRecruiting(town, data) {
 }
 
 function trySending(town, data) {
-  const unitData = WorldData.unitMap;
+  const unitData = WorldDataService.unitMap;
   const queueCreateTime = Date.now();
   let slowest = 0;
 
