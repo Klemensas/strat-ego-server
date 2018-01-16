@@ -10,10 +10,11 @@ import { world } from '../../sqldb';
 export type permissionNames =
   'viewInvites' |
   'editInvites' |
+  'manageForum' |
+  'editProfile' |
   'viewManagement' |
-  'manageMinorRoles' |
-  'manageAllRoles' |
-  'editProfile';
+  'manageRoles' |
+  'manageAlliance';
 
 export type AlliancePermissions = {
   [name in permissionNames]: boolean;
@@ -22,10 +23,11 @@ export type AlliancePermissions = {
 export const ALLIANCE_PERMISSIONS: permissionNames[] = [
   'viewInvites',
   'editInvites',
-  'viewManagement',
-  'manageMinorRoles',
-  'manageAllRoles',
+  'manageForum',
   'editProfile',
+  'viewManagement',
+  'manageRoles',
+  'manageAlliance',
 ];
 
 export class AllianceRole extends Model {
@@ -60,10 +62,11 @@ AllianceRole.init({
     defaultValue: {
       viewInvites: false,
       editInvites: false,
-      viewManagement: false,
-      manageMinorRoles: false,
-      manageAllRoles: false,
+      manageForum: false,
       editProfile: false,
+      viewManagement: false,
+      manageRoles: false,
+      manageAlliance: false,
     },
   },
 }, { sequelize: world.sequelize });

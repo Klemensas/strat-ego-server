@@ -10,6 +10,16 @@ import { Player } from 'api/world/player.model';
 
 export interface UserSocket extends SocketIO.Socket {
   player: Player;
+  userId: number;
+  username: string;
+  world: string;
+  connectedAt: Date;
+  address: string;
+  decoded_token: {
+    id: number;
+    name: string;
+  };
+  log(...data: any[]): void;
 }
 
 function onConnect(client) {
@@ -31,12 +41,12 @@ function onDisconnect(client) {
   client.log(`${client.username} disconnected`);
 }
 
-export default (socketio) => {
+export default (socketio: SocketIO.Server) => {
   socketio.use(socketJwt.authorize({
     secret: config.secrets.session,
     handshake: true,
   }));
-  socketio.on('connection', (client) => {
+  socketio.on('connection', (client: UserSocket) => {
     client.address = `${client.request.connection.remoteAddress}:${client.request.connection.remotePort}`;
     client.connectedAt = new Date();
     client.world = client.handshake.query.world;

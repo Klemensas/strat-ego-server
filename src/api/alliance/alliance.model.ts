@@ -65,6 +65,7 @@ export class Alliance extends Model {
 
   public addInvitation: BelongsToManyAddAssociationsMixin<Player, number>;
   public removeInvitation: BelongsToManyRemoveAssociationMixin<Player, number>;
+  public removeMember: BelongsToManyRemoveAssociationMixin<Player, number>;
 }
 Alliance.init({
   id: {

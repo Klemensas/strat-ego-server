@@ -15,6 +15,14 @@ function joinAllianceRoom(socket) {
   }
 }
 
+function leaveAllianceRoom(socket: UserSocket, allianceId: number) {
+  const room = `alliance.${allianceId}`;
+  if (socket.player && !!socket.rooms[room]) {
+    socket.leave(room);
+    socket.log(`${socket.username} left alliance ${allianceId} room`);
+  }
+}
+
 function isMember(members, id) {
   return members.some((member) => member.id === id);
 }
@@ -36,10 +44,11 @@ function createAlliance(data) {
             permissions: {
               viewInvites: true,
               editInvites: true,
-              viewManagement: true,
-              manageMinorRoles: true,
-              manageAllRoles: true,
+              manageForum: true,
               editProfile: true,
+              viewManagement: true,
+              manageRoles: true,
+              manageAlliance: true,
             },
           }, {
             name: 'Member',
@@ -226,26 +235,51 @@ function updateRoles(data) {
     .then((alliance) => io.sockets.in(`alliance.${alliance.id}`).emit('alliance', alliance));
 }
 
-function removeRole(data) {
-  // const role = data;
-
+function removeRole(roleId) {
   return world.sequelize.transaction((transaction) =>
     Alliance.getAlliance({ id: this.player.AllianceId }, transaction)
       .then((alliance) => {
         if (!alliance) { return Promise.reject('Wrong alliance.'); }
 
-        const target = alliance.Roles.find((role) => role.id === data.id);
+        const target = alliance.Roles.find((role) => role.id === roleId);
         if (!target) { return Promise.reject('Wrong role'); }
 
         return Player.update(
           { AllianceRoleId: alliance.DefaultRoleId },
-          { where: { AllianceRoleId: data.id, AllianceId: alliance.id }, transaction },
+          { where: { AllianceRoleId: roleId, AllianceId: alliance.id }, transaction },
         );
       })
-      .then(() => AllianceRole.destroy({ where: { id: data.id }, transaction })),
+      .then(() => AllianceRole.destroy({ where: { id: roleId }, transaction })),
   )
     .then(() => Alliance.getAlliance({ id: this.player.AllianceId }))
     .then((alliance) => io.sockets.in(`alliance.${alliance.id}`).emit('alliance', alliance));
+}
+
+function removePlayer(playerId) {
+  let ally;
+  return world.sequelize.transaction((transaction) =>
+    Alliance.getAlliance({ id: this.player.AllianceId }, transaction)
+      .then((alliance) => {
+        if (!alliance) { return Promise.reject('Can\t remove member.'); }
+        ally = alliance;
+
+        return Player.update({
+          AllianceId: null,
+          AllianceRoleId: null,
+        }, {
+          where: {
+            id: playerId,
+            AllianceId: this.player.AllianceId,
+          },
+          transaction,
+        });
+      }),
+  )
+    .then(() => {
+      const alliance = ally.get();
+      alliance.Members = alliance.Members.filter(({ id }) => id !== playerId);
+      io.sockets.in(`alliance.${alliance.id}`).emit('alliance:memberRemove', { alliance, memberId: playerId });
+    });
 }
 
 function destroyAlliance() {
@@ -294,11 +328,34 @@ function updatePlayerRole(data) {
       const member = ally.Members.find(({ id }) => id === playerId).get();
       member.AllianceRole = ally.Roles.find(({ id }) => id === roleId);
       io.sockets.in(room).emit('alliance:memberUpdate', member);
-      console.log('socket keys', Object.keys(io.sockets.in(room).sockets));
     });
 }
 
-export default (socket) => {
+function leaveAlliance() {
+  return world.sequelize.transaction((transaction) =>
+    Player.update({
+      AllianceId: null,
+      AllianceRoleId: null,
+    }, {
+      where: {
+        id: this.player.id,
+      },
+      transaction,
+    }).then(() => Alliance.getAlliance({ id: this.player.AllianceId }, transaction)),
+  ).then((ally) => {
+    const alliance = ally.get();
+    this.player.Alliance = null;
+    this.player.AllianceId = null;
+    this.player.AllianceRoleId = null;
+    this.player.AllianceRole = null;
+    leaveAllianceRoom(this, alliance.id);
+    this.emit('alliance:left');
+    io.sockets.in(`alliance.${alliance.id}`).emit('alliance', alliance);
+
+  });
+}
+
+export default (socket: UserSocket) => {
   joinAllianceRoom(socket);
 
   socket.on('alliance:create', createAlliance);
@@ -309,6 +366,8 @@ export default (socket) => {
   socket.on('alliance:updatePlayerRole', updatePlayerRole);
   socket.on('alliance:updateRoles', updateRoles);
   socket.on('alliance:removeRole', removeRole);
+  socket.on('alliance:removePlayer', removePlayer);
+  socket.on('alliance:leave', leaveAlliance);
   socket.on('alliance:destroy', destroyAlliance);
   return socket;
 };
