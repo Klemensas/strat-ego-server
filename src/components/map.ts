@@ -1,3 +1,4 @@
+import * as Bluebird from 'bluebird';
 import { WorldDataService } from './world';
 import { Town } from '../api/town/town.model';
 import { Player } from '../api/world/player.model';
@@ -93,7 +94,7 @@ class MapManager {
     return [...coords.top, ...innards, ...coords.bottom];
   }
 
-  public chooseLocation() {
+  public chooseLocation(): Bluebird<[number, number]> {
     return Town.getAvailableCoords(this.getCoordsInRange(
       WorldDataService.world.generationArea,
       WorldDataService.world.currentRing,

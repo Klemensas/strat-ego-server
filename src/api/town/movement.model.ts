@@ -2,6 +2,8 @@ import { Sequelize, Model, DataTypes, BelongsTo } from 'sequelize';
 import { Resources, Requirements, Combat } from '../util.model';
 import { world } from '../../sqldb';
 
+export type MovementType = 'attack' | 'support';
+
 export class Movement extends Model {
   public static associations: {
     MovementDestinationTown: BelongsTo;
@@ -11,7 +13,7 @@ export class Movement extends Model {
   public id: number;
   public units: { [name: string]: number };
   public haul: Resources;
-  public type: string;
+  public type: MovementType;
   public endsAt: Date;
   public createdAt: Date;
   public updatedAt: Date;

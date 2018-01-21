@@ -20,7 +20,7 @@ export type permissionNames =
   'editProfile';
 
 export type AlliancePermissions = {
-  [name in permissionNames]?: boolean;
+  [name in permissionNames]: boolean;
 };
 
 export const ALLIANCE_PERMISSIONS: permissionNames[] = [

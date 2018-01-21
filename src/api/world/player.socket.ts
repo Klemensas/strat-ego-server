@@ -1,77 +1,92 @@
-import { world } from '../../sqldb';
+import * as Bluebird from 'bluebird';
 import MapManager from '../../components/map';
 import { Town } from '../town/town.model';
 import { Player } from './player.model';
-import { UnitQueue } from './unitQueue.model';
-import { BuildingQueue } from './buildingQueue.model';
-import { Movement } from '../town/movement.model';
-import { Report } from '../report/report.model';
 import { UserWorld } from './userWorld.model';
-import { joinTownRoom } from '../town/town.socket';
-import { Alliance } from '../alliance/alliance.model';
+import { TownSocket } from '../town/town.socket';
+import { UserSocket } from 'config/socket';
 
-function createPlayer(socket) {
-  socket.log(`creating player for ${socket.username}, on ${socket.world}`);
-  return MapManager.chooseLocation()
-    .then((location) => Player.create({
-      name: socket.username,
-      UserId: socket.userId,
-      Towns: [{
-        name: `${socket.username}s Town`,
-        location,
-      }],
-    }, {
-      include: [{ all: true }],
-    }))
-    .then((newPlayer: Player) => {
-      return UserWorld.create({
-        UserId: socket.userId,
-        World: socket.world,
-        PlayerId: newPlayer.id,
-      })
-      .then(() => newPlayer);
-    });
-}
+export class PlayerSocket {
+  static onConnect(socket: UserSocket): Bluebird<void> {
+    return this.getOrCreatePlayer(
+      socket.userData.username,
+      socket.userData.userId,
+      socket.userData.worldName,
+    )
+      .then((player) => this.processPlayerTowns(player))
+      .then((player) => {
+        socket.userData = {
+          ...socket.userData,
+          playerId: player.id,
+          playername: player.name,
+          townIds: player.Towns.map(({ id }) => id),
+          AllianceId: player.AllianceId,
+          AllianceRoleId: player.AllianceRoleId,
+          AlliancePermissions: player.AllianceRole ? player.AllianceRole.permissions : null,
+          updatedAt: player.updatedAt,
+        };
+        socket.join(`player.${player.id}`);
+        socket.emit('player', player);
 
-function restart() {
-  this.log(`player ${this.username} restarting`);
-  return Player.getPlayer({ UserId: this.userId })
-    .then((player) => {
-      if (player.Towns.length) {
-        return Promise.reject('Can\'t restart.');
+        socket.on('player:restart', () => this.restart(socket));
+      });
+  }
+
+  private static getOrCreatePlayer(username: string, userId: number, worldName: string): Bluebird<Player> {
+    return Player.getPlayer({ id: userId }).then((player: Player) => {
+      if (!player) {
+        return this.createPlayer(username, userId, worldName).then(() => Player.getPlayer({ UserId: userId }));
       }
-      return MapManager.chooseLocation()
-        .then((location) => player.createTown({ location, name: `${player.name}s Town` })
-        .then(() => Player.getPlayer({ UserId: this.userId })));
-    })
-    .then((player) => {
-      this.player = player;
-      joinTownRoom(this);
-      this.emit('player', player);
-    })
-    .catch((err) => this.log(err, 'SOCKET RESTART ERROR'));
-}
+      return player;
+    });
+  }
 
-export default (socket) => Player.getPlayer({ UserId: socket.userId })
-  .then((player: Player) => {
-    if (!player) {
-      return createPlayer(socket).then(() => Player.getPlayer({ UserId: socket.userId }));
-    }
-    return player;
-  })
-  .then((player) => {
+  private static createPlayer(username: string, userId: number, worldName: string): Bluebird<Player> {
+    return MapManager.chooseLocation()
+      .then((location) => Player.create({
+        name: username,
+        UserId: userId,
+        Towns: [{
+          name: `${username}s Town`,
+          location,
+        }],
+      }, {
+        include: [{ all: true }],
+      }))
+      .then((newPlayer: Player) => {
+        return UserWorld.create({
+          UserId: userId,
+          World: worldName,
+          PlayerId: newPlayer.id,
+        })
+        .then(() => newPlayer);
+      });
+  }
+
+  private static processPlayerTowns(player: Player): Promise<Player> {
     return Promise.all(player.Towns.map((town) => Town.processTownQueues(town.id)))
       .then((processedTowns) => {
         player.Towns = processedTowns.map(({ town }) => town);
         return player;
       });
-  })
-  .then((player) => {
-    socket.player = player;
-    socket.join(`player.${player.id}`);
-    socket.emit('player', player);
+  }
 
-    socket.on('player:restart', restart);
-    return socket;
-  })
-  .catch((err) => socket.log(err, 'SOCKET FATAL ERROR'));
+  private static restart(socket: UserSocket) {
+    socket.log(`player ${socket.userData.username} restarting`);
+    if (socket.userData.townIds.length) {
+      return Promise.reject('Can\'t restart.');
+    }
+    return MapManager.chooseLocation()
+      .then((location) => Town.create({ location, name: `${socket.userData.playername}s Town` }))
+      .then(() => Player.getPlayer({ UserId: socket.userData.userId }))
+      .then((player) => {
+        socket.userData = {
+          ...socket.userData,
+          townIds: player.Towns.map(({ id }) => id),
+        };
+        TownSocket.joinTownRoom(socket);
+
+        socket.emit('player', player);
+      });
+  }
+}

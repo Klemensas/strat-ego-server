@@ -137,9 +137,7 @@ export class Town extends Model {
   }
 
   public checkBuildingRequirements(requirements) {
-    return requirements ?
-    requirements.every(({ item, level }) => this.buildings[item].level >= level) :
-    true;
+    return requirements ? requirements.every(({ item, level }) => this.buildings[item].level >= level) : true;
   }
 
   public getMaxRes() {

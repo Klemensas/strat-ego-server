@@ -20,7 +20,7 @@ import seedWorld from './sqldb/seed';
 import { WorldDataService } from './components/world';
 import MapManager from './components/map';
 import routing from './routes';
-import initSocket from './config/socket';
+import { initializeSocket } from './config/socket';
 // import queue from './api/world/queue';
 
 const app = express();
@@ -63,7 +63,7 @@ main.sequelize.sync()
   .then(() => (config.seedDB ? seedWorld() : null))
   .then(() => WorldDataService.readWorld(worldName))
   .then(() => MapManager.initialize(worldName))
-  .then(() => initSocket(io))
+  .then(() => initializeSocket(io))
   .then(() => logger.info('server ready!'));
   // .then(() => queue.go());
 
