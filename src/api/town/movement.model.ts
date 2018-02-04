@@ -2,7 +2,7 @@ import { Sequelize, Model, DataTypes, BelongsTo } from 'sequelize';
 import { Resources, Requirements, Combat } from '../util.model';
 import { world } from '../../sqldb';
 
-export type MovementType = 'attack' | 'support';
+export type MovementType = 'attack' | 'support' | 'return';
 
 export class Movement extends Model {
   public static associations: {

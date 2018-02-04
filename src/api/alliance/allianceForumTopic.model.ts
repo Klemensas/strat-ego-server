@@ -10,7 +10,7 @@ import { world } from '../../sqldb';
 export class AllianceForumTopic extends Model {
   static associations: {
     Category: BelongsTo;
-    Poster: BelongsTo;
+    Creator: BelongsTo;
     Posts: HasMany;
   };
 
@@ -20,8 +20,8 @@ export class AllianceForumTopic extends Model {
   // Associations
   public CategoryId: number;
   public Category: AllianceForumCategory;
-  public PosterId: number;
-  public Poster: Player;
+  public CreatorId: number;
+  public Creator: Player;
   public Posts: AllianceForumPost[];
 }
 AllianceForumTopic.init({

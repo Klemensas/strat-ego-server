@@ -18,7 +18,7 @@ export class AllianceForumPost extends Model {
   // Associations
   public TopicId: number;
   public Topic: AllianceForumTopic;
-  public PlayerId: number;
+  public PosterId: number;
   public Poster: Player;
 }
 AllianceForumPost.init({
@@ -29,7 +29,7 @@ AllianceForumPost.init({
     autoIncrement: true,
   },
   body: {
-    type: DataTypes.TEXT ,
+    type: DataTypes.TEXT,
     allowNull: false,
   },
 }, { sequelize: world.sequelize });

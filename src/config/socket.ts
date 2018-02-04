@@ -51,8 +51,8 @@ export function setupUserSocket(socket: UserSocket) {
     username: socket.decoded_token.name,
     connectedAt: new Date(),
   };
-  console.log('socket logged in', socket.userData)
-  
+  console.log('socket logged in', socket.userData);
+
   socket.on('disconnect', () => {
     socket.log(`${socket.userData.username} disconnected`);
   });

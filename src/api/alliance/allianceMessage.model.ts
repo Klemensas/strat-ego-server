@@ -7,36 +7,35 @@ import {
 } from 'sequelize';
 import { world } from '../../sqldb';
 
-export class AllianceForumCategory extends Model {
+export class AllianceMessage extends Model {
   static associations: {
     Alliance: BelongsTo;
-    Topics: HasMany;
+    Player: BelongsTo;
   };
 
   public id: number;
-  public name: string;
+  public text: string;
   public description: string;
+  public createdAt: Date;
 
   // Associations
   public AllianceId: number;
   public Alliance: Alliance;
-  public Topics: AllianceForumTopic[];
+  public PlayerId: number;
+  public Player: Player;
 }
-AllianceForumCategory.init({
+AllianceMessage.init({
   id: {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,
     autoIncrement: true,
   },
-  name: {
+  text: {
     type: DataTypes.STRING,
     allowNull: false,
-  },
-  description: {
-    type: DataTypes.STRING,
   },
 }, { sequelize: world.sequelize });
 
 import { Alliance } from 'api/alliance/alliance.model';
-import { AllianceForumTopic } from 'api/alliance/allianceForumTopic.model';
+import { Player } from 'api/world/player.model';

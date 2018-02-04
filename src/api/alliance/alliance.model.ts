@@ -39,6 +39,8 @@ export class Alliance extends Model {
     ForumCategories: HasMany;
     AllianceRoles: HasMany;
     DefaultRole: HasOne;
+    Forum: HasMany;
+    Messages: HasMany[];
   };
 
   static getAlliance = (where: WhereOptions, transaction?: Transaction) => {
@@ -61,7 +63,8 @@ export class Alliance extends Model {
   public DefaultRole: AllianceRole;
   public Members: Player[];
   public Invitations: Player[];
-  public ForumCategories: AllianceForumCategory[];
+  public Forum: AllianceForumCategory[];
+  public Messages: AllianceMessage[];
 
   public addInvitation: BelongsToManyAddAssociationsMixin<Player, number>;
   public removeInvitation: BelongsToManyRemoveAssociationMixin<Player, number>;
@@ -84,6 +87,9 @@ Alliance.init({
 import { Player } from '../world/player.model';
 import { AllianceForumCategory } from './allianceForumCategory.model';
 import { AllianceRole } from './allianceRole.model';
+import { AllianceForumTopic } from './allianceForumTopic.model';
+import { AllianceForumPost } from './allianceForumPost.model';
+import { AllianceMessage } from './allianceMessage.model';
 
 export const allianceIncludes = [{
   model: Player,
@@ -100,4 +106,35 @@ export const allianceIncludes = [{
 }, {
   model: AllianceRole,
   as: 'Roles',
+}, {
+  model: AllianceRole,
+  as: 'DefaultRole',
+}, {
+  model: AllianceMessage,
+  as: 'Messages',
+  include: [{
+    model: Player,
+    as: 'Player',
+    attributes: ['name'],
+  }],
+// }, {
+//   model: AllianceForumCategory,
+//   as: 'Forum',
+//   include: [{
+//     model: AllianceForumTopic,
+//     as: 'Topic',
+//     include: [{
+//       model: Player,
+//       as: 'Creator',
+//       attributes: ['name'],
+//     }, {
+//       model: AllianceForumPost,
+//       as: 'Posts',
+//       include: [{
+//         model: Player,
+//         as: 'Poster',
+//         attributes: ['name'],
+//       }],
+//     }],
+//   }],
 }];

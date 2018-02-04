@@ -4,12 +4,20 @@ import { Town } from '../api/town/town.model';
 import { Player } from '../api/world/player.model';
 import { World } from '../api/world/world.model';
 import { logger } from '../';
+import { Alliance } from '../api/alliance/alliance.model';
 
 export interface MapTown {
   id: number;
   name: string;
   location: number[];
-  owner: string;
+  owner: {
+    id: number;
+    name: string;
+  };
+  alliance: {
+    id: number;
+    name: string;
+  };
 }
 
 class MapManager {
@@ -19,20 +27,46 @@ class MapManager {
   public initialize(world: string) {
     this.world = world;
     return Town.findAll({
-      include: [{ model: Player, as: 'Player' }],
+      include: [{
+        model: Player,
+        as: 'Player',
+        attributes: ['id', 'name'],
+        include: [{
+          model: Alliance,
+          as: 'Alliance',
+          attributes: ['id', 'name'],
+        }],
+      }],
     })
       .then((towns) => this.addTown(...towns));
   }
 
   public addTown(...towns) {
      towns.forEach((town) => {
-       const owner = town.Player ? town.Player.name : null;
-       this.mapData[town.location.join(',')] = {
-         id: town.id,
-         name: town.name,
-         owner,
-         location: town.location,
-       };
+      let owner = null;
+      let alliance = null;
+
+      if (town.Player) {
+        owner = town.Player ? {
+          id: town.Player.id,
+          name: town.Player.name,
+        } : null;
+        alliance = town.Player.Alliance ? {
+          id: town.Player.Alliance.id,
+          name: town.Player.Alliance.name,
+        } : null;
+      }
+      if (town.Player) {
+
+        console.log('oho', town.Player.get(), alliance, owner)
+      }
+      this.mapData[town.location.join(',')] = {
+        id: town.id,
+        name: town.name,
+        owner,
+        alliance,
+        location: town.location,
+      };
      });
    }
 

@@ -146,6 +146,10 @@ import { Town, townIncludes } from '../town/town.model';
 import { Report } from '../report/report.model';
 import { Alliance, allianceIncludes } from '../alliance/alliance.model';
 import { AllianceRole } from '../alliance/allianceRole.model';
+import { AllianceForumCategory } from '../alliance/allianceForumCategory.model';
+import { AllianceForumTopic } from '../alliance/allianceForumTopic.model';
+import { AllianceForumPost } from '../alliance/allianceForumPost.model';
+import { AllianceMessage } from '../alliance/allianceMessage.model';
 
 Alliance.hasMany(Player, { as: 'Members', foreignKey: 'AllianceId' });
 Player.belongsTo(Alliance, { as: 'Alliance', foreignKey: 'AllianceId' });
@@ -165,3 +169,24 @@ Player.hasMany(Report, { as: 'ReportOriginPlayer', foreignKey: 'ReportOriginPlay
 Player.hasMany(Report, { as: 'ReportDestinationPlayer', foreignKey: 'ReportDestinationPlayerId' });
 Report.belongsTo(Player, { as: 'ReportDestinationPlayer', foreignKey: 'ReportDestinationPlayerId' });
 Report.belongsTo(Player, { as: 'ReportOriginPlayer', foreignKey: 'ReportOriginPlayerId' });
+
+Alliance.hasMany(AllianceForumCategory, { as: 'Forum', foreignKey: 'AllianceId' });
+AllianceForumCategory.belongsTo(Alliance, { as: 'Alliance', foreignKey: 'AllianceId' });
+
+AllianceForumCategory.hasMany(AllianceForumTopic, { as: 'Topic', foreignKey: 'CategoryId' });
+AllianceForumTopic.belongsTo(AllianceForumCategory, { as: 'Category', foreignKey: 'CategoryId' });
+
+AllianceForumTopic.hasOne(Player, { as: 'Creator', foreignKey: 'CreatorId' });
+Player.belongsTo(AllianceForumTopic, { as: 'Creator', foreignKey: 'CreatorId' });
+
+AllianceForumTopic.hasMany(AllianceForumPost, { as: 'Posts', foreignKey: 'TopicId' });
+AllianceForumPost.belongsTo(AllianceForumTopic, { as: 'Topic', foreignKey: 'TopicId' });
+
+AllianceForumPost.hasOne(Player, { as: 'Poster', foreignKey: 'PosterId' });
+Player.belongsTo(AllianceForumPost, { as: 'Poster', foreignKey: 'PosterId' });
+
+Alliance.hasMany(AllianceMessage, { as: 'Messages', foreignKey: 'AllianceId' });
+AllianceMessage.belongsTo(Alliance, { as: 'Alliance', foreignKey: 'AllianceId' });
+
+Player.hasMany(AllianceMessage, { as: 'AllianceMessages', foreignKey: 'PlayerId' });
+AllianceMessage.belongsTo(Player, { as: 'Player', foreignKey: 'PlayerId' });

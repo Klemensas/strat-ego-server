@@ -5,6 +5,7 @@
     ],
     "jsRules": {},
     "rules": {
+        "max-line-length": [true, 160],
         "no-console": ["warn"],
 
         "quotemark": [true, "single", "avoid-escape"],

@@ -33,7 +33,7 @@ export class PlayerSocket {
   }
 
   private static getOrCreatePlayer(username: string, userId: number, worldName: string): Bluebird<Player> {
-    return Player.getPlayer({ id: userId }).then((player: Player) => {
+    return Player.getPlayer({ UserId: userId }).then((player: Player) => {
       if (!player) {
         return this.createPlayer(username, userId, worldName).then(() => Player.getPlayer({ UserId: userId }));
       }
