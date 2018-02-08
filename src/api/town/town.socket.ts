@@ -38,8 +38,9 @@ export class TownSocket {
 
   private static changeName(socket: UserSocket, payload: NamePayload) {
     if (!payload.name || !payload.town) { return Promise.reject('Missing data'); }
+    if (!socket.userData.townIds.includes(payload.town)) { return Promise.reject('No town found'); }
 
-    return this.getTown(socket.userData.townIds, payload.town)
+    return Town.getTown({ id: payload.town })
       .then((town): PromiseLike<Town> => {
         town.name = payload.name;
         return town.save();
@@ -49,27 +50,29 @@ export class TownSocket {
 
   private static build(socket: UserSocket, payload: BuildPayload) {
     if (!payload.building || !payload.town) { return Promise.reject('Missing data'); }
+    if (!socket.userData.townIds.includes(payload.town)) { return Promise.reject('No town found'); }
 
     const time = Date.now();
-    return this.getTown(socket.userData.townIds, payload.town)
+    return Town.getTown({ id: payload.town })
       .then((town) => this.tryBuilding(town, time, payload.building))
       .then((town) => town.notify({ type: 'build' }));
   }
 
   private static recruit(socket: UserSocket, payload: RecruitPayload) {
     if (!payload.units || !payload.town) { return Promise.reject('Missing data'); }
+    if (!socket.userData.townIds.includes(payload.town)) { return Promise.reject('No town found'); }
 
     const time = Date.now();
-    this.getTown(socket.userData.townIds, payload.town)
+    return Town.getTown({ id: payload.town})
       .then((town) => this.tryRecruiting(town, time, payload.units))
       .then((town) => town.notify({ type: 'recruit' }));
   }
   private static moveTroops(socket: UserSocket, payload: TroopMovementPayload) {
-    if (!payload.town || !payload.target || !payload.type) { return;
-    }
+    if (!payload.town || !payload.target || !payload.type) { return; }
+    if (!socket.userData.townIds.includes(payload.town)) { return Promise.reject('No town found'); }
 
     const time = Date.now();
-    this.getTown(socket.userData.townIds, payload.town)
+    return Town.getTown({ id: payload.town })
       .then((town) => this.tryMoving(town, time, payload))
       .then((town) => town.notify({ type: 'movement' }));
   }
@@ -211,21 +214,5 @@ export class TownSocket {
             socket.emit('player', player);
           });
       });
-  }
-
-  private static getTown(townIds: number[], townId: number): PromiseLike<Town> {
-    if (!townIds.includes(townId)) { return Promise.reject('No town found'); }
-
-    return Town.findById(townId, { include: townIncludes }).then((town) => {
-      town.MovementDestinationTown = town.MovementDestinationTown.map((movement) => {
-        if (movement.type !== 'attack') {
-          delete movement.units;
-          delete movement.createdAt;
-          delete movement.updatedAt;
-        }
-        return movement;
-      });
-      return town;
-    });
   }
 }

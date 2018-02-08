@@ -1,4 +1,4 @@
-import { Sequelize, Model, DataTypes, BelongsTo, HasMany, HasManyCreateAssociationMixin, Transaction } from 'sequelize';
+import { Sequelize, Model, DataTypes, BelongsTo, HasMany, HasManyCreateAssociationMixin, Transaction, WhereOptions } from 'sequelize';
 import * as Bluebird from 'bluebird';
 
 import { io } from '../../';
@@ -54,6 +54,24 @@ export class Town extends Model {
   static processTownQueues: (id: number, time?: Date, processed?: ProcessedQueues) =>
     Bluebird<ProcessedTown>;
   static setInitialUnits: () => TownUnits;
+
+  static getTown = (where: WhereOptions, transaction?: Transaction) => {
+    return Town.findOne({
+      where,
+      transaction,
+      include: townIncludes,
+    }).then((town) => {
+      town.MovementDestinationTown = town.MovementDestinationTown.map((movement) => {
+        if (movement.type !== 'attack') {
+          delete movement.units;
+          delete movement.createdAt;
+          delete movement.updatedAt;
+        }
+        return movement;
+      });
+      return town;
+    });
+  }
 
   public id: number;
   public name: string;

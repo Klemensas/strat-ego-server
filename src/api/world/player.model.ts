@@ -167,9 +167,9 @@ AllianceRole.hasMany(Player, { as: 'AllianceRole', foreignKey: 'AllianceRoleId' 
 Player.belongsTo(AllianceRole, { as: 'AllianceRole', foreignKey: 'AllianceRoleId' });
 
 Player.hasMany(Report, { as: 'ReportOriginPlayer', foreignKey: 'ReportOriginPlayerId' });
+Report.belongsTo(Player, { as: 'ReportOriginPlayer', foreignKey: 'ReportOriginPlayerId' });
 Player.hasMany(Report, { as: 'ReportDestinationPlayer', foreignKey: 'ReportDestinationPlayerId' });
 Report.belongsTo(Player, { as: 'ReportDestinationPlayer', foreignKey: 'ReportDestinationPlayerId' });
-Report.belongsTo(Player, { as: 'ReportOriginPlayer', foreignKey: 'ReportOriginPlayerId' });
 
 Alliance.hasMany(AllianceForumCategory, { as: 'Forum', foreignKey: 'AllianceId' });
 AllianceForumCategory.belongsTo(Alliance, { as: 'Alliance', foreignKey: 'AllianceId' });
