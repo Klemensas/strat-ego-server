@@ -43,6 +43,7 @@ export class Alliance extends Model {
     Messages: HasMany[];
     DiplomacyOrigin: HasMany[];
     DiplomacyTarget: HasMany[];
+    Events: HasMany;
   };
 
   static getAlliance = (where: WhereOptions, transaction?: Transaction) => {
@@ -52,6 +53,7 @@ export class Alliance extends Model {
       include: allianceIncludes,
       order: [
         [{ model: AllianceRole, as: 'Roles' }, 'id', 'ASC'],
+        [{ model: AllianceEvent, as: 'Events' }, 'createdAt', 'DESC'],
       ],
     });
   }
@@ -69,6 +71,7 @@ export class Alliance extends Model {
   public Messages: AllianceMessage[];
   public DiplomacyOrigin: AllianceDiplomacy[];
   public DiplomacyTarget: AllianceDiplomacy[];
+  public Events: AllianceEvent[];
 
   public addInvitation: BelongsToManyAddAssociationsMixin<Player, number>;
   public removeInvitation: BelongsToManyRemoveAssociationMixin<Player, number>;
@@ -95,6 +98,7 @@ import { AllianceForumTopic } from './allianceForumTopic.model';
 import { AllianceForumPost } from './allianceForumPost.model';
 import { AllianceMessage } from './allianceMessage.model';
 import { AllianceDiplomacy } from './allianceDiplomacy.model';
+import { AllianceEvent } from './allianceEvent.model';
 
 export const allianceIncludes = [{
   model: Player,
@@ -107,7 +111,7 @@ export const allianceIncludes = [{
 }, {
   model: Player,
   as: 'Invitations',
-  attributes: ['id', 'name', 'createdAt'],
+  attributes: ['id', 'name'],
 }, {
   model: AllianceRole,
   as: 'Roles',
@@ -128,6 +132,22 @@ export const allianceIncludes = [{
   include: [{
     model: Alliance,
     as: 'OriginAlliance',
+    attributes: ['id', 'name'],
+  }],
+}, {
+  model: AllianceEvent,
+  as: 'Events',
+  include: [{
+    model: Alliance,
+    as: 'TargetAlliance',
+    attributes: ['id', 'name'],
+  }, {
+    model: Player,
+    as: 'InitiatingPlayer',
+    attributes: ['id', 'name'],
+  }, {
+    model: Player,
+    as: 'TargetPlayer',
     attributes: ['id', 'name'],
   }],
 }, {

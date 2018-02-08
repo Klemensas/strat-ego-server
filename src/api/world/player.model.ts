@@ -82,6 +82,7 @@ export class Player extends Model {
           'id',
           'ASC',
         ],
+        ['Alliance', { model: AllianceEvent, as: 'Events' }, 'createdAt', 'DESC'],
       ],
     }).then((player) => {
       if (!player) {
@@ -151,6 +152,7 @@ import { AllianceForumTopic } from '../alliance/allianceForumTopic.model';
 import { AllianceForumPost } from '../alliance/allianceForumPost.model';
 import { AllianceMessage } from '../alliance/allianceMessage.model';
 import { AllianceDiplomacy } from '../alliance/allianceDiplomacy.model';
+import { AllianceEvent } from '../alliance/allianceEvent.model';
 
 Alliance.hasMany(Player, { as: 'Members', foreignKey: 'AllianceId' });
 Player.belongsTo(Alliance, { as: 'Alliance', foreignKey: 'AllianceId' });
@@ -202,3 +204,16 @@ AllianceDiplomacy.belongsTo(Player, { as: 'OriginPlayer', foreignKey: 'OriginPla
 
 AllianceDiplomacy.belongsTo(Player, { as: 'TargetPlayer', foreignKey: 'TargetPlayerId' });
 
+Alliance.hasMany(AllianceEvent, { as: 'Events', foreignKey: 'InitiatingAllianceId' });
+// Alliance.hasMany(AllianceEvent, { as: 'TargetEvents', foreignKey: 'TargetAllianceId' });
+AllianceEvent.belongsTo(Alliance, { as: 'InitiatingAlliance', foreignKey: 'InitiatingAllianceId' });
+AllianceEvent.belongsTo(Alliance, { as: 'TargetAlliance', foreignKey: 'TargetAllianceId' });
+
+AllianceEvent.belongsTo(Player, { as: 'InitiatingPlayer', foreignKey: 'InitiatingPlayerId' });
+AllianceEvent.belongsTo(Player, { as: 'TargetPlayer', foreignKey: 'TargetPlayerId' });
+
+// Player.belongsTo(AllianceDiplomacy, { as: 'OriginPlayer', foreignKey: 'OriginPlayerId' });
+// AllianceDiplomacy.hasOne(Player, { as: 'OriginPlayer', foreignKey: 'OriginPlayerId' });
+
+// Player.belongsTo(AllianceDiplomacy, { as: 'TargetPlayer', foreignKey: 'TargetPlayerId' });
+// AllianceDiplomacy.hasOne(Player, { as: 'TargetPlayer', foreignKey: 'TargetPlayerId' });

@@ -22,7 +22,7 @@ export interface UserSocket extends AuthenticatedSocket {
     worldName?: string;
     userId?: number;
     username?: string;
-    playername?: string;
+    playerName?: string;
     playerId?: number;
     townIds?: number[];
     AllianceId?: number;
@@ -63,85 +63,3 @@ export function setupUserSocket(socket: UserSocket) {
     .then(() => AllianceSocket.onConnect(socket))
     .then(() => socket.log(`${socket.userData.username} connected`));
 }
-
-//   export class UserSocket {
-//   data: {
-//     worldName: string;
-//     userId: number;
-//     username: string;
-//     playername: string;
-//     playerId: number;
-//     townIds: number[];
-//     AllianceId: number;
-//     AllianceRoleId: number;
-//     AlliancePermissions: AlliancePermissions;
-//     updatedAt: Date;
-//     connectedAt: Date;
-//   };
-
-//   socket: AuthenticatedSocket;
-//   private address: string;
-//   private log: any;
-//   private worldData: WorldData;
-
-//   constructor(socket: AuthenticatedSocket, worldData: WorldData, log: any) {
-//     socket.
-//     this.socket = socket;
-//     this.log = log;
-//     this.worldData = worldData;
-
-//     this.address = `${socket.request.connection.remoteAddress}:${socket.request.connection.remotePort}`;
-//     this.updateData({
-//       connectedAt: new Date(),
-//       worldName: socket.handshake.query.world,
-//       userId: socket.decoded_token.id,
-//       username: socket.decoded_token.name,
-//     });
-//   }
-
-//   updateData(data: any) {
-//     this.data = {
-//       ...this.data,
-//       ...data,
-//     };
-//   }
-
-//   logMessage(...data) {
-//     this.log.error(...data, `SocketIO ${this.socket.nsp.name} [${this.address}]`);
-//   }
-
-//   private onConnect() {
-//     if (this.worldData.world.name.toLowerCase() !== this.data.worldName.toLowerCase()) {
-//       this.socket.disconnect();
-//       return;
-//     }
-
-//     this.logMessage(`${this.data.username} connected`);
-
-//     PlayerSocket.onConnect(this)
-//       .then(() => TownSocket.onConnect(this))
-//       .then(() => MapSocket.onConnect(this.socket));
-//     // )
-//   }
-
-//   private onDisconnect() {
-//     this.logMessage(`${this.data.username} disconnected`);
-//   }
-
-// }
-
-// function onConnect(client: UserSocket) {
-//   client.log(`${client.username} connected`);
-//   // Disconnect client if sent world not found
-//   if (WorldDataService.world.name.toLowerCase() === client.world.toLowerCase()) {
-//     client.log(`${client.username} disconnect, dattempted world: ${client.world}`);
-//     client.disconnect();
-//     return;
-//   }
-
-//   initializePlayerSocket(client)
-//     .then(initializeTownSocket)
-//     .then(initializeMapSocket)
-//     .then(initializeAllianceSocket)
-//     .catch((err) => client.log(err, 'SOCKET INIT ERROR'));
-// }

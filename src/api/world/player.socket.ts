@@ -18,7 +18,7 @@ export class PlayerSocket {
         socket.userData = {
           ...socket.userData,
           playerId: player.id,
-          playername: player.name,
+          playerName: player.name,
           townIds: player.Towns.map(({ id }) => id),
           AllianceId: player.AllianceId,
           AllianceRoleId: player.AllianceRoleId,
@@ -77,7 +77,7 @@ export class PlayerSocket {
       return Promise.reject('Can\'t restart.');
     }
     return MapManager.chooseLocation()
-      .then((location) => Town.create({ location, name: `${socket.userData.playername}s Town` }))
+      .then((location) => Town.create({ location, name: `${socket.userData.playerName}s Town` }))
       .then(() => Player.getPlayer({ UserId: socket.userData.userId }))
       .then((player) => {
         socket.userData = {
