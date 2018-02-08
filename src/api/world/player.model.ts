@@ -150,6 +150,7 @@ import { AllianceForumCategory } from '../alliance/allianceForumCategory.model';
 import { AllianceForumTopic } from '../alliance/allianceForumTopic.model';
 import { AllianceForumPost } from '../alliance/allianceForumPost.model';
 import { AllianceMessage } from '../alliance/allianceMessage.model';
+import { AllianceDiplomacy } from '../alliance/allianceDiplomacy.model';
 
 Alliance.hasMany(Player, { as: 'Members', foreignKey: 'AllianceId' });
 Player.belongsTo(Alliance, { as: 'Alliance', foreignKey: 'AllianceId' });
@@ -190,3 +191,14 @@ AllianceMessage.belongsTo(Alliance, { as: 'Alliance', foreignKey: 'AllianceId' }
 
 Player.hasMany(AllianceMessage, { as: 'AllianceMessages', foreignKey: 'PlayerId' });
 AllianceMessage.belongsTo(Player, { as: 'Player', foreignKey: 'PlayerId' });
+
+Alliance.hasMany(AllianceDiplomacy, { as: 'DiplomacyOrigin', foreignKey: 'OriginAllianceId' });
+AllianceDiplomacy.belongsTo(Alliance, { as: 'OriginAlliance', foreignKey: 'OriginAllianceId' });
+
+Alliance.hasMany(AllianceDiplomacy, { as: 'DiplomacyTarget', foreignKey: 'TargetAllianceId' });
+AllianceDiplomacy.belongsTo(Alliance, { as: 'TargetAlliance', foreignKey: 'TargetAllianceId' });
+
+AllianceDiplomacy.belongsTo(Player, { as: 'OriginPlayer', foreignKey: 'OriginPlayerId' });
+
+AllianceDiplomacy.belongsTo(Player, { as: 'TargetPlayer', foreignKey: 'TargetPlayerId' });
+

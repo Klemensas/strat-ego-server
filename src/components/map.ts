@@ -56,10 +56,6 @@ class MapManager {
           name: town.Player.Alliance.name,
         } : null;
       }
-      if (town.Player) {
-
-        console.log('oho', town.Player.get(), alliance, owner)
-      }
       this.mapData[town.location.join(',')] = {
         id: town.id,
         name: town.name,
