@@ -3,14 +3,14 @@ import { Player } from '../world/player.model';
 import { Alliance, allianceIncludes } from './alliance.model';
 import { io } from '../../';
 import { WhereOptions, Transaction } from 'sequelize';
-import { AllianceRole } from './allianceRole.model';
+import { AllianceRole, AlliancePermissions } from './allianceRole.model';
 import { UserSocket, AuthenticatedSocket } from 'config/socket';
 import { AllianceForumCategory } from './allianceForumCategory.model';
 import { AllianceMessage } from './allianceMessage.model';
 import { AllianceEvent } from './allianceEvent.model';
+import { WarDeclarationPayload, AllianceDiplomacy } from './allianceDiplomacy.model';
 
 // TODO: overiew permissions everywhere
-
 export interface PlayerRolePayload {
   playerId: number;
   roleId: number;
@@ -41,12 +41,25 @@ export class AllianceSocket {
     socket.on('alliance:removeMember', (playerId) => this.removeMember(socket, playerId));
     socket.on('alliance:leave', () => this.leaveAlliance(socket));
     socket.on('alliance:destroy', () => this.destroyAlliance(socket));
-    socket.on('alliance:createForumCategory', (payload: ForumCategoryPayload) => this.createForumCategory(socket, payload));
+
+    socket.on('alliance:declareWar', (payload: WarDeclarationPayload) => this.startWar(socket, payload));
+    socket.on('alliance:proposeAlliance', (payload: string) => this.proposeDiplo(socket, payload, 'alliance'));
+    socket.on('alliance:proposeNap', (payload: string) => this.proposeDiplo(socket, payload, 'nap'));
+    socket.on('alliance:cancelAlliance', (payload: number) => this.cancelDiplo(socket, payload, 'alliance'));
+    socket.on('alliance:cancelNap', (payload: number) => this.cancelDiplo(socket, payload, 'nap'));
+    socket.on('alliance:rejectAlliance', (payload: number) => this.rejectDiplo(socket, payload, 'alliance'));
+    socket.on('alliance:rejectNap', (payload: number) => this.rejectDiplo(socket, payload, 'nap'));
+    socket.on('alliance:acceptAlliance', (payload: number) => this.acceptDiplo(socket, payload, 'alliance'));
+    socket.on('alliance:acceptNap', (payload: number) => this.acceptDiplo(socket, payload, 'nap'));
+    socket.on('alliance:endAlliance', (payload: number) => this.endDiplo(socket, payload, 'alliance'));
+    socket.on('alliance:endNap', (payload: number) => this.endDiplo(socket, payload, 'nap'));
+
     socket.on('chat:postMessage', (message: string) => this.postMessage(socket, message));
+    // socket.on('alliance:createForumCategory', (payload: ForumCategoryPayload) => this.createForumCategory(socket, payload));
   }
 
   static joinAllianceRoom(socket: UserSocket) {
-    if (socket.userData.AllianceId) { socket.join(`alliance.${socket.userData.AllianceId}`); }
+    if (socket.userData.allianceId) { socket.join(`alliance.${socket.userData.allianceId}`); }
   }
 
   static leaveAllianceRoom(socket: AuthenticatedSocket, allianceId: number) {
@@ -55,7 +68,7 @@ export class AllianceSocket {
   }
 
   private static createAlliance(socket: UserSocket, name: string) {
-    if (socket.userData.AllianceId !== null) { return Promise.reject('Can\'t create alliance.'); }
+    if (socket.userData.allianceId !== null) { return Promise.reject('Can\'t create alliance.'); }
 
     return Player.getPlayer({ id: socket.userData.playerId })
       .then((player) => {
@@ -84,6 +97,7 @@ export class AllianceSocket {
             transaction,
           })
           .then((alliance) => {
+            alliance.MasterRoleId = alliance.Roles[0].id;
             alliance.DefaultRoleId = alliance.Roles[1].id;
             return alliance.save({ transaction });
           })
@@ -92,14 +106,21 @@ export class AllianceSocket {
             player.AllianceRoleId = alliance.Roles[0].id;
             return player.save({ transaction });
           })
+          .then(() => AllianceEvent.create({
+            type: 'management',
+            status: 'create',
+            OriginPlayerId: socket.userData.playerId,
+            OriginAllianceId: player.AllianceId,
+          }, { transaction }))
           .then(() => Alliance.getAlliance({ id: player.AllianceId }, transaction)),
         )
         .then((alliance) => {
           socket.userData = {
             ...socket.userData,
-            AllianceId: player.AllianceId,
-            AllianceRoleId: player.AllianceRoleId,
-            AlliancePermissions: alliance.Roles[0].permissions,
+            allianceId: player.AllianceId,
+            allianceName: player.name,
+            allianceRoleId: player.AllianceRoleId,
+            alliancePermissions: alliance.Roles[0].permissions,
           };
           this.joinAllianceRoom(socket);
           socket.emit('alliance:createSuccess', { alliance, role: alliance.Roles[0] });
@@ -113,7 +134,7 @@ export class AllianceSocket {
     let createdInvite;
 
     return world.sequelize.transaction((transaction) =>
-      Alliance.getAlliance({ id: socket.userData.AllianceId }, transaction).then((alliance) => {
+      Alliance.getAlliance({ id: socket.userData.allianceId }, transaction).then((alliance) => {
         // TODO: add additional permission check
         if (!alliance || !this.hasItemById(alliance.Members, socket.userData.playerId)) {
           return Promise.reject('Can\'t invite player.');
@@ -123,13 +144,12 @@ export class AllianceSocket {
           transaction,
           where: {
             name: targetName,
-            // AllianceId: { $or: [{ $ne: invitingAlliance.id }, { $eq: null }] },
           },
           include: [{
             model: Alliance,
             as: 'Invitations',
           }],
-        }).catch((p) => console.log('p err', targetName, p));
+        });
       }).then((player) => {
         // TODO: look for certain if invite existance can't be checked in sql
         if (!player || this.hasItemById(player.Invitations, invitingAlliance.id)) {
@@ -142,8 +162,8 @@ export class AllianceSocket {
         return AllianceEvent.create({
           type: 'invitation',
           status: 'create',
-          InitiatingAllianceId: invitingAlliance.id,
-          InitiatingPlayerId: socket.userData.playerId,
+          OriginAllianceId: invitingAlliance.id,
+          OriginPlayerId: socket.userData.playerId,
           TargetPlayerId: invitedPlayer.id,
         }, { transaction });
       }).then((ev) => {
@@ -152,11 +172,10 @@ export class AllianceSocket {
         const invite = {
           id: createdInvite.PlayerId,
           name: targetName,
-          AllianceInvitations: createdInvite,
         };
         const playerRoom = `player.${invitedPlayer.id}`;
         const event: any = ev.get();
-        event.InitiatingPlayer = {
+        event.OriginPlayer = {
           id: socket.userData.playerId,
           name: socket.userData.playerName,
         };
@@ -183,7 +202,7 @@ export class AllianceSocket {
     let invite;
 
     return world.sequelize.transaction((transaction) =>
-      Alliance.getAlliance({ id: socket.userData.AllianceId }, transaction).then((alliance) => {
+      Alliance.getAlliance({ id: socket.userData.allianceId }, transaction).then((alliance) => {
         // TODO: add additional permission check
         if (!alliance || !this.hasItemById(alliance.Members, socket.userData.playerId)) {
           return Promise.reject('Wrong alliance.');
@@ -198,8 +217,8 @@ export class AllianceSocket {
       .then(() => AllianceEvent.create({
         type: 'invitation',
         status: 'cancel',
-        InitiatingAllianceId: targetAlliance.id,
-        InitiatingPlayerId: socket.userData.playerId,
+        OriginAllianceId: targetAlliance.id,
+        OriginPlayerId: socket.userData.playerId,
         TargetPlayerId: playerId,
       }, { transaction }))
       .then((ev) => {
@@ -208,7 +227,7 @@ export class AllianceSocket {
         // socket.emit('alliance', alliance);
 
         const event: any = ev.get();
-        event.InitiatingPlayer = {
+        event.OriginPlayer = {
           id: socket.userData.playerId,
           name: socket.userData.playerName,
         };
@@ -240,16 +259,16 @@ export class AllianceSocket {
       }).then(() => AllianceEvent.create({
         type: 'invitation',
         status: 'reject',
-        InitiatingPlayerId: socket.userData.playerId,
-        // TODO: consider if this should use initiating alliance instead of target
+        OriginPlayerId: socket.userData.playerId,
+        // TODO: consider if this should use Origin alliance instead of target
         // if player is not a part
-        InitiatingAllianceId: allianceId,
+        OriginAllianceId: allianceId,
       } , { transaction }))
       .then((ev) => {
         socket.emit('alliance:rejectInviteSuccess', allianceId);
 
         const event: any = ev.get();
-        event.InitiatingPlayer = {
+        event.OriginPlayer = {
           id: socket.userData.playerId,
           name: socket.userData.playerName,
         };
@@ -283,12 +302,12 @@ export class AllianceSocket {
       }).then(() => AllianceEvent.create({
         type: 'membership',
         status: 'join',
-        InitiatingPlayerId: targetPlayer.id,
-        InitiatingAllianceId: allianceId,
+        OriginPlayerId: targetPlayer.id,
+        OriginAllianceId: allianceId,
       }, { transaction }))
       .then((ev) => {
         event = ev.get();
-        event.InitiatingPlayer = {
+        event.OriginPlayer = {
           id: socket.userData.playerId,
           name: socket.userData.playerName,
         };
@@ -306,9 +325,10 @@ export class AllianceSocket {
         socket.emit('alliance:acceptInviteSuccess', alliance);
         socket.userData = {
           ...socket.userData,
-          AllianceId: alliance.id,
-          AllianceRoleId: alliance.DefaultRoleId,
-          AlliancePermissions: alliance.DefaultRole.permissions,
+          allianceId: alliance.id,
+          allianceName: alliance.name,
+          allianceRoleId: alliance.DefaultRoleId,
+          alliancePermissions: alliance.DefaultRole.permissions,
         };
         this.joinAllianceRoom(socket);
       }),
@@ -317,9 +337,18 @@ export class AllianceSocket {
 
   private static updateRoles(socket: UserSocket, payload: RoleUpdatePayload) {
     const { roles, newRoles } = payload;
+    let hasNewRoles = false;
+    const updatedRoles = {
+      created: [],
+      updated: [],
+    };
     return world.sequelize.transaction((transaction) =>
-      Alliance.getAlliance({ id: socket.userData.AllianceId }, transaction).then((alliance) => {
+      Alliance.getAlliance({ id: socket.userData.allianceId }, transaction).then((alliance) => {
         if (!alliance) { return Promise.reject('Wrong alliance.'); }
+
+        const masterRolePermissionChanged = roles.some(({ id, permissions }) =>
+          id === alliance.MasterRoleId && this.permissionsChanged(alliance.Roles.find((role) => role.id === alliance.MasterRoleId).permissions, permissions));
+        if (masterRolePermissionChanged) { return Promise.reject('Can\'t change permissions.'); }
 
         const actions = [];
         if (newRoles.length) {
@@ -328,6 +357,7 @@ export class AllianceSocket {
             permissions,
             AllianceId: alliance.id,
           }));
+          hasNewRoles = true;
           actions.push(AllianceRole.bulkCreate(rolesToCreate, { returning: true, transaction }));
         }
 
@@ -343,45 +373,110 @@ export class AllianceSocket {
         }
 
         return Promise.all(actions);
+      })
+      .then((savedRoles) => {
+        if (hasNewRoles) { updatedRoles.created = savedRoles[0]; }
+        updatedRoles.updated = hasNewRoles ? savedRoles.slice(1) : savedRoles;
+        return AllianceEvent.create({
+          type: 'roles',
+          status: 'update',
+          OriginPlayerId: socket.userData.playerId,
+          OriginAllianceId: socket.userData.allianceId,
+        });
       }),
     )
-      .then(() => Alliance.getAlliance({ id: socket.userData.AllianceId }))
-      .then((alliance) => io.sockets.in(`alliance.${alliance.id}`).emit('alliance', alliance));
+      .then((ev) => {
+        const event = ev.get();
+        event.OriginPlayer = {
+          id: socket.userData.playerId,
+          name: socket.userData.playerName,
+        };
+        // TODO: shoould send actually updated roles instead of same payload
+        const data = {
+          created: updatedRoles.created,
+          updated: updatedRoles.updated,
+        };
+        const allianceRoom = `alliance.${socket.userData.allianceId}`;
+        socket.to(allianceRoom).emit('alliance:event', { event, data });
+        socket.emit('alliance:updateRolePermissionsSuccess', { event, data });
+
+        const updatedRoleIds = payload.roles.map(({ id }) => id);
+        Object.keys(io.sockets.adapter.rooms[allianceRoom].sockets).forEach((socketId: string) => {
+          const client = io.sockets.connected[socketId] as UserSocket;
+          if (updatedRoleIds.includes(client.userData.allianceRoleId)) {
+            client.userData = {
+              ...client.userData,
+              alliancePermissions: payload.roles.find(({ id }) => id === client.userData.allianceRoleId).permissions,
+            };
+          }
+        });
+      });
   }
 
   private static removeRole(socket: UserSocket, roleId: number) {
+    let ally;
+
     return world.sequelize.transaction((transaction) =>
-      Alliance.getAlliance({ id: socket.userData.AllianceId }, transaction)
+      Alliance.getAlliance({ id: socket.userData.allianceId }, transaction)
         .then((alliance) => {
           if (!alliance) { return Promise.reject('Wrong alliance.'); }
 
-          const target = alliance.Roles.find((role) => role.id === roleId);
+          const target = alliance.Roles.find(({ id }) => id === roleId && id !== alliance.DefaultRoleId && id !== alliance.MasterRoleId);
           if (!target) { return Promise.reject('Wrong role'); }
 
+          ally = alliance;
           return Player.update(
             { AllianceRoleId: alliance.DefaultRoleId },
             { where: { AllianceRoleId: roleId, AllianceId: alliance.id }, transaction },
           );
         })
-        .then(() => AllianceRole.destroy({ where: { id: roleId }, transaction })),
+        .then(() => AllianceRole.destroy({ where: { id: roleId }, transaction }))
+        .then(() => AllianceEvent.create({
+          type: 'roles',
+          status: 'update',
+          OriginPlayerId: socket.userData.playerId,
+          OriginAllianceId: socket.userData.allianceId,
+        }, { transaction })),
     )
-      .then(() => Alliance.getAlliance({ id: socket.userData.AllianceId }))
-      .then((alliance) => io.sockets.in(`alliance.${alliance.id}`).emit('alliance', alliance));
+      .then((ev) => {
+        const event = ev.get();
+        event.OriginPlayer = {
+          id: socket.userData.playerId,
+          name: socket.userData.playerName,
+        };
+        const data = { removed: [roleId] };
+        const allianceRoom = `alliance.${ally.id}`;
+        socket.emit(`alliance:removeRoleSuccess`, { event, data });
+        socket.to(allianceRoom).emit('alliance:event', { event, data });
+
+        Object.keys(io.sockets.adapter.rooms[allianceRoom].sockets).forEach((socketId: string) => {
+          const client = io.sockets.connected[socketId] as UserSocket;
+          if (client.userData.allianceRoleId === roleId) {
+            client.userData = {
+              ...client.userData,
+              allianceRoleId: ally.DefaultRoleId,
+              alliancePermissions: ally.DefaultRole.permissions,
+            };
+          }
+        });
+      });
   }
 
   private static removeMember(socket: UserSocket, playerId: number) {
+    let playerName;
     return world.sequelize.transaction((transaction) =>
-      Alliance.getAlliance({ id: socket.userData.AllianceId }, transaction)
+      Alliance.getAlliance({ id: socket.userData.allianceId }, transaction)
         .then((alliance) => {
           if (!alliance) { return Promise.reject('Can\t remove member.'); }
 
+          playerName = alliance.Members.find(({ id }) => id === playerId);
           return Player.update({
             AllianceId: null,
             AllianceRoleId: null,
           }, {
             where: {
               id: playerId,
-              AllianceId: socket.userData.AllianceId,
+              AllianceId: socket.userData.allianceId,
             },
             transaction,
           });
@@ -389,28 +484,31 @@ export class AllianceSocket {
         .then(() => AllianceEvent.create({
           type: 'membership',
           status: 'remove',
-          InitiatingPlayerId: socket.userData.playerId,
+          OriginPlayerId: socket.userData.playerId,
           TargetPlayerId: playerId,
-          InitiatingAllianceId: socket.userData.AllianceId,
+          OriginAllianceId: socket.userData.allianceId,
         }, { transaction })),
     )
       .then((ev: AllianceEvent) => {
-        const playerRoom = `player.${playerId}`;
-        let playerName;
-        Object.keys(io.sockets.adapter.rooms[playerRoom].sockets).forEach((socketId: string) => {
-          const client = io.sockets.connected[socketId] as UserSocket;
-          client.userData = {
-            ...client.userData,
-            AllianceId: null,
-            AllianceRoleId: null,
-            AlliancePermissions: null,
-          };
-          playerName = client.userData.playerName;
-          this.leaveAllianceRoom(client, socket.userData.AllianceId);
-        });
+        const room = io.sockets.adapter.rooms[`player.${playerId}`];
+        if (room) {
+          Object.keys(room.sockets).forEach((socketId: string) => {
+            const client = io.sockets.connected[socketId] as UserSocket;
+            client.userData = {
+              ...client.userData,
+              allianceId: null,
+              allianceName: null,
+              allianceRoleId: null,
+              alliancePermissions: null,
+            };
+            playerName = client.userData.playerName;
+            this.leaveAllianceRoom(client, socket.userData.allianceId);
+            client.emit('alliance:removed');
+          });
+        }
 
         const event: any = ev.get();
-        event.InitiatingPlayer = {
+        event.OriginPlayer = {
           id: socket.userData.playerId,
           name: socket.userData.playerName,
         };
@@ -419,13 +517,12 @@ export class AllianceSocket {
           name: playerName,
         };
         socket.emit(`alliance:removeMemberSuccess`, { event, data: playerId });
-        io.sockets.in(playerRoom).emit('alliance:removed');
-        socket.to(`alliance.${socket.userData.AllianceId}`).emit('alliance:event', { event, data: playerId });
+        socket.to(`alliance.${socket.userData.allianceId}`).emit('alliance:event', { event, data: playerId });
     });
   }
 
   private static destroyAlliance(socket: UserSocket) {
-    const allianceId = socket.userData.AllianceId;
+    const allianceId = socket.userData.allianceId;
     return world.sequelize.transaction((transaction) =>
       AllianceRole.destroy({ where: { AllianceId: allianceId }, transaction })
         .then(() => Alliance.destroy({ where: { id: allianceId }, transaction })),
@@ -437,25 +534,340 @@ export class AllianceSocket {
         const client = io.sockets.connected[socketId] as UserSocket;
         client.userData = {
           ...client.userData,
-          AllianceId: null,
-          AllianceRoleId: null,
-          AlliancePermissions: null,
+          allianceId: null,
+          allianceName: null,
+          allianceRoleId: null,
+          alliancePermissions: null,
         };
         client.leave(room);
       });
     });
   }
 
+  private static startWar(socket: UserSocket, payload: WarDeclarationPayload) {
+    let ally: Alliance;
+    let diplo: AllianceDiplomacy;
+
+    return world.sequelize.transaction((transaction) =>
+      Alliance.getAlliance({ name: payload.targetName }, transaction)
+        .then((alliance) => {
+          if (!alliance) { return Promise.reject('Wrong alliance.'); }
+          ally = alliance;
+
+          let hasDiplo = alliance.DiplomacyOrigin.some(({ TargetAllianceId }) => TargetAllianceId === socket.userData.allianceId);
+          hasDiplo = hasDiplo || alliance.DiplomacyTarget.some(({ OriginAllianceId }) => OriginAllianceId === socket.userData.allianceId);
+          if (hasDiplo) { return Promise.reject('Already involved in diplomacy with target alliance.'); }
+
+          return AllianceDiplomacy.create({
+            OriginPlayerId: socket.userData.playerId,
+            OriginAllianceId: socket.userData.allianceId,
+            TargetAllianceId: alliance.id,
+            status: 'ongoing',
+            type: 'war',
+            data: {
+              reason: payload.reason,
+            }
+          }, { transaction });
+         })
+        .then((diplomacy) => {
+          diplo = diplomacy;
+
+          return AllianceEvent.create({
+            type: 'diplomacy',
+            status: 'startWar',
+            OriginAllianceId: socket.userData.allianceId,
+            OriginPlayerId: socket.userData.playerId,
+            TargetAllianceId: ally.id,
+          }, { transaction })
+        })
+        .then((ev) => {
+          const event: any = ev.get();
+          const diplomacy: any = diplo.get();
+          const originPlayer = { id: socket.userData.playerId, name: socket.userData.playerName };
+          const originAlliance = { id: socket.userData.allianceId, name: socket.userData.allianceName };
+          const targetAlliance = { id: ally.id, name: ally.name };
+
+          diplomacy.OriginPlayer = originPlayer;
+          diplomacy.OriginAlliance = originAlliance;
+          diplomacy.TargetAlliance = targetAlliance;
+
+          event.OriginPlayer = originPlayer;
+          event.TargetAlliance = targetAlliance;
+          event.OriginAlliance = originAlliance;
+
+          socket.emit('alliance:declareWarSuccess', { event, data: diplomacy })
+          socket.to(`alliance.${socket.userData.allianceId}`).emit('alliance:event', { event, data: diplomacy });
+          socket.to(`alliance.${ally.id}`).emit('alliance:event', { event, data: diplomacy });
+        })
+    )
+  }
+
+  private static proposeDiplo(socket: UserSocket, targetName: string, type: string) {
+    let ally: Alliance;
+    let diplo: AllianceDiplomacy;
+    const typeUpper = type.slice(0, 1).toUpperCase() + type.slice(1);
+
+    return world.sequelize.transaction((transaction) =>
+      Alliance.getAlliance({ name: targetName }, transaction)
+        .then((alliance) => {
+          if (!alliance || alliance.id === socket.userData.allianceId) { return Promise.reject('Wrong alliance.'); }
+          ally = alliance;
+
+          let hasDiplo = alliance.DiplomacyOrigin.some(({ TargetAllianceId }) => TargetAllianceId === socket.userData.allianceId);
+          hasDiplo = hasDiplo || alliance.DiplomacyTarget.some(({ OriginAllianceId }) => OriginAllianceId === socket.userData.allianceId);
+          if (hasDiplo) { return Promise.reject('Already involved in diplomacy with target alliance.'); }
+
+
+          return AllianceDiplomacy.create({
+            OriginPlayerId: socket.userData.playerId,
+            OriginAllianceId: socket.userData.allianceId,
+            TargetAllianceId: alliance.id,
+            status: 'pending',
+            type: type,
+          }, { transaction });
+         })
+        .then((diplomacy) => {
+          diplo = diplomacy;
+
+          return AllianceEvent.create({
+            type: 'diplomacy',
+            status: `propose${typeUpper}`,
+            OriginAllianceId: socket.userData.allianceId,
+            OriginPlayerId: socket.userData.playerId,
+            TargetAllianceId: ally.id,
+          }, { transaction })
+        })
+        .then((ev) => {
+          const event: any = ev.get();
+          const diplomacy: any = diplo.get();
+          const originPlayer = { id: socket.userData.playerId, name: socket.userData.playerName };
+          const originAlliance = { id: socket.userData.allianceId, name: socket.userData.allianceName };
+          const targetAlliance = { id: ally.id, name: ally.name };
+
+          diplomacy.OriginPlayer = originPlayer;
+          diplomacy.OriginAlliance = originAlliance;
+          diplomacy.TargetAlliance = targetAlliance;
+
+          event.OriginPlayer = originPlayer;
+          event.TargetAlliance = targetAlliance;
+          event.OriginAlliance = originAlliance;
+
+          socket.emit(`alliance:propose${typeUpper}Success`, { event, data: diplomacy })
+          socket.to(`alliance.${socket.userData.allianceId}`).emit('alliance:event', { event, data: diplomacy });
+          socket.to(`alliance.${ally.id}`).emit('alliance:event', { event, data: diplomacy });
+        })
+    )
+  }
+
+  private static cancelDiplo(socket: UserSocket, targetId: number, type: string) {
+    let ally;
+    const typeUpper = type.slice(0, 1).toUpperCase() + type.slice(1);
+
+    return world.sequelize.transaction((transaction) =>
+      AllianceDiplomacy.findById(targetId, {
+        include: [{
+          model: Alliance,
+          as: 'TargetAlliance',
+          attributes: ['id', 'name'],
+        }],
+        transaction,
+      })
+        .then((diplomacy) => {
+          if (!diplomacy || diplomacy.OriginAllianceId !== socket.userData.allianceId) {
+            return Promise.reject(`Can't cancel pending ${type}.`);
+          }
+          if (diplomacy.status !== 'pending') {
+            return Promise.reject(`${typeUpper} is already active.`);
+          }
+          ally = diplomacy.TargetAlliance;
+
+          return diplomacy.destroy({ transaction });
+         })
+        .then(() => AllianceEvent.create({
+            type: 'diplomacy',
+            status: `cancel${typeUpper}`,
+            OriginAllianceId: socket.userData.allianceId,
+            OriginPlayerId: socket.userData.playerId,
+            TargetAllianceId: ally.id,
+          }, { transaction })
+        )
+        .then((ev) => {
+          const event: any = ev.get();
+          const originPlayer = { id: socket.userData.playerId, name: socket.userData.playerName };
+          const originAlliance = { id: socket.userData.allianceId, name: socket.userData.allianceName };
+          const targetAlliance = { id: ally.id, name: ally.name };
+
+          event.OriginPlayer = originPlayer;
+          event.TargetAlliance = targetAlliance;
+          event.OriginAlliance = originAlliance;
+
+          socket.emit(`alliance:cancel${typeUpper}Success`, { event, data: targetId })
+          socket.to(`alliance.${socket.userData.allianceId}`).emit('alliance:event', { event, data: targetId });
+          socket.to(`alliance.${ally.id}`).emit('alliance:event', { event, data: targetId });
+        })
+    )
+  }
+
+  private static rejectDiplo(socket: UserSocket, targetId: number, type: string) {
+    let ally;
+    const typeUpper = type.slice(0, 1).toUpperCase() + type.slice(1);
+
+    return world.sequelize.transaction((transaction) =>
+      AllianceDiplomacy.findById(targetId, {
+        include: [{
+          model: Alliance,
+          as: 'OriginAlliance',
+          attributes: ['id', 'name'],
+        }],
+        transaction,
+      })
+        .then((diplomacy) => {
+          if (!diplomacy || diplomacy.TargetAllianceId !== socket.userData.allianceId) {
+            return Promise.reject(`Can't reject ${type}.`);
+          }
+          if (diplomacy.status !== 'pending') {
+            return Promise.reject(`${typeUpper} is already active.`);
+          }
+          ally = diplomacy.OriginAlliance;
+
+          return diplomacy.destroy({ transaction });
+         })
+        .then(() => AllianceEvent.create({
+            type: 'diplomacy',
+            status: `reject${typeUpper}`,
+            OriginAllianceId: socket.userData.allianceId,
+            OriginPlayerId: socket.userData.playerId,
+            TargetAllianceId: ally.id,
+          }, { transaction })
+        )
+        .then((ev) => {
+          const event: any = ev.get();
+          const originPlayer = { id: socket.userData.playerId, name: socket.userData.playerName };
+          const originAlliance = { id: socket.userData.allianceId, name: socket.userData.allianceName };
+          const targetAlliance = { id: ally.id, name: ally.name };
+
+          event.OriginPlayer = originPlayer;
+          event.TargetAlliance = targetAlliance;
+          event.OriginAlliance = originAlliance;
+
+          socket.emit(`alliance:reject${typeUpper}Success`, { event, data: targetId })
+          socket.to(`alliance.${socket.userData.allianceId}`).emit('alliance:event', { event, data: targetId });
+          socket.to(`alliance.${ally.id}`).emit('alliance:event', { event, data: targetId });
+        })
+    )
+  }
+
+  private static acceptDiplo(socket: UserSocket, targetId: number, type: string) {
+    let ally;
+    const typeUpper = type.slice(0, 1).toUpperCase() + type.slice(1);
+
+    return world.sequelize.transaction((transaction) =>
+      AllianceDiplomacy.findById(targetId, {
+        include: [{
+          model: Alliance,
+          as: 'OriginAlliance',
+          attributes: ['id', 'name'],
+        }],
+        transaction,
+      })
+        .then((diplomacy) => {
+          if (!diplomacy || diplomacy.TargetAllianceId !== socket.userData.allianceId) {
+            return Promise.reject(`Can't accept ${type}.`);
+          }
+          if (diplomacy.status !== 'pending') {
+             return Promise.reject(`${typeUpper} is already active.`);
+          }
+          ally = diplomacy.OriginAlliance;
+
+          diplomacy.status = 'ongoing';
+          return diplomacy.save({ transaction });
+         })
+        .then(() => AllianceEvent.create({
+            type: 'diplomacy',
+            status: `start${typeUpper}`,
+            OriginAllianceId: socket.userData.allianceId,
+            OriginPlayerId: socket.userData.playerId,
+            TargetAllianceId: ally.id,
+          }, { transaction })
+        )
+        .then((ev) => {
+          const event: any = ev.get();
+          const originPlayer = { id: socket.userData.playerId, name: socket.userData.playerName };
+          const originAlliance = { id: socket.userData.allianceId, name: socket.userData.allianceName };
+          const targetAlliance = { id: ally.id, name: ally.name };
+
+          event.OriginPlayer = originPlayer;
+          event.TargetAlliance = targetAlliance;
+          event.OriginAlliance = originAlliance;
+
+          socket.emit(`alliance:accept${typeUpper}Success`, { event, data: targetId })
+          socket.to(`alliance.${socket.userData.allianceId}`).emit('alliance:event', { event, data: targetId });
+          socket.to(`alliance.${ally.id}`).emit('alliance:event', { event, data: targetId });
+        })
+    )
+  }
+
+  private static endDiplo(socket: UserSocket, targetId: number, type: string) {
+    let ally;
+    const typeUpper = type.slice(0, 1).toUpperCase() + type.slice(1);
+
+    return world.sequelize.transaction((transaction) =>
+      AllianceDiplomacy.findById(targetId, {
+        include: [{
+          model: Alliance,
+          as: 'TargetAlliance',
+          attributes: ['id', 'name'],
+        }, {
+          model: Alliance,
+          as: 'OriginAlliance',
+          attributes: ['id', 'name'],
+        }],
+        transaction,
+      })
+        .then((diplomacy) => {
+          if (!diplomacy || !(diplomacy.OriginAllianceId === socket.userData.allianceId || diplomacy.TargetAllianceId === socket.userData.allianceId)) {
+            return Promise.reject(`Can't end ${type}.`);
+          }
+          if (diplomacy.status !== 'ongoing') {
+             return Promise.reject(`${typeUpper} isn't active'.`);
+          }
+          ally = diplomacy.TargetAllianceId === socket.userData.allianceId ? diplomacy.OriginAlliance : diplomacy.TargetAlliance;
+
+          return diplomacy.destroy({ transaction });
+         })
+        .then(() => AllianceEvent.create({
+          type: 'diplomacy',
+          status: `end${typeUpper}`,
+          OriginAllianceId: socket.userData.allianceId,
+          OriginPlayerId: socket.userData.playerId,
+          TargetAllianceId: ally.id,
+        }, { transaction }))
+        .then((ev) => {
+          const event: any = ev.get();
+          const originPlayer = { id: socket.userData.playerId, name: socket.userData.playerName };
+          const originAlliance = { id: socket.userData.allianceId, name: socket.userData.allianceName };
+          const targetAlliance = { id: ally.id, name: ally.name };
+
+          event.OriginPlayer = originPlayer;
+          event.TargetAlliance = targetAlliance;
+          event.OriginAlliance = originAlliance;
+
+          socket.emit(`alliance:end${typeUpper}Success`, { event, data: targetId });
+          socket.to(`alliance.${socket.userData.allianceId}`).emit('alliance:event', { event, data: targetId });
+          socket.to(`alliance.${ally.id}`).emit('alliance:event', { event, data: targetId });
+        })
+    )
+  }
+
   private static updatePlayerRole(socket: UserSocket, payload: PlayerRolePayload) {
     const { playerId, roleId } = payload;
-    const allianceId = socket.userData.AllianceId;
+    const allianceId = socket.userData.allianceId;
     let ally;
     return world.sequelize.transaction((transaction) =>
       Alliance.getAlliance({
         id: allianceId,
       }, transaction)
         .then((alliance) => {
-
           if (!alliance || !this.hasItemById(alliance.Members, playerId) || !this.hasItemById(alliance.Roles, roleId)) {
             return Promise.reject('Can\'t change player role.');
           }
@@ -467,13 +879,42 @@ export class AllianceSocket {
             where: { id: playerId },
             transaction,
           });
-        }),
+        })
+        .then(() => AllianceEvent.create({
+          type: 'roles',
+          status: 'updateMember',
+          OriginPlayerId: socket.userData.playerId,
+          TargetPlayerId: playerId,
+          OriginAllianceId: socket.userData.allianceId,
+        }, { transaction })),
     )
-      .then(() => {
-        const room = `alliance.${allianceId}`;
-        const member = ally.Members.find(({ id }) => id === playerId).get();
-        member.AllianceRole = ally.Roles.find(({ id }) => id === roleId);
-        io.sockets.in(room).emit('alliance:memberUpdate', member);
+      .then((ev) => {
+        const memberRole = ally.Roles.find(({ id }) => id === roleId);
+        const event = ev.get();
+        event.OriginPlayer = {
+          id: socket.userData.playerId,
+          name: socket.userData.playerName,
+        };
+        event.TargetPlayer = {
+          id: playerId,
+          name: ally.Members.find(({ id }) => id === playerId).name,
+        };
+        const data = { updatedMember: [{ id: playerId, role: memberRole  }] };
+        const allianceRoom = `alliance.${allianceId}`;
+
+        socket.emit('alliance:updateMemberRoleSuccess', { event, data });
+        socket.to(allianceRoom).emit('alliance:event', { event, data });
+        const room = io.sockets.adapter.rooms[`player.${playerId}`];
+        if (room) {
+          Object.keys(room.sockets).forEach((socketId: string) => {
+            const client = io.sockets.connected[socketId] as UserSocket;
+            client.userData = {
+              ...client.userData,
+              allianceRoleId: roleId,
+              alliancePermissions: memberRole.permissions,
+            };
+          });
+        }
       });
   }
 
@@ -487,26 +928,26 @@ export class AllianceSocket {
           id: socket.userData.playerId,
         },
         transaction,
-      // }).then(() => Alliance.getAlliance({ id: socket.userData.AllianceId }, transaction)),
       }).then(() => AllianceEvent.create({
         type: 'membership',
         status: 'leave',
-        InitiatingAllianceId: socket.userData.AllianceId,
-        InitiatingPlayerId: socket.userData.playerId,
+        OriginAllianceId: socket.userData.allianceId,
+        OriginPlayerId: socket.userData.playerId,
       }, { transaction })),
     ).then((ev) => {
-      const allianceId = socket.userData.AllianceId;
+      const allianceId = socket.userData.allianceId;
       const event = ev.get();
-      event.InitiatingPlayer = {
+      event.OriginPlayer = {
         id: socket.userData.playerId,
         name: socket.userData.playerName,
       };
 
       socket.userData = {
         ...socket.userData,
-        AllianceId: null,
-        AllianceRoleId: null,
-        AlliancePermissions: null,
+        allianceId: null,
+        allianceName: null,
+        allianceRoleId: null,
+        alliancePermissions: null,
       };
       this.leaveAllianceRoom(socket, allianceId);
       socket.emit('alliance:leaveAllianceSuccess');
@@ -518,7 +959,7 @@ export class AllianceSocket {
     return AllianceForumCategory.create({
       name: payload.name,
       description: payload.description,
-      AllianceId: socket.userData.AllianceId })
+      AllianceId: socket.userData.allianceId })
       .then((category) => {
         socket.emit('alliance:forumCategoryCreate', category);
       });
@@ -528,7 +969,7 @@ export class AllianceSocket {
     return AllianceMessage.create({
       text,
       PlayerId: socket.userData.playerId,
-      AllianceId: socket.userData.AllianceId,
+      AllianceId: socket.userData.allianceId,
     })
       .then((allianceMessage) => {
         const message: any = allianceMessage.get();
@@ -536,12 +977,18 @@ export class AllianceSocket {
         setTimeout(() => {
 
           socket.emit('chat:messageCreated', message);
-          socket.broadcast.to(`alliance.${socket.userData.AllianceId}`).emit('chat:newMessage', message);
+          socket.broadcast.to(`alliance.${socket.userData.allianceId}`).emit('chat:newMessage', message);
         }, 5000);
       });
   }
 
   private static hasItemById(items: any[], id: number) {
     return items.some((item) => item.id === id);
+  }
+
+  private static permissionsChanged(oldPermissions: AlliancePermissions, newPermissions: AlliancePermissions) {
+    const oldEntries = Object.entries(oldPermissions);
+    const newEntries = Object.entries(newPermissions);
+    return oldEntries.length === newEntries.length && Object.entries(oldPermissions).every(([name, value]) => newPermissions[name] === value);
   }
 }

@@ -7,9 +7,12 @@ import {
 } from 'sequelize';
 import { world } from '../../sqldb';
 
-export type diplomacyType = 'alliance' | 'war';
+export type diplomacyType = 'alliance' | 'war' | 'nap';
 export type diplomacyStatus = 'pending' | 'ongoing';
 
+export type WarDeclarationPayload = { targetName: string; reason: string; };
+
+// TODO: move to  many-to-many for multiple diplomacy participants i.e. multi alliance wars
 export class AllianceDiplomacy extends Model {
   static associations: {
     OriginAlliance: BelongsTo;

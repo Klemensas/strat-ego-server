@@ -25,9 +25,10 @@ export interface UserSocket extends AuthenticatedSocket {
     playerName?: string;
     playerId?: number;
     townIds?: number[];
-    AllianceId?: number;
-    AllianceRoleId?: number;
-    AlliancePermissions?: AlliancePermissions;
+    allianceId?: number;
+    allianceName?: string;
+    allianceRoleId?: number;
+    alliancePermissions?: AlliancePermissions;
     updatedAt?: Date | string;
     connectedAt?: Date;
   };

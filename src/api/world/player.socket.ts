@@ -20,9 +20,10 @@ export class PlayerSocket {
           playerId: player.id,
           playerName: player.name,
           townIds: player.Towns.map(({ id }) => id),
-          AllianceId: player.AllianceId,
-          AllianceRoleId: player.AllianceRoleId,
-          AlliancePermissions: player.AllianceRole ? player.AllianceRole.permissions : null,
+          allianceName: player.Alliance ? player.Alliance.name : null,
+          allianceId: player.AllianceId,
+          allianceRoleId: player.AllianceRoleId,
+          alliancePermissions: player.AllianceRole ? player.AllianceRole.permissions : null,
           updatedAt: player.updatedAt,
         };
         socket.join(`player.${player.id}`);
