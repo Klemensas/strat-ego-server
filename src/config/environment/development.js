@@ -1,26 +1,18 @@
-'use strict';
-
-// Development specific configuration
-// ==================================
-module.exports = {
-
-  // Sequelize connection opions
+exports = module.exports = {
   sequelize: {
-      options: {
-        logging: false/* console.log*/,
-        define: {
-          timestamps: true,
-          paranoid: false
-        },
-        dialectOptions: {
-          supportBigNumbers: true
-        }
+    options: {
+      logging: false,
+      // logging: console.log,
+      define: {
+        timestamps: true,
+        paranoid: false
       },
-      main: 'postgres://ffe:test@127.0.0.1:5432/ffe',
-      world: 'postgres://ffe:test@127.0.0.1:5432/ffeWorld'
+      dialectOptions: {
+        supportBigNumbers: true
+      }
+    },
+    main: process.env.DB_MAIN || 'postgres://ffe:test@127.0.0.1:5432/ffe',
+    world: process.env.DB_WORLD || 'postgres://ffe:test@127.0.0.1:5432/ffeWorld'
   },
-
-  // Seed database on startup
   seedDB: true
-
 };

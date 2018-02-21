@@ -1,5 +1,5 @@
-import { world } from '../../sqldb';
 import { EventEmitter } from 'events';
+import { world } from '../../sqldb';
 
 const Player = world.Player;
 const PlayerEvents = new EventEmitter();
@@ -22,12 +22,12 @@ for (const e in events) {
 
 function emitEvent(event) {
   return (doc, options, done) => {
-    PlayerEvents.emit(`${event}:${doc._id}`, doc);
+    PlayerEvents.emit(`${event}:${doc.id}`, doc);
     PlayerEvents.emit(event, doc);
     done(null);
   };
 }
 
-export const worldEvents = {
+export default {
   player: PlayerEvents,
 };
