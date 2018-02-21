@@ -45,6 +45,7 @@ export class Alliance extends Model {
     DiplomacyOrigin: HasMany[];
     DiplomacyTarget: HasMany[];
     Events: HasMany;
+    EventsTarget: HasMany;
   };
 
   static getAlliance = (where: WhereOptions, transaction?: Transaction) => {
@@ -56,6 +57,12 @@ export class Alliance extends Model {
         [{ model: AllianceRole, as: 'Roles' }, 'id', 'ASC'],
         [{ model: AllianceEvent, as: 'Events' }, 'createdAt', 'DESC'],
       ],
+    }).then((alliance) => {
+      // TODO: Sequelize doesn't support union and raw querries are a pain also limit seems not to work without using require... consider migrating to knex or just using raw everywhere
+      if (!alliance) { return; }
+      alliance.Events = [...alliance.Events, ...alliance.EventsTarget].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()).slice(0, 50);
+      delete alliance.EventsTarget
+      return alliance;
     });
   }
 
@@ -75,6 +82,7 @@ export class Alliance extends Model {
   public DiplomacyOrigin: AllianceDiplomacy[];
   public DiplomacyTarget: AllianceDiplomacy[];
   public Events: AllianceEvent[];
+  public EventsTarget: AllianceEvent[];
 
   public addInvitation: BelongsToManyAddAssociationsMixin<Player, number>;
   public removeInvitation: BelongsToManyRemoveAssociationMixin<Player, number>;
@@ -151,6 +159,18 @@ export const allianceIncludes = [{
   }, {
     model: Player,
     as: 'TargetPlayer',
+    attributes: ['id', 'name'],
+  }],
+}, {
+  model: AllianceEvent,
+  as: 'EventsTarget',
+  include: [{
+    model: Alliance,
+    as: 'OriginAlliance',
+    attributes: ['id', 'name'],
+  }, {
+    model: Player,
+    as: 'OriginPlayer',
     attributes: ['id', 'name'],
   }, {
     model: Player,

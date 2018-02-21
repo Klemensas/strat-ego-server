@@ -203,8 +203,8 @@ AllianceDiplomacy.belongsTo(Player, { as: 'OriginPlayer', foreignKey: 'OriginPla
 
 AllianceDiplomacy.belongsTo(Player, { as: 'TargetPlayer', foreignKey: 'TargetPlayerId' });
 
-// Alliance.hasMany(AllianceEvent, { as: 'TargetEvents', foreignKey: 'TargetAllianceId' });
 Alliance.hasMany(AllianceEvent, { as: 'Events', foreignKey: 'OriginAllianceId' });
+Alliance.hasMany(AllianceEvent, { as: 'EventsTarget', foreignKey: 'TargetAllianceId' });
 AllianceEvent.belongsTo(Alliance, { as: 'OriginAlliance', foreignKey: 'OriginAllianceId' });
 AllianceEvent.belongsTo(Alliance, { as: 'TargetAlliance', foreignKey: 'TargetAllianceId' });
 
