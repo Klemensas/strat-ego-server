@@ -8,21 +8,21 @@ import {
 import { world } from '../../sqldb';
 
 // TODO: use specifc status based on type
-export type eventType = 'diplomacy' | 'membership' | 'forum' | 'roles' | 'permissions' | 'invitation';
+export type eventType = 'diplomacy' | 'membership' | 'forum' | 'roles' | 'invitation' | 'management';
 export type eventStatus =
-  'pending' | 'started' | 'ended' |
+  'proposeAlliance' | 'cancelAlliance' | 'rejectAlliance' | 'startAlliance' | 'endAlliance' | 'proposeNap' | 'cancelNap' | 'rejectNap' | 'startNap' | 'endNap' | 'startWar' | 'endWar' |
   'join' | 'leave' | 'remove' |
   'update' |
-  'update' |
-  'update' |
-  'create' | 'reject' | 'cancel'
+  'update' | 'updateMember' |
+  'create' | 'reject' | 'cancel' |
+  'updateProfile' | 'create'
 ;
 
 export class AllianceEvent extends Model {
   static associations: {
-    InitiatingPlayer: BelongsTo;
+    OriginPlayer: BelongsTo;
     TargetPlayer: BelongsTo;
-    InitiatingAlliance: BelongsTo;
+    OriginAlliance: BelongsTo;
     TargetAlliance: BelongsTo;
   };
 
@@ -32,12 +32,12 @@ export class AllianceEvent extends Model {
   public createdAt: Date;
 
   // Associations
-  public InitiatingPlayerId: number;
-  public InitiatingPlayer: Player;
+  public OriginPlayerId: number;
+  public OriginPlayer: Player;
   public TargetPlayerId: number;
   public TargetPlayer: Player;
-  public InitiatingAllianceId: number;
-  public InitiatingAlliance: Alliance;
+  public OriginAllianceId: number;
+  public OriginAlliance: Alliance;
   public TargetAllianceId: number;
   public TargetAlliance: Alliance;
 }

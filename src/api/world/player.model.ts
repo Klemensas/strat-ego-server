@@ -164,6 +164,7 @@ Alliance.hasMany(AllianceRole, { as: 'Roles', foreignKey: 'AllianceId' });
 AllianceRole.belongsTo(Alliance, { as: 'Roles', foreignKey: 'AllianceId' });
 
 Alliance.belongsTo(AllianceRole, { as: 'DefaultRole', foreignKey: 'DefaultRoleId', constraints: false });
+Alliance.belongsTo(AllianceRole, { as: 'MasterRole', foreignKey: 'MasterRoleId', constraints: false });
 
 AllianceRole.hasMany(Player, { as: 'AllianceRole', foreignKey: 'AllianceRoleId' });
 Player.belongsTo(AllianceRole, { as: 'AllianceRole', foreignKey: 'AllianceRoleId' });
@@ -179,14 +180,12 @@ AllianceForumCategory.belongsTo(Alliance, { as: 'Alliance', foreignKey: 'Allianc
 AllianceForumCategory.hasMany(AllianceForumTopic, { as: 'Topic', foreignKey: 'CategoryId' });
 AllianceForumTopic.belongsTo(AllianceForumCategory, { as: 'Category', foreignKey: 'CategoryId' });
 
-AllianceForumTopic.hasOne(Player, { as: 'Creator', foreignKey: 'CreatorId' });
-Player.belongsTo(AllianceForumTopic, { as: 'Creator', foreignKey: 'CreatorId' });
+AllianceForumTopic.belongsTo(Player, { as: 'Creator', foreignKey: 'CreatorId' });
 
 AllianceForumTopic.hasMany(AllianceForumPost, { as: 'Posts', foreignKey: 'TopicId' });
 AllianceForumPost.belongsTo(AllianceForumTopic, { as: 'Topic', foreignKey: 'TopicId' });
 
-AllianceForumPost.hasOne(Player, { as: 'Poster', foreignKey: 'PosterId' });
-Player.belongsTo(AllianceForumPost, { as: 'Poster', foreignKey: 'PosterId' });
+AllianceForumPost.belongsTo(Player, { as: 'Poster', foreignKey: 'PosterId' });
 
 Alliance.hasMany(AllianceMessage, { as: 'Messages', foreignKey: 'AllianceId' });
 AllianceMessage.belongsTo(Alliance, { as: 'Alliance', foreignKey: 'AllianceId' });
@@ -204,12 +203,12 @@ AllianceDiplomacy.belongsTo(Player, { as: 'OriginPlayer', foreignKey: 'OriginPla
 
 AllianceDiplomacy.belongsTo(Player, { as: 'TargetPlayer', foreignKey: 'TargetPlayerId' });
 
-Alliance.hasMany(AllianceEvent, { as: 'Events', foreignKey: 'InitiatingAllianceId' });
 // Alliance.hasMany(AllianceEvent, { as: 'TargetEvents', foreignKey: 'TargetAllianceId' });
-AllianceEvent.belongsTo(Alliance, { as: 'InitiatingAlliance', foreignKey: 'InitiatingAllianceId' });
+Alliance.hasMany(AllianceEvent, { as: 'Events', foreignKey: 'OriginAllianceId' });
+AllianceEvent.belongsTo(Alliance, { as: 'OriginAlliance', foreignKey: 'OriginAllianceId' });
 AllianceEvent.belongsTo(Alliance, { as: 'TargetAlliance', foreignKey: 'TargetAllianceId' });
 
-AllianceEvent.belongsTo(Player, { as: 'InitiatingPlayer', foreignKey: 'InitiatingPlayerId' });
+AllianceEvent.belongsTo(Player, { as: 'OriginPlayer', foreignKey: 'OriginPlayerId' });
 AllianceEvent.belongsTo(Player, { as: 'TargetPlayer', foreignKey: 'TargetPlayerId' });
 
 // Player.belongsTo(AllianceDiplomacy, { as: 'OriginPlayer', foreignKey: 'OriginPlayerId' });

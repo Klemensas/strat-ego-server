@@ -39,6 +39,7 @@ export class Alliance extends Model {
     ForumCategories: HasMany;
     AllianceRoles: HasMany;
     DefaultRole: HasOne;
+    MasterRole: HasOne;
     Forum: HasMany;
     Messages: HasMany[];
     DiplomacyOrigin: HasMany[];
@@ -65,6 +66,8 @@ export class Alliance extends Model {
   public Roles: AllianceRole[];
   public DefaultRoleId: number;
   public DefaultRole: AllianceRole;
+  public MasterRoleId: number;
+  public MasterRole: AllianceRole;
   public Members: Player[];
   public Invitations: Player[];
   public Forum: AllianceForumCategory[];
@@ -143,7 +146,11 @@ export const allianceIncludes = [{
     attributes: ['id', 'name'],
   }, {
     model: Player,
-    as: 'InitiatingPlayer',
+    as: 'OriginPlayer',
+    attributes: ['id', 'name'],
+  }, {
+    model: Player,
+    as: 'TargetPlayer',
     attributes: ['id', 'name'],
   }, {
     model: Player,
