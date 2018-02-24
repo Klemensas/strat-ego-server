@@ -1,10 +1,10 @@
 import * as jwt from 'jsonwebtoken';
 import * as expressJwt from 'express-jwt';
 import * as compose from 'composable-middleware';
-import { User } from '../api/world/user.model';
-import { UserWorld } from '../api/world/userWorld.model';
-import { World } from '../api/world/world.model';
 import * as config from '../config/environment';
+
+import { User } from '../api/user/User';
+import { knexDb } from '../sqldb';
 
 const validateJwt = expressJwt({
   secret: config.secrets.session,
@@ -22,14 +22,11 @@ export function isAuthenticated() {
   return compose()
     .use(validate)
     .use((req, res, next) => {
-      User.findOne({
-        where: {
-          id: req.user.id,
-        },
-        include: [{
-          model: World,
-        }],
-      })
+      User
+        .query(knexDb.main)
+        .findById(req.user.id)
+        .select('id', 'name', 'email', 'role', 'provider', 'createdAt', 'updatedAt')
+        .eager('worlds')
         .then((user) => {
           if (!user) {
             return res.status(401).end();
