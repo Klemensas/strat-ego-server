@@ -1,6 +1,4 @@
 import * as express from 'express';
-// import passport from 'passport';
-import config from '../config/environment';
 import localPassport from './local/passport';
 import localController from './local';
 

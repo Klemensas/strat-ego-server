@@ -14,7 +14,7 @@ import * as bunyan from 'bunyan';
 
 import * as statusMonitor from 'express-status-monitor';
 
-import config from './config/environment';
+import * as config from './config/environment';
 import { main, world } from './sqldb';
 import seedWorld from './sqldb/seed';
 import { WorldDataService } from './components/world';

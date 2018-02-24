@@ -1,5 +1,12 @@
 import { Sequelize } from 'sequelize';
-import config from '../config/environment';
+import * as config from '../config/environment';
+import * as Knex from 'knex';
+
+
+interface KnexDb {
+  main: Knex;
+  world: Knex;
+}
 
 interface Db {
   Sequelize: Sequelize;
@@ -21,6 +28,12 @@ interface Db {
     // Report?: any,
   };
 }
+
+export const knexDb = {
+  main: Knex({ ...config.knex.options, connection: config.knex.main }),
+  world: Knex({ ...config.knex.options, connection: config.knex.world }),
+};
+
 
 const db = {
   Sequelize,
