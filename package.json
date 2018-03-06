@@ -10,7 +10,16 @@
     "build": "tsc",
     "test": "tsc && ava",
     "dev": "nodemon -e ts --exec ts-node --project . ./src",
-    "lint": "tslint ./src/**/*.ts"
+    "lint": "tslint ./src/**/*.ts",
+    "seed": "npm run seed:main && npm run seed:world",
+    "seed:main": "knex seed:run --knexfile knexfile.main.js",
+    "seed:world": "knex seed:run --knexfile knexfile.world.js",
+    "migrate": "npm run migrate:main && npm run migrate:world",
+    "migrate:rollback": "npm run migrate:rollback:main && npm run migrate:rollback:world",
+    "migrate:main": "knex migrate:latest --knexfile knexfile.main.js",
+    "migrate:world": "knex migrate:latest --knexfile knexfile.world.js",
+    "migrate:rollback:main": "knex migrate:rollback --knexfile knexfile.main.js",
+    "migrate:rollback:world": "knex migrate:rollback --knexfile knexfile.world.js"
   },
   "ava": {
     "files": [
@@ -45,6 +54,7 @@
     "sinon": "^4.1.2",
     "socket.io": "^2.0.4",
     "socketio-jwt": "^4.5.0",
+    "strat-ego-common": "^0.0.1",
     "uws": "^8.14.1"
   },
   "devDependencies": {

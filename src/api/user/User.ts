@@ -1,8 +1,7 @@
 import * as crypto from 'crypto';
-import { RelationMappings } from 'objection';
+import { UserRoles, UserProviders, Token, Profile } from 'strat-ego-common';
 import { World } from '../world/World';
 import { BaseModel } from '../../sqldb/model';
-import { UserRoles, UserProviders, Token, Profile } from '../../../../strat-ego-common/User';
 
 export class User extends BaseModel {
   readonly id: number;

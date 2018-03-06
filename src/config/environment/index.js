@@ -9,7 +9,7 @@ module.exports = {
     session: process.env.APP_SECRET || 'secret',
   },
   userRoles: ['member', 'admin'],
-  seedDB: process.env.SEED_DATA || false,
+  seedDB: process.env.SEED_DATA || true,
   sequelize: {
     options: {
       logging: /* false */console.log,
@@ -25,17 +25,11 @@ module.exports = {
   knex: {
     options: {
       client: 'postgresql',
-      debug: true,
       migrations: {
         tableName: 'knex_migrations'
       },
     },
     main: process.env.DB_MAIN || 'postgres://stratego:supasecretpassword@localhost:5432/stratego',
-    world: process.env.DB_MAIN || {
-      host: 'localhost:5432',
-      user: 'stratego',
-      password: 'supasecretpassword',
-      database: 'stategoWorld',
-    }
+    world: process.env.DB_MAIN || 'postgres://stratego:supasecretpassword@localhost:5432/strategoWorld'
   }
 };

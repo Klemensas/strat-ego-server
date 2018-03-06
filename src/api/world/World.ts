@@ -1,6 +1,7 @@
+import { ValidationError } from 'objection';
+
 import { BaseModel } from '../../sqldb/model';
 import { User } from '../user/User';
-import { ValidationError } from 'objection';
 
 export class World extends BaseModel {
   readonly name: string;
@@ -16,7 +17,7 @@ export class World extends BaseModel {
   currentRing: number;
   initialLoyalty: number;
   loyaltyRegeneration: number;
-  loyaltyReductionRange: number[];
+  loyaltyReductionRange: [number, number];
   
   // Associations
   users?: User[];
