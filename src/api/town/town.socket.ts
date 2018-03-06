@@ -1,11 +1,11 @@
 import * as Bluebird from 'bluebird';
-import { WorldDataService } from '../../components/world';
 import { Town, townIncludes, Coords } from './town.model';
 import { Player } from '../world/player.model';
 import { UnitQueue } from '../world/unitQueue.model';
 import { world } from '../../sqldb';
 import { UserSocket, AuthenticatedSocket } from 'config/socket';
 import { MovementType } from 'api/town/movement.model';
+import { worldData } from '../world/worldData';
 
 export interface SocketPayload { town: number; }
 export interface NamePayload extends SocketPayload { name: string; }
@@ -81,7 +81,7 @@ export class TownSocket {
     const target = town.buildings[building];
     if (target) {
       const level = target.queued || target.level;
-      const targetBuilding = WorldDataService.buildingMap[building];
+      const targetBuilding = worldData.buildingMap[building];
       const buildingData = targetBuilding.data[level];
 
       if (!buildingData) {
@@ -114,7 +114,7 @@ export class TownSocket {
   }
 
   private static tryRecruiting(town: Town, time: number, units: PayloadUnit[]): PromiseLike<Town> {
-    const unitData = WorldDataService.unitMap;
+    const unitData = worldData.unitMap;
     const unitsToQueue = [];
     const queueCreateTime = new Date();
     const TownId = town.id;
@@ -163,7 +163,7 @@ export class TownSocket {
   }
 
   private static tryMoving(town: Town, time: number, payload: TroopMovementPayload): PromiseLike<Town> {
-    const unitData = WorldDataService.unitMap;
+    const unitData = worldData.unitMap;
     let slowest = 0;
 
     if (payload.target === town.location) { return Promise.reject('A town can\'t attack itself'); }

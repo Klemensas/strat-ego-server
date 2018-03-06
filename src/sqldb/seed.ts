@@ -2,7 +2,7 @@ import { main, world } from './index';
 import buildingData from '../config/game/buildingData';
 import unitData from '../config/game/unitData';
 import MapManager from '../components/map';
-import { WorldDataService } from '../components/world';
+import { worldData } from '../api/world/worldData';
 
 import { User } from '../api/world/user.model';
 import { World } from '../api/world/world.model';
@@ -82,7 +82,7 @@ export default () => {
     Building.bulkCreate(buildingData(worldDataService.speed)),
     Unit.bulkCreate(unitData(worldDataService.speed)),
   ]))
-  .then(() => WorldDataService.readWorld('Megapolis'))
+  .then(() => worldData.readWorld('Megapolis'))
   .then(() => Town.bulkCreate(seedTowns(
     MapManager.getCoordsInRange(
       townGenerationData.area,

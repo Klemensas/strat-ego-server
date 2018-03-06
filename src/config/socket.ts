@@ -1,6 +1,5 @@
 import * as socketJwt from 'socketio-jwt';
 import * as config from './environment';
-import { WorldDataService, WorldData } from '../components/world';
 import { PlayerSocket } from '../api/world/player.socket';
 import { AllianceSocket } from '../api/alliance/alliance.socket';
 import { TownSocket } from '../api/town/town.socket';

@@ -1,10 +1,10 @@
 import * as Bluebird from 'bluebird';
-import { WorldDataService } from './world';
 import { Town } from '../api/town/town.model';
 import { Player } from '../api/world/player.model';
 import { World } from '../api/world/world.model';
 import { logger } from '../';
 import { Alliance } from '../api/alliance/alliance.model';
+import { worldData } from '../api/world/worldData';
 
 export interface MapTown {
   id: number;
@@ -126,13 +126,13 @@ class MapManager {
 
   public chooseLocation(): Bluebird<[number, number]> {
     return Town.getAvailableCoords(this.getCoordsInRange(
-      WorldDataService.world.generationArea,
-      WorldDataService.world.currentRing,
-      Math.ceil(WorldDataService.world.size / 2),
+      worldData.world.generationArea,
+      worldData.world.currentRing,
+      Math.ceil(worldData.world.size / 2),
     ))
     .then((coords) => {
       if (!coords.length) {
-        return WorldDataService.increaseRing(this.world)
+        return worldData.increaseRing(this.world)
           .then(() => this.chooseLocation());
       }
       // TODO: handle running out of locationsx`

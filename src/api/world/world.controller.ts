@@ -1,9 +1,7 @@
-import { WorldDataService } from '../../components/world';
+import { worldData } from './worldData';
 
 function worlds(req, res) {
-  const data = [];
-  [WorldDataService].forEach((world) => data.push(world));
-  res.status(200).json(data);
+  res.status(200).json(worldData.fullWorld);
 }
 
 // function playerData(world, player, targetPlayer) {

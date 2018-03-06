@@ -1,11 +1,11 @@
 import * as Bluebird from 'bluebird';
 import { Transaction } from 'sequelize';
-import { WorldDataService } from '../../../components/world';
 import { world } from '../../../sqldb';
 import { Town, TownUnits, Resources } from '../town.model';
 import { Report } from '../../report/report.model';
 import { Movement } from '../movement.model';
 import generateReport from './report.service';
+import { worldData } from '../../world/worldData';
 
 interface CombatStrength {
   general: number;
@@ -130,7 +130,7 @@ export default class MovementResolver {
       outcome.unitChange = outcome.unitChange || !!loss;
       outcome.survivors[key] = survived;
       outcome.losses[key] = loss;
-      outcome.maxHaul += outcome.survivors[key] * WorldDataService.unitMap[key].haul;
+      outcome.maxHaul += outcome.survivors[key] * worldData.unitMap[key].haul;
       return outcome;
     }, { survivors: {}, attackingUnits: {}, losses: {}, maxHaul: 0, unitChange: false });
 
@@ -154,7 +154,7 @@ export default class MovementResolver {
     const destinationPlayerId = destinationTown.PlayerId;
     destinationTown.loyalty = changedLoyalty;
     if (changedLoyalty <= 0) {
-      destinationTown.loyalty = WorldDataService.world.initialLoyalty;
+      destinationTown.loyalty = worldData.world.initialLoyalty;
       destinationTown.PlayerId = originTown.PlayerId;
       destinationTown.units = Town.setInitialUnits();
       originTown.units.noble.outside -= 1;
@@ -283,7 +283,7 @@ export default class MovementResolver {
 
   static calculateAttackStrength(units): CombatStrength {
     return units.reduce((result, [key, val]) => {
-      const unit = WorldDataService.unitMap[key];
+      const unit = worldData.unitMap[key];
       const unitAttack = unit.combat.attack * val;
       result[unit.attackType] += unitAttack;
 
@@ -293,7 +293,7 @@ export default class MovementResolver {
 
   static calculateDefenseStrength(units): CombatStrength {
     return units.reduce((result, [key, val]) => {
-      const unit = WorldDataService.unitMap[key];
+      const unit = worldData.unitMap[key];
       result.general += unit.combat.defense.general * val.inside;
       result.cavalry += unit.combat.defense.cavalry * val.inside;
       result.archer += unit.combat.defense.archer * val.inside;
@@ -309,9 +309,9 @@ export default class MovementResolver {
   static getLoyaltyChange(units) {
     let change = 0;
     const changeRange =
-      WorldDataService.world.loyaltyReductionRange[1] - WorldDataService.world.loyaltyReductionRange[0];
+      worldData.world.loyaltyReductionRange[1] - worldData.world.loyaltyReductionRange[0];
     for (let i = 0; i < units; i++) {
-      change += WorldDataService.world.loyaltyReductionRange[0] + Math.round(Math.random() * changeRange);
+      change += worldData.world.loyaltyReductionRange[0] + Math.round(Math.random() * changeRange);
     }
     return change;
   }

@@ -2,7 +2,7 @@ import { Sequelize, Model, DataTypes, BelongsTo, HasMany, HasManyCreateAssociati
 import * as Bluebird from 'bluebird';
 
 import { io } from '../../';
-import { WorldDataService } from '../../components/world';
+import { worldData } from '../world/worldData';
 import MapManager from '../../components/map';
 import MovementResolver from './components/movement.resolver';
 import { TownBuildings, TownUnits } from '../util.model';
@@ -134,7 +134,7 @@ export class Town extends Model {
       return this;
     }
 
-    const growthPerHour = WorldDataService.world.loyaltyRegeneration;
+    const growthPerHour = worldData.world.loyaltyRegeneration;
     const timePast = (now - new Date(previous).getTime()) / 1000 / 60 / 60;
     const growth = growthPerHour * timePast;
     this.loyalty = Math.min(100, this.loyalty + growth);
@@ -142,11 +142,11 @@ export class Town extends Model {
   }
 
   public calculateProduction() {
-    const buildingData = WorldDataService.buildingMap;
+    const buildingData = worldData.buildingMap;
     return {
-      wood: WorldDataService.world.baseProduction + buildingData.wood.data[this.buildings.wood.level].production,
-      clay: WorldDataService.world.baseProduction + buildingData.clay.data[this.buildings.clay.level].production,
-      iron: WorldDataService.world.baseProduction + buildingData.iron.data[this.buildings.iron.level].production,
+      wood: worldData.world.baseProduction + buildingData.wood.data[this.buildings.wood.level].production,
+      clay: worldData.world.baseProduction + buildingData.clay.data[this.buildings.clay.level].production,
+      iron: worldData.world.baseProduction + buildingData.iron.data[this.buildings.iron.level].production,
     };
   }
 
@@ -159,22 +159,22 @@ export class Town extends Model {
   }
 
   public getMaxRes() {
-    return WorldDataService.buildingMap.storage.data[this.buildings.storage.level].storage;
+    return worldData.buildingMap.storage.data[this.buildings.storage.level].storage;
   }
 
   public getWallBonus() {
-    return WorldDataService.buildingMap.wall.data[this.buildings.wall.level].defense || 1;
+    return worldData.buildingMap.wall.data[this.buildings.wall.level].defense || 1;
   }
 
   public getRecruitmentModifier() {
-    return WorldDataService.buildingMap.barracks.data[this.buildings.barracks.level].recruitment;
+    return worldData.buildingMap.barracks.data[this.buildings.barracks.level].recruitment;
   }
 
   public getAvailablePopulation() {
-    const used = WorldDataService.units.reduce((t, unit) => {
+    const used = worldData.units.reduce((t, unit) => {
       return t + Object.values(this.units[unit.name]).reduce((a, b) => a + b);
     }, 0);
-    const total = WorldDataService.buildingMap.farm.data[this.buildings.farm.level].population;
+    const total = worldData.buildingMap.farm.data[this.buildings.farm.level].population;
     return total - used;
   }
 
@@ -280,7 +280,7 @@ Town.init({
 }, { sequelize: world.sequelize });
 
 Town.beforeBulkCreate((towns: Town[]) => {
-  const buildings = WorldDataService.buildings.reduce((map, item) => {
+  const buildings = worldData.buildings.reduce((map, item) => {
     map[item.name] = { level: item.levels.min, queued: 0 };
     return map;
   }, {});
@@ -299,7 +299,7 @@ Town.beforeBulkCreate((towns: Town[]) => {
   });
 });
 Town.beforeCreate((town: Town) => {
-  const buildings = WorldDataService.buildings.reduce((map, item) => {
+  const buildings = worldData.buildings.reduce((map, item) => {
     map[item.name] = { level: item.levels.min, queued: 0 };
     return map;
   }, {});
@@ -349,7 +349,7 @@ Town.afterCreate((town: Town) => {
 });
 
 Town.setInitialUnits = () => {
-  return WorldDataService.units.reduce((map, item) => {
+  return worldData.units.reduce((map, item) => {
     map[item.name] = { inside: 0, outside: 0, queued: 0 };
     return map;
   }, {});
