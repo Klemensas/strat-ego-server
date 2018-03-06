@@ -1,3 +1,4 @@
+const speed = process.env.WORLD_SPEED || 1;
 
 exports.seed = (knex, Promise) => knex('User').del()
   .then(() => knex('User').insert([{
@@ -19,7 +20,7 @@ exports.seed = (knex, Promise) => knex('User').del()
   .then(() => knex('World').insert([{
     name: 'Megapolis',
     baseProduction: 5000,
-    speed: 100,
+    speed,
     size: 999,
     regionSize: 27,
     fillTime: (90 * 24 * 60 * 60 * 1000),
@@ -32,4 +33,3 @@ exports.seed = (knex, Promise) => knex('User').del()
     loyaltyRegeneration: 1,
     loyaltyReductionRange: [100, 105],
   }]))
-

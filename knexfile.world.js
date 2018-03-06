@@ -5,12 +5,12 @@ const config = require('./src/config/environment');
 module.exports = {
   [config.env]: {
     ...config.knex.options,
-    connection: config.knex.main,
+    connection: config.knex.world,
     seeds: {
-      directory: './seeds/main'
+      directory: './seeds/world'
     },
     migrations: {
-      directory: './migrations/main'
+      directory: './migrations/world'
     }
   },
 };
