@@ -3,7 +3,7 @@ import * as expressJwt from 'express-jwt';
 import * as compose from 'composable-middleware';
 import * as config from '../config/environment';
 
-import { User } from '../api/user/User';
+import { User } from '../api/user/user';
 import { knexDb } from '../sqldb';
 
 const validateJwt = expressJwt({

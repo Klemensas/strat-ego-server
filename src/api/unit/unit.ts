@@ -1,6 +1,6 @@
 import { Requirements, Resources, AttackType, Combat } from 'strat-ego-common';
 
-import { BaseModel } from '../../sqldb/model';
+import { BaseModel } from '../../sqldb/baseModel';
 
 export class Unit extends BaseModel {
   readonly id: number;
@@ -13,7 +13,6 @@ export class Unit extends BaseModel {
   costs: Resources;
   combat: Combat;
 
-  static timestamps = true;
   static tableName = 'Unit';
 
   static jsonSchema = {
@@ -33,8 +32,8 @@ export class Unit extends BaseModel {
           properties: {
             item: { type: 'string' },
             level: { type: 'number' },
-          }
-        }
+          },
+        },
       },
       costs: {
         type: 'object',
@@ -42,7 +41,7 @@ export class Unit extends BaseModel {
           wood: { type: 'number' },
           clay: { type: 'number' },
           iron: { type: 'number' },
-        }
+        },
       },
       combat: {
         type: 'object',
@@ -54,10 +53,10 @@ export class Unit extends BaseModel {
               general: { type: 'number '},
               cavalry: { type: 'number '},
               archer: { type: 'number '},
-            }
+            },
           },
-        }
+        },
       },
-    }
-  }
+    },
+  };
 }

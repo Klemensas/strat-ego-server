@@ -1,6 +1,6 @@
 import { Requirements, Resources } from 'strat-ego-common';
 
-import { BaseModel } from '../../sqldb/model';
+import { BaseModel } from '../../sqldb/baseModel';
 
 export class Building extends BaseModel {
   readonly id: number;
@@ -20,7 +20,6 @@ export class Building extends BaseModel {
     defense?: number;
   }];
 
-  static timestamps = true;
   static tableName = 'Building';
 
   static jsonSchema = {

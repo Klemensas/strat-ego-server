@@ -1,7 +1,7 @@
 import * as crypto from 'crypto';
 import { UserRoles, UserProviders, Token, Profile } from 'strat-ego-common';
-import { World } from '../world/World';
-import { BaseModel } from '../../sqldb/model';
+import { World } from '../world/world';
+import { BaseModel } from '../../sqldb/baseModel';
 
 export class User extends BaseModel {
   readonly id: number;
@@ -17,9 +17,7 @@ export class User extends BaseModel {
   github?: any;
 
   // Relations
-  worlds?: World[];
-
-  static timestamps = true;
+  worlds?: Array<Partial<World[]>>;
 
   static tableName = 'User';
 
@@ -32,11 +30,11 @@ export class User extends BaseModel {
         through: {
           modelClass: 'UserWorld',
           from: 'UserWorld.userId',
-          to: 'UserWorld.worldName'
+          to: 'UserWorld.worldName',
         },
-        to: 'World.name'
+        to: 'World.name',
       },
-    }
+    },
   };
 
   static jsonSchema = {
@@ -55,8 +53,8 @@ export class User extends BaseModel {
       twitter: { type: 'object' },
       google: { type: 'object' },
       github: { type: 'object' },
-    }
-  }
+    },
+  };
 
   get token(): Token {
     return { id: this.id, role: this.role };
@@ -105,14 +103,12 @@ export class User extends BaseModel {
   async $beforeInsert(queryContext) {
     super.$beforeInsert(queryContext);
     await this.updatePassword();
-    console.log('pass updated', this.password);
   }
 
   async $beforeUpdate(opt, queryContext) {
     super.$beforeUpdate(opt, queryContext);
     if (opt.old && opt.old.password !== this.password) {
       await this.updatePassword();
-      console.log('pass updated', this.password);
     }
   }
 }

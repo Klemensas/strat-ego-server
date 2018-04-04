@@ -1,7 +1,7 @@
 import { ValidationError } from 'objection';
 
-import { BaseModel } from '../../sqldb/model';
-import { User } from '../user/User';
+import { BaseModel } from '../../sqldb/baseModel';
+import { User } from '../user/user';
 
 export class World extends BaseModel {
   readonly name: string;
@@ -18,11 +18,9 @@ export class World extends BaseModel {
   initialLoyalty: number;
   loyaltyRegeneration: number;
   loyaltyReductionRange: [number, number];
-  
-  // Associations
-  users?: User[];
 
-  static timestamps = true;
+  // Associations
+  users?: Array<Partial<User[]>>;
 
   static tableName = 'World';
   static idColumn = 'name';
@@ -38,14 +36,29 @@ export class World extends BaseModel {
           from: 'UserWorld.worldName',
           to: 'UserWorld.userId',
         },
-        to: 'User.id'
+        to: 'User.id',
       },
-    }
+    },
   };
 
   static jsonSchema = {
     type: 'object',
-    required: ['name', 'baseProduction', 'speed', 'size', 'regionSize', 'fillTime', 'fillPercent', 'barbPercent', 'timeQouta', 'generationArea', 'currentRing', 'initialLoyalty', 'loyaltyRegeneration', 'loyaltyReductionRange'],
+    required: [
+    'name',
+    'baseProduction',
+    'speed',
+    'size',
+    'regionSize',
+    'fillTime',
+    'fillPercent',
+    'barbPercent',
+    'timeQouta',
+    'generationArea',
+    'currentRing',
+    'initialLoyalty',
+    'loyaltyRegeneration',
+    'loyaltyReductionRange',
+  ],
 
     properties: {
       name: { type: 'string' },
@@ -65,11 +78,11 @@ export class World extends BaseModel {
         type: 'array',
         items: [
           { type: 'number' },
-          { type: 'number' }
-        ]
+          { type: 'number' },
+        ],
       },
-    }
-  }
+    },
+  };
 
   $beforeInsert(queryContext) {
     super.$beforeInsert(queryContext);
@@ -77,14 +90,14 @@ export class World extends BaseModel {
       throw new ValidationError({
         message: 'World size must be an odd number',
         type: 'WorldSize',
-        data: this
+        data: this,
       });
     }
     if (this.size % this.regionSize) {
       throw new ValidationError({
         message: 'World size must be divisable by region size',
         type: 'WorldRegionSize',
-        data: this
+        data: this,
       });
     }
   }

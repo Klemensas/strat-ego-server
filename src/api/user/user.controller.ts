@@ -1,5 +1,5 @@
 import { signToken } from '../../auth/auth.service';
-import { User } from './User';
+import { User } from './user';
 import { knexDb } from '../../sqldb';
 
 function validationError(res, statusCode = 422) {
