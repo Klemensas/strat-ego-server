@@ -17,16 +17,16 @@ import * as statusMonitor from 'express-status-monitor';
 import * as config from './config/environment';
 import { main, world } from './sqldb';
 import seedWorld from './sqldb/seed';
-import MapManager from './components/map';
 import routing from './routes';
 import { initializeSocket } from './config/socket';
 import { worldData } from './api/world/worldData';
+import { mapManager } from './api/map/mapManager';
 // import queue from './api/world/queue';
 
 const app = express();
 const env = app.get('env');
 const server = http.createServer(app);
-const worldName = 'Megapolis';
+const worldName = 'megapolis';
 
 export const logger = bunyan.createLogger({
   name: 'app',
@@ -36,6 +36,9 @@ export const logger = bunyan.createLogger({
   }, {
     level: 'error',
     path: 'error.log',
+  }, {
+    level: 'error',
+    stream: process.stdout,
   }],
 });
 
@@ -62,7 +65,7 @@ main.sequelize.sync()
   .then(() => world.sequelize.sync())
   .then(() => (config.seedDB ? seedWorld() : null))
   .then(() => worldData.readWorld(worldName))
-  .then(() => MapManager.initialize(worldName))
+  .then(() => mapManager.initialize(worldName))
   .then(() => initializeSocket(io))
   .then(() => logger.info('server ready!'));
   // .then(() => queue.go());

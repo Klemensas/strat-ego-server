@@ -1,8 +1,8 @@
 import { main, world } from './index';
 import buildingData from '../config/game/buildingData';
 import unitData from '../config/game/unitData';
-import MapManager from '../components/map';
 import { worldData } from '../api/world/worldData';
+import { mapManager } from '../api/map/mapManager';
 
 import { User } from '../api/world/user.model';
 import { World } from '../api/world/world.model';
@@ -17,7 +17,7 @@ import { Alliance } from '../api/alliance/alliance.model';
 
 export default () => {
   const worldDataService = {
-    name: 'Megapolis',
+    name: 'megapolis',
     baseProduction: 5000,
     speed: 100,
     size: 999,
@@ -82,16 +82,16 @@ export default () => {
     Building.bulkCreate(buildingData(worldDataService.speed)),
     Unit.bulkCreate(unitData(worldDataService.speed)),
   ]))
-  .then(() => worldData.readWorld('Megapolis'))
+  .then(() => worldData.readWorld('megapolis'))
   .then(() => Town.bulkCreate(seedTowns(
-    MapManager.getCoordsInRange(
+    mapManager.getCoordsInRange(
       townGenerationData.area,
       townGenerationData.furthestRing,
       townGenerationData.size,
     ),
     townGenerationData.percent)))
   .then(() => Town.findAll({ include: [{ all: true }] }))
-  .then((towns) => MapManager.addTown(...towns))
+  .then((towns) => mapManager.addTown(...towns as any))
   .then(() => console.log('Seeding done.'))
   .catch((error) => console.log('Seeding error', error));
 };

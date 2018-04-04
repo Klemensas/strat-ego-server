@@ -9,10 +9,10 @@ module.exports = {
     session: process.env.APP_SECRET || 'secret',
   },
   userRoles: ['member', 'admin'],
-  seedDB: process.env.SEED_DATA || true,
+  seedDB: process.env.SEED_DATA || false,
   sequelize: {
     options: {
-      logging: /* false */console.log,
+      logging: false/* console.log */,
       define: {
         timestamps: true,
         paranoid: false,

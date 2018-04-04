@@ -3,8 +3,7 @@ import * as Bluebird from 'bluebird';
 
 import { io } from '../../';
 import { worldData } from '../world/worldData';
-import MapManager from '../../components/map';
-import MovementResolver from './components/movement.resolver';
+// import MovementResolver from './components/movement.resolver';
 import { TownBuildings, TownUnits } from '../util.model';
 import { world } from '../../sqldb';
 import { logger } from '../../';
@@ -220,7 +219,7 @@ export class Town extends Model {
   }
 
   public processMovement(item: Movement) {
-    return MovementResolver.resolveMovement(item, this);
+    // return MovementResolver.resolveMovement(item, this);
   }
 }
 
@@ -345,7 +344,7 @@ Town.beforeUpdate((town: Town, {}) => {
 // },
 Town.afterCreate((town: Town) => {
   town.reload({ include: [{ all: true }] })
-    .then((fullTown) => MapManager.addTown(fullTown));
+    .then((fullTown) => mapManager.addTown(fullTown as any));
 });
 
 Town.setInitialUnits = () => {
@@ -444,6 +443,7 @@ import { Report } from '../report/report.model';
 import { Movement } from './movement.model';
 import { BuildingQueue } from '../world/buildingQueue.model';
 import { UnitQueue } from '../world/unitQueue.model';
+import { mapManager } from '../map/mapManager';
 
 export const townIncludes = [{
   model: Movement,
