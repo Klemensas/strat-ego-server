@@ -7,14 +7,14 @@ exports.up = function(knex, Promise) {
       table.string('email').unique();
       table.string('password').notNullable();
       table.string('salt').notNullable();
-      table.string('role').defaultTo('member').notNullable();
+      table.string('role').notNullable();
       table.string('provider').notNullable();
       table.json('facebook');
       table.json('twitter');
       table.json('google');
       table.json('github');
-      table.timestamp('createdAt').defaultTo(knex.fn.now()).notNullable();
-      table.timestamp('updatedAt').defaultTo(knex.fn.now()).notNullable();
+      table.bigInteger('createdAt').unsigned().notNullable();
+      table.bigInteger('updatedAt').unsigned().notNullable();
     })
     .createTable('World', table => {
       table.string('name').primary();
@@ -31,8 +31,8 @@ exports.up = function(knex, Promise) {
       table.integer('initialLoyalty').notNullable();
       table.integer('loyaltyRegeneration').notNullable();
       table.specificType('loyaltyReductionRange', 'integer[]').notNullable();
-      table.timestamp('createdAt').defaultTo(knex.fn.now()).notNullable();
-      table.timestamp('updatedAt').defaultTo(knex.fn.now()).notNullable();
+      table.bigInteger('createdAt').unsigned().notNullable();
+      table.bigInteger('updatedAt').unsigned().notNullable();
     })
     .createTable('UserWorld', table => {
       table.increments('id').primary();
@@ -48,8 +48,8 @@ exports.up = function(knex, Promise) {
         .inTable('World')
         .onDelete('CASCADE');
       table.integer('playerId').unsigned().unique().notNullable()
-      table.timestamp('createdAt').defaultTo(knex.fn.now()).notNullable();
-      table.timestamp('updatedAt').defaultTo(knex.fn.now()).notNullable();
+      table.bigInteger('createdAt').unsigned().notNullable();
+      table.bigInteger('updatedAt').unsigned().notNullable();
     })
 };
 
