@@ -4610,6 +4610,10 @@ static-extend@^0.1.1:
   version "1.3.1"
   resolved "https://registry.yarnpkg.com/statuses/-/statuses-1.3.1.tgz#faf51b9eb74aaef3b3acf4ad5f61abf24cb7b93e"
 
+"strat-ego-common@github:klemensas/strat-ego-common":
+  version "0.0.1"
+  resolved "https://codeload.github.com/klemensas/strat-ego-common/tar.gz/fa9924df2c2820e94f33fa386dfd3fc5eb5f3b11"
+
 stream-combiner@~0.0.4:
   version "0.0.4"
   resolved "https://registry.yarnpkg.com/stream-combiner/-/stream-combiner-0.0.4.tgz#4d5e433c185261dde623ca3f44c586bcf5c4ad14"
