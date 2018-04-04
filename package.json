@@ -54,7 +54,7 @@
     "sinon": "^4.1.2",
     "socket.io": "^2.0.4",
     "socketio-jwt": "^4.5.0",
-    "strat-ego-common": "^0.0.1",
+    "strat-ego-common": "github:klemensas/strat-ego-common",
     "uws": "^8.14.1"
   },
   "devDependencies": {
