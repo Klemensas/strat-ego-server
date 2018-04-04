@@ -1,10 +1,10 @@
+import * as Knex from 'knex';
 import { WorldData as WorldDataModel } from 'strat-ego-common';
-import { Building } from '../building/Building';
-import { Unit } from '../unit/Unit';
-import { World } from './World';
+import { Building } from '../building/building';
+import { Unit } from '../unit/unit';
+import { World } from './world';
 import { knexDb } from '../../sqldb';
 import { logger } from '../../';
-
 
 export class WorldData {
   public world: World;
@@ -42,10 +42,10 @@ export class WorldData {
     }
   }
 
-  public async increaseRing(name: string, ring = this.world.currentRing) {
+  public async increaseRing(name: string, query: Knex.Transaction | Knex = knexDb.main,  ring = this.world.currentRing) {
     try {
-      const update = await World.query(knexDb.main)
-        .update({ currentRing: ring + 1 })
+      const update = await World.query(query)
+        .patch({ currentRing: ring + 1 })
         .where({ name });
 
       this.world.currentRing++;
