@@ -498,12 +498,78 @@ const buildingList = [
   },
 ];
 const speed = process.env.WORLD_SPEED || 1;
+const baseProduction = process.env.BASE_PRODUCTION || 5000;
 
+const townGenerationData = {
+  percent: 0.5,
+  furthestRing: 9,
+  area: 9,
+  size: Math.ceil(999 / 2),
+};
+function getRingCoords(size, ring) {
+  const min = size - ring;
+  const max = size + ring;
+  const halfRing = Math.floor(ring / 2);
+
+  const xLeft = [min, size];
+  const xRight = [max, size];
+  const top = [];
+  const bottom = [];
+  const leftTop = [];
+  const leftBottom = [];
+  const rightTop = [];
+  const rightBottom = [];
+
+  for (let i = 0; i < ring + 1; i++) {
+    const x = min + halfRing + i;
+    top.push([x, min]);
+    bottom.push([x, max]);
+    if (i < ring - 1) {
+      const yT = size - 1 - i;
+      const yB = size + 1 + i;
+      const xL = min + Math.floor((i + 1) / 2);
+      const xR = max - Math.round((1 + i) / 2);
+      leftTop.unshift([xL, yT]);
+      rightTop.unshift([xR, yT]);
+      leftBottom.push([xL, yB]);
+      rightBottom.push([xR, yB]);
+    }
+  }
+
+  return {
+    left: [...leftTop, xLeft, ...leftBottom],
+    right: [...rightTop, xRight, ...rightBottom],
+    top,
+    bottom,
+  };
+}
+
+function getCoordsInRange(rings, furthestRing, size) {
+  const coords = getRingCoords(size, furthestRing);
+  const innards = coords.left.reduce((p, c, i, a) => {
+    const right = coords.right[i];
+    if (i >= rings - 1 && i <= a.length - rings) {
+      return [
+        ...p,
+        ...Array.from({ length: rings }, (v, j) => [c[0] + j, c[1]]),
+        ...Array.from({ length: rings }, (v, j) => [right[0] - j, right[1]]),
+      ];
+    }
+    const rowLength = right[0] - c[0] + 1;
+    return [
+      ...p,
+      ...Array.from({ length: rowLength }, (v, j) => [c[0] + j, c[1]]),
+    ];
+  }, []);
+  return [...coords.top, ...innards, ...coords.bottom];
+}
 
 exports.seed = (knex, Promise) => knex('Unit').del()
   .then(() => knex('Unit').insert(unitList.map((unit) => {
     unit.speed /= speed / 1000;
     unit.recruitTime /= speed / 1000;
+    unit.createdAt = Date.now();
+    unit.updatedAt = Date.now();
     return unit;
   })))
   .then(() => knex('Building').del())
@@ -513,6 +579,8 @@ exports.seed = (knex, Promise) => knex('Unit').del()
       levels: { max: building.levels, min: building.min },
       requirements: building.requirements,
       data: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
   
     for (let i = 0; i <= item.levels.max; i++) {
@@ -539,3 +607,43 @@ exports.seed = (knex, Promise) => knex('Unit').del()
     }
     return item;
   })))
+  .then(() => knex('Town').del())
+  .then(() => {
+    const coords = getCoordsInRange(townGenerationData.area, townGenerationData.furthestRing, townGenerationData.size);
+    const factor = townGenerationData.percent;
+    // const units = 
+    const resources = {
+      wood: 800,
+      clay: 800,
+      iron: 800
+    };
+    const production = {
+      wood: baseProduction,
+      clay: baseProduction,
+      iron: baseProduction,
+    };
+    const buildings = buildingList.reduce((result, item) => {
+      result[item.name] = { level: item.min, queued: 0 };
+      return result;
+    }, {});
+    const units = unitList.reduce((result, item) => {
+      result[item.name] = { inside: 0, outside: 0, queued: 0 };
+      return result;
+    }, {});
+    const loyalty = 100;
+    const name = 'Abandoned Town';
+    return knex('Town').insert(coords.reduce((towns, location) => {
+      if (Math.random() <= factor) { towns.push({
+        location,
+        loyalty,
+        name,
+        resources,
+        production,
+        buildings,
+        units,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),  
+      }); }
+      return towns;
+    }, []))
+  })

@@ -8,17 +8,22 @@ exports.seed = (knex, Promise) => knex('User').del()
       salt: 'mepyIyafki7lYV/SjUemBg==',
       role: 'admin',
       provider: 'local',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     }, {
       name: 'test',
       email: 'test@test.com',
       password: 'm0on7YE189BX+w89s5dvPwUX1+C1J9ZT8MrE23gR7RBT5KEolUiSJBOqpXpKMCtzgO1MCIVQojQv1ImGfYa9xQ==',
       salt: 'AzhSjDA2sFinkcPEOY4ZuA==',
+      role: 'member',
       provider: 'local',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     }])
   )
   .then(() => knex('World').del())
   .then(() => knex('World').insert([{
-    name: 'Megapolis',
+    name: 'megapolis',
     baseProduction: 5000,
     speed,
     size: 999,
@@ -32,4 +37,6 @@ exports.seed = (knex, Promise) => knex('User').del()
     initialLoyalty: 30,
     loyaltyRegeneration: 1,
     loyaltyReductionRange: [100, 105],
-  }]))
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+}]))
