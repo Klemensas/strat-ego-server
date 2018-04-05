@@ -10,18 +10,6 @@ module.exports = {
   },
   userRoles: ['member', 'admin'],
   seedDB: process.env.SEED_DATA || false,
-  sequelize: {
-    options: {
-      logging: false/* console.log */,
-      define: {
-        timestamps: true,
-        paranoid: false,
-        version: true,
-      },
-    },
-    main: process.env.DB_MAIN || 'postgres://stratego:supasecretpassword@localhost:5432/stratego',
-    world: process.env.DB_WORLD || 'postgres://stratego:supasecretpassword@localhost:5432/strategoWorld',
-  },
   knex: {
     options: {
       client: 'postgresql',
