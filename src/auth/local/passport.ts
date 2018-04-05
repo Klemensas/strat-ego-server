@@ -1,8 +1,9 @@
 import * as passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
-import { logger } from '../../';
-import { User } from '../../api/user/user';
+
+import { logger } from '../../logger';
 import { knexDb } from '../../sqldb';
+import { User } from '../../api/user/user';
 
 async function localAuthenticate(email, password, done) {
   try {

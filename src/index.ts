@@ -10,7 +10,6 @@ import * as compression from 'compression';
 import * as methodOverride from 'method-override';
 import * as errorHandler from 'errorhandler';
 import * as passport from 'passport';
-import * as bunyan from 'bunyan';
 
 import * as statusMonitor from 'express-status-monitor';
 
@@ -19,26 +18,13 @@ import routing from './routes';
 import { initializeSocket } from './config/socket';
 import { worldData } from './api/world/worldData';
 import { mapManager } from './api/map/mapManager';
+import { logger } from './logger';
 // import queue from './api/world/queue';
 
 const app = express();
 const env = app.get('env');
 const server = http.createServer(app);
 const worldName = 'megapolis';
-
-export const logger = bunyan.createLogger({
-  name: 'app',
-  streams: [{
-    level: 'info',
-    stream: process.stdout,
-  }, {
-    level: 'error',
-    path: 'error.log',
-  }, {
-    level: 'error',
-    stream: process.stdout,
-  }],
-});
 
 export const io = socket(server, {
   path: '/socket.io-client',

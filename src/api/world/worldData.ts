@@ -1,10 +1,11 @@
 import * as Knex from 'knex';
 import { WorldData as WorldDataModel } from 'strat-ego-common';
+
 import { Building } from '../building/building';
 import { Unit } from '../unit/unit';
 import { World } from './world';
 import { knexDb } from '../../sqldb';
-import { logger } from '../../';
+import { logger } from '../../logger';
 
 export class WorldData {
   public world: World;

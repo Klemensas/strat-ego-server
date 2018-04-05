@@ -4,7 +4,7 @@ import { MapTown, Coords, Profile } from 'strat-ego-common';
 import { Town } from '../town/town';
 import { Player } from '../player/player';
 import { World } from '../world/world';
-import { logger } from '../../';
+import { logger } from '../../logger';
 import { Alliance } from '../alliance/alliance';
 import { worldData } from '../world/worldData';
 import { knexDb } from '../../sqldb';
