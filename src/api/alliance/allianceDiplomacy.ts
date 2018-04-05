@@ -1,8 +1,8 @@
 import { DiplomacyType, DiplomacyStatus } from 'strat-ego-common';
 
 import { BaseModel } from '../../sqldb/baseModel';
-import { Alliance } from './alliance.model';
-import { Player } from '../world/player.model';
+import { Alliance } from './alliance';
+import { Player } from '../player/player';
 
 export class AllianceDiplomacy extends BaseModel {
   readonly id: number;

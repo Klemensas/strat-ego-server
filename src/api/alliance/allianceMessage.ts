@@ -1,5 +1,5 @@
 import { BaseModel } from '../../sqldb/baseModel';
-import { Alliance } from './alliance.model';
+import { Alliance } from './alliance';
 import { Player } from '../player/player';
 
 export class AllianceMessage extends BaseModel {

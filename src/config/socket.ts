@@ -7,7 +7,6 @@ import { AllianceSocket } from '../api/alliance/alliance.socket';
 import { TownSocket } from '../api/town/town.socket';
 import { MapSocket } from '../api/map/map.socket';
 import { logger } from '../';
-import { Player } from 'api/world/player.model';
 import { serializeError } from '../errorSerializer';
 
 export interface AuthenticatedSocket extends SocketIO.Socket {
