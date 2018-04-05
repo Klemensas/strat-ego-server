@@ -1,5 +1,5 @@
-import MapManager from '../../components/map';
 import { UserSocket } from 'config/socket';
+import { mapManager } from './mapManager';
 
 export class MapSocket {
   public static onConnect(socket: UserSocket) {
@@ -7,6 +7,6 @@ export class MapSocket {
   }
 
   private static sendMapData(socket: UserSocket, payload?: any) {
-    socket.emit('map', MapManager.getAllData());
+    socket.emit('map', mapManager.getAllData());
   }
 }

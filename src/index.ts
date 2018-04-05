@@ -14,19 +14,17 @@ import * as bunyan from 'bunyan';
 
 import * as statusMonitor from 'express-status-monitor';
 
-import config from './config/environment';
-import { main, world } from './sqldb';
-import seedWorld from './sqldb/seed';
-import { WorldDataService } from './components/world';
-import MapManager from './components/map';
+import * as config from './config/environment';
 import routing from './routes';
 import { initializeSocket } from './config/socket';
+import { worldData } from './api/world/worldData';
+import { mapManager } from './api/map/mapManager';
 // import queue from './api/world/queue';
 
 const app = express();
 const env = app.get('env');
 const server = http.createServer(app);
-const worldName = 'Megapolis';
+const worldName = 'megapolis';
 
 export const logger = bunyan.createLogger({
   name: 'app',
@@ -36,6 +34,9 @@ export const logger = bunyan.createLogger({
   }, {
     level: 'error',
     path: 'error.log',
+  }, {
+    level: 'error',
+    stream: process.stdout,
   }],
 });
 
@@ -58,11 +59,8 @@ app.use(morgan('dev'));
 app.use(cors());
 routing(app);
 
-main.sequelize.sync()
-  .then(() => world.sequelize.sync())
-  .then(() => (config.seedDB ? seedWorld() : null))
-  .then(() => WorldDataService.readWorld(worldName))
-  .then(() => MapManager.initialize(worldName))
+worldData.readWorld(worldName)
+  .then(() => mapManager.initialize(worldName))
   .then(() => initializeSocket(io))
   .then(() => logger.info('server ready!'));
   // .then(() => queue.go());

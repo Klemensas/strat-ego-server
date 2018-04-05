@@ -1,7 +1,7 @@
-import { Movement } from '../town/movement.model';
-import { Town } from '../town/town.model';
-import { BuildingQueue } from './buildingQueue.model';
-import { UnitQueue } from './unitQueue.model';
+import { Movement } from '../town/movement';
+import { Town } from '../town/town';
+import { BuildingQueue } from '../building/buildingQueue';
+import { UnitQueue } from '../unit/unitQueue';
 
 class Queue {
   public interval;

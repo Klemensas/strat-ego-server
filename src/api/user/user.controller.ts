@@ -1,7 +1,6 @@
 import { signToken } from '../../auth/auth.service';
-import { User } from '../world/user.model';
-import { UserWorld } from '../world/userWorld.model';
-import { World } from '../world/world.model';
+import { User } from './user';
+import { knexDb } from '../../sqldb';
 
 function validationError(res, statusCode = 422) {
   return (err) => {
@@ -19,103 +18,82 @@ function handleError(res, statusCode = 500) {
  * Get list of users
  * restriction: 'admin'
  */
-export function index(req, res) {
-  return User.find({ attributes: { exclude: ['salt', 'password'] }})
-    .then((users) => {
-      res.status(200).json(users);
-    })
-    .catch(handleError(res));
+export async function index(req, res) {
+  try {
+    const users = await User.query(knexDb.main).select(['id', 'name', 'email', 'role', 'provider']);
+    return res.status(200).json(users);
+  } catch (err) {
+    return handleError(res)(err);
+  }
 }
 
 /**
  * Creates a new user
  */
 // export function create(req, res, next) {
-export function create(req, res) {
+export async function create(req, res) {
   const newUser = req.body;
   newUser.provider = 'local';
   newUser.role = 'user';
-  User.create(newUser)
-    .then((user) => {
-      res.json({ token: signToken(user) });
-    })
-    .catch(validationError(res));
+  try {
+    const user = await User.query(knexDb.main).insert(newUser);
+    return res.json({ token: signToken(user) });
+  } catch (err) {
+    return validationError(res)(err);
+  }
 }
 
 /**
  * Get a single user
  */
-export function show(req, res, next) {
+export async function show(req, res, next) {
   const userId = req.params.id;
-
-  return User.findById(userId)
-    .then((user) => {
-      if (!user) {
-        res.status(404).end();
-        return;
-      }
-      res.json(user.profile);
-    })
-    .catch((err) => next(err));
+  try {
+    const user = await User.query(knexDb.main).findById(userId);
+    return res.json(user.profile);
+  } catch (err) {
+    return validationError(res)(err);
+  }
 }
 
 /**
  * Deletes a user
  * restriction: 'admin'
  */
-export function destroy(req, res) {
-  return User.destroy({ where: { id: req.params.id }})
-    .then(() => {
-      res.status(204).end();
-    })
-    .catch(handleError(res));
+export async function destroy(req, res) {
+  try {
+    const user = await User.query(knexDb.main).deleteById(req.params.id);
+    return res.status(204).end();
+  } catch (err) {
+    return validationError(res)(err);
+  }
 }
 
 /**
  * Change a users password
  */
 // export function changePassword(req, res, next) {
-export function changePassword(req, res) {
+export async function changePassword(req, res) {
   const userId = req.user.id;
   const oldPass = String(req.body.oldPassword);
   const newPass = String(req.body.newPassword);
-
-  return User.findById(userId)
-    .then((user) => {
-      if (user.authenticate(oldPass)) {
-        user.password = newPass;
-        return user.save()
-          .then(() => {
-            res.status(204).end();
-          })
-          .catch(validationError(res));
-      } else {
-        return res.status(403).end();
-      }
-    });
+  try {
+    const user = await User.query(knexDb.main).findById(userId);
+    const isAuthenticated = await user.authenticate(oldPass);
+    if (isAuthenticated) {
+      await user.$query(knexDb.main).patch({ 'password': newPass });
+      res.status(204).end();
+    } else {
+      return res.status(403).end();
+    }
+  } catch (err) {
+    return validationError(res)(err);
+  }
 }
 
 /**
  * Get my info
  */
-export function me(req, res, next) {
-  const userId = req.user.id;
-  return User.findOne({
-    where: { id: userId },
-    attributes: {
-      exclude: ['salt', 'password'],
-    },
-    include: [{
-      model: World,
-    }],
-  })
-  // , '-salt -password').populate('gameData.towns').exec()
-    // .then(user => user.getWorlds())
-    .then((user) => { // don't ever give out the password or salt
-      if (!user) {
-        return res.status(401).end();
-      }
-      return res.json(user);
-    })
-    .catch((err) => next(err));
+export async function me(req, res, next) {
+  return res.json(req.user);
 }

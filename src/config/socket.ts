@@ -1,13 +1,13 @@
 import * as socketJwt from 'socketio-jwt';
-import config from './environment';
-import { WorldDataService, WorldData } from '../components/world';
-import { PlayerSocket } from '../api/world/player.socket';
+import { AlliancePermissions } from 'strat-ego-common';
+
+import * as config from './environment';
+import { PlayerSocket } from '../api/player/player.socket';
 import { AllianceSocket } from '../api/alliance/alliance.socket';
 import { TownSocket } from '../api/town/town.socket';
 import { MapSocket } from '../api/map/map.socket';
 import { logger } from '../';
-import { Player } from 'api/world/player.model';
-import { AlliancePermissions } from 'api/alliance/allianceRole.model';
+import { serializeError } from '../errorSerializer';
 
 export interface AuthenticatedSocket extends SocketIO.Socket {
   decoded_token: {
@@ -29,10 +29,19 @@ export interface UserSocket extends AuthenticatedSocket {
     allianceName?: string;
     allianceRoleId?: number;
     alliancePermissions?: AlliancePermissions;
-    updatedAt?: Date | string;
-    connectedAt?: Date;
+    updatedAt?: number;
+    connectedAt?: number;
   };
   log(...data: any[]): void;
+  handleError(err: any, type: string, target?: string, payload?: any): void;
+}
+
+export class ErrorMessage extends Error {
+  constructor(private error: string) {
+    super(error);
+  }
+
+  toString() { return this.error; }
 }
 
 export function initializeSocket(socketio: SocketIO.Server) {
@@ -45,15 +54,26 @@ export function initializeSocket(socketio: SocketIO.Server) {
 
 export function setupUserSocket(socket: UserSocket) {
   socket.address = `${socket.request.connection.remoteAddress}:${socket.request.connection.remotePort}`;
-  socket.log = (...data) => logger.error(...data, `SocketIO ${socket.nsp.name} [${socket.address}]`);
   socket.userData = {
     worldName: socket.handshake.query.world,
     userId: socket.decoded_token.id,
     username: socket.decoded_token.name,
-    connectedAt: new Date(),
+    connectedAt: Date.now(),
   };
-  console.log('socket logged in', socket.userData);
+  socket.log = (data) => logger.error(serializeError(data), `SocketIO ${socket.nsp.name} [${socket.address}]`);
+  socket.handleError = (err: Error, type: string, target?: string, payload?: any) => {
+    const message = err && typeof err.toString === 'function' ? err.toString() : err;
+    const error = {
+      type,
+      error: message,
+      data: payload,
+    };
 
+    socket.log(error);
+    if (target) {
+      socket.emit(target, error);
+    }
+  };
   socket.on('disconnect', () => {
     socket.log(`${socket.userData.username} disconnected`);
   });
