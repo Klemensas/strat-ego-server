@@ -15,8 +15,6 @@ import * as bunyan from 'bunyan';
 import * as statusMonitor from 'express-status-monitor';
 
 import * as config from './config/environment';
-import { main, world } from './sqldb';
-import seedWorld from './sqldb/seed';
 import routing from './routes';
 import { initializeSocket } from './config/socket';
 import { worldData } from './api/world/worldData';
@@ -61,10 +59,7 @@ app.use(morgan('dev'));
 app.use(cors());
 routing(app);
 
-main.sequelize.sync()
-  .then(() => world.sequelize.sync())
-  .then(() => (config.seedDB ? seedWorld() : null))
-  .then(() => worldData.readWorld(worldName))
+worldData.readWorld(worldName)
   .then(() => mapManager.initialize(worldName))
   .then(() => initializeSocket(io))
   .then(() => logger.info('server ready!'));
