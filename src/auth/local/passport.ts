@@ -7,19 +7,19 @@ import { User } from '../../api/user/user';
 
 async function localAuthenticate(email, password, done) {
   try {
-    const user = await User.query(knexDb.main).findOne('email', email.toLowerCase())
+    const user = await User.query(knexDb.main).findOne('email', email.toLowerCase());
     if (!user) {
       return done(null, false, {
         message: 'This email is not registered.',
       });
     }
-  
-    const auth = await user.authenticate(password)
+
+    const auth = await user.authenticate(password);
     if (!auth) {
       return done(null, false, { message: 'This password is not correct.' });
     }
     return done(null, user);
-  } catch(err) {
+  } catch (err) {
     logger.error(err, 'Auth error');
     return done(err);
   }

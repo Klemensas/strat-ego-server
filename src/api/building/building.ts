@@ -33,7 +33,7 @@ export class Building extends BaseModel {
         properties: {
           max: { type: 'number' },
           min: { type: 'number' },
-        }
+        },
       },
       requirements: {
         type: 'array',
@@ -42,8 +42,8 @@ export class Building extends BaseModel {
           properties: {
             item: { type: 'string' },
             level: { type: 'number' },
-          }
-        }
+          },
+        },
       },
       data: {
         type: 'array',
@@ -57,7 +57,7 @@ export class Building extends BaseModel {
                 wood: { type: 'number' },
                 clay: { type: 'number' },
                 iron: { type: 'number' },
-              }
+              },
             },
           },
           storage: { type: 'number' },
@@ -65,8 +65,8 @@ export class Building extends BaseModel {
           recruitment: { type: 'number' },
           production: { type: 'number' },
           defense: { type: 'number' },
-        }
+        },
       },
-    }
-  }
+    },
+  };
 }
