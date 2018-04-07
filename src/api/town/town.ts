@@ -183,7 +183,7 @@ export class Town extends BaseModel {
       await item.$query(trx).delete();
       await this.$query<Town>(trx)
         .patch(update)
-        .context({ resourcesUpdated: true });
+        .context({ resourcesUpdated: true, updateScore: true });
       await trx.commit();
 
       this.buildingQueues = this.buildingQueues.filter(({ id }) => id !== item.id);
@@ -242,6 +242,13 @@ export class Town extends BaseModel {
 
   getRecruitmentModifier() {
     return worldData.buildingMap.barracks.data[this.buildings.barracks.level].recruitment;
+  }
+
+  calculateScore(): number {
+    return worldData.buildings.reduce((result, building) => {
+      const target = this.buildings[building.name].level;
+      return result + building.data[target].score;
+    }, 0);
   }
 
   static getAvailableCoords = async (coords: Coords[]) => {
@@ -365,12 +372,14 @@ export class Town extends BaseModel {
     const date = +(this.updatedAt || Date.now());
     if (!queryContext.resourcesUpdated) {
       this.resources = this.getResources(date, opt.old.updatedAt, opt.old);
-      this.updatedAt = date;
     }
     if (!queryContext.loyaltyUpdated) {
       this.loyalty = this.getLoyalty(date, opt.old.updatedAt, opt.old);
-      this.updatedAt = date;
     }
+    if (queryContext.updateScore) {
+      this.score = this.calculateScore();
+    }
+    this.updatedAt = date;
   }
 
   static jsonSchema = {
