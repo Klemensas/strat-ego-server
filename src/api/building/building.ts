@@ -11,6 +11,7 @@ export class Building extends BaseModel {
   };
   requirements?: Requirements[];
   data: [{
+    score: number;
     buildTime: number;
     costs: Resources;
     storage?: number;
@@ -50,20 +51,21 @@ export class Building extends BaseModel {
         items: {
           type: 'object',
           properties: {
-            buildTime: { type: 'number' },
+            buildTime: { type: 'integer' },
             costs: {
               type: 'object',
               properties: {
-                wood: { type: 'number' },
-                clay: { type: 'number' },
-                iron: { type: 'number' },
+                wood: { type: 'integer' },
+                clay: { type: 'integer' },
+                iron: { type: 'integer' },
               },
             },
           },
-          storage: { type: 'number' },
-          population: { type: 'number' },
+          score: { type: 'integer' },
+          storage: { type: 'integer' },
+          population: { type: 'integer' },
           recruitment: { type: 'number' },
-          production: { type: 'number' },
+          production: { type: 'integer' },
           defense: { type: 'number' },
         },
       },

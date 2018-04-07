@@ -29,6 +29,7 @@ export class Town extends BaseModel {
   resources?: Resources;
   units?: TownUnits;
   buildings?: TownBuildings;
+  score?: number;
 
   // Associations
   playerId?: number;
@@ -353,6 +354,7 @@ export class Town extends BaseModel {
             return result;
           }, {}),
         },
+        score: { type: 'integer' },
       },
     };
   }
