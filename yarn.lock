@@ -2603,8 +2603,8 @@ jsonwebtoken@^5.0.0:
     xtend "^4.0.1"
 
 jsonwebtoken@^8.1.0:
-  version "8.2.0"
-  resolved "https://registry.yarnpkg.com/jsonwebtoken/-/jsonwebtoken-8.2.0.tgz#690ec3a9e7e95e2884347ce3e9eb9d389aa598b3"
+  version "8.2.1"
+  resolved "https://registry.yarnpkg.com/jsonwebtoken/-/jsonwebtoken-8.2.1.tgz#333ee39aa8f238f32fa41693e7a2fb7e42f82b31"
   dependencies:
     jws "^3.1.4"
     lodash.includes "^4.3.0"
@@ -4318,7 +4318,7 @@ statuses@~1.4.0:
 
 "strat-ego-common@github:klemensas/strat-ego-common":
   version "0.0.1"
-  resolved "https://codeload.github.com/klemensas/strat-ego-common/tar.gz/002779baa8bf0c39bee6c11dfe6285977248c7db"
+  resolved "https://codeload.github.com/klemensas/strat-ego-common/tar.gz/c1e353ad61ec14f15faa5ac76b0f3df09ece2d0f"
 
 stream-combiner@~0.0.4:
   version "0.0.4"

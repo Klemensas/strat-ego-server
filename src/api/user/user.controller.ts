@@ -81,7 +81,7 @@ export async function changePassword(req, res) {
     const user = await User.query(knexDb.main).findById(userId);
     const isAuthenticated = await user.authenticate(oldPass);
     if (isAuthenticated) {
-      await user.$query(knexDb.main).patch({ 'password': newPass });
+      await user.$query(knexDb.main).patch({ password: newPass });
       res.status(204).end();
     } else {
       return res.status(403).end();

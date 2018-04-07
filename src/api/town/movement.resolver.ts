@@ -1,10 +1,10 @@
 import { MovementUnit, TownUnits, TownUnit, CombatStrength, Resources, MovementType, CombatOutcome, Haul, Dict } from 'strat-ego-common';
+import { transaction } from 'objection';
 
+import { knexDb } from '../../sqldb';
+import { worldData } from '../world/worldData';
 import { Town } from './town';
 import { Movement } from './movement';
-import { worldData } from '../world/worldData';
-import { knexDb } from '../../sqldb';
-import { transaction } from 'objection';
 import { Report } from './report';
 
 const defaultStrength: CombatStrength = { general: 0, cavalry: 0, archer: 0 };
@@ -96,12 +96,12 @@ export class MovementResolver {
       return sides;
     }, [{ side: 'attack', strength: 0 }, { side: 'defense', strength: 0 }]).sort((a, b) => b.strength - a.strength);
 
-    const winnerLoss = MovementResolver.calculateLoss(winner.strength, losser.strength);
+    const winnerSurvival = MovementResolver.calculateSurvivalPercent(winner.strength, losser.strength);
 
     const outcomeHandler = winner.side === 'attack' ?
       MovementResolver.handleAttackWin :
       MovementResolver.handleDefenseWin;
-    return outcomeHandler(unitArrays, winnerLoss, movement, targetTown, originTown);
+    return outcomeHandler(unitArrays, winnerSurvival, movement, targetTown, originTown);
   }
 
   static async resolveReturn(movement: Movement, targetTown: Town) {
@@ -144,12 +144,12 @@ export class MovementResolver {
     return targetTown;
   }
 
-  static handleAttackWin(unitArrays: CombatantList, winnerLoss: number, movement: Movement, targetTown: Town, originTown: Town) {
+  static handleAttackWin(unitArrays: CombatantList, winnerSurvival: number, movement: Movement, targetTown: Town, originTown: Town) {
     const targetResources: Resources = targetTown.getResources(movement.endsAt);
     const targetLoyalty = targetTown.getLoyalty(movement.endsAt);
 
     const attackResult = unitArrays.attack.reduce((result, [key, val]) => {
-      const survived = Math.round(val * winnerLoss);
+      const survived = Math.round(val * winnerSurvival);
       const loss = val - survived;
       result.attackingUnits[key] = val;
       result.unitChange = result.unitChange || !!loss;
@@ -241,9 +241,9 @@ export class MovementResolver {
     });
   }
 
-  static handleDefenseWin(unitArrays: CombatantList, winnerLoss: number, movement: Movement, targetTown: Town, originTown: Town) {
+  static handleDefenseWin(unitArrays: CombatantList, winnerSurvival: number, movement: Movement, targetTown: Town, originTown: Town) {
     const defenseResult = unitArrays.defense.reduce((outcome, [key, val]) => {
-      const survived = Math.round(val.inside * winnerLoss);
+      const survived = Math.round(val.inside * winnerSurvival);
       const loss = val.inside - survived;
       outcome.defendingUnits[key] = val.inside;
       outcome.losses[key] = loss;
@@ -378,7 +378,7 @@ export class MovementResolver {
     }, { ...defaultStrength });
   }
 
-  static calculateLoss(winner: number, loser: number): number {
+  static calculateSurvivalPercent(winner: number, loser: number): number {
     return 1 - (((loser / winner) ** 0.5) / (winner / loser));
   }
 

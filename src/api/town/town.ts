@@ -7,7 +7,7 @@ import { Player } from '../player/player';
 import { worldData } from '../world/worldData';
 import { BuildingQueue } from '../building/buildingQueue';
 import { UnitQueue } from '../unit/unitQueue';
-import { logger } from '../..';
+import { logger } from '../../logger';
 import { transaction } from 'objection';
 import { Movement } from './movement';
 import { mapManager } from '../map/mapManager';
