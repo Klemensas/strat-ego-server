@@ -288,6 +288,8 @@ const buildingList = [
     },
     baseTime: 20,
     timeFactor: 1.4,
+    baseScore: 30,
+    scoreFactor: 1.75,
   }, {
     name: 'barracks',
     levels: 20,
@@ -308,6 +310,8 @@ const buildingList = [
     },
     baseTime: 30,
     timeFactor: 1.2,
+    baseScore: 20,
+    scoreFactor: 1.6,
     additional: {
       recruitment: {
         base: 1,
@@ -338,6 +342,8 @@ const buildingList = [
     },
     baseTime: 15,
     timeFactor: 1.2,
+    baseScore: 14,
+    scoreFactor: 1.4,
     additional: {
       production: {
         base: 30,
@@ -364,6 +370,8 @@ const buildingList = [
     },
     baseTime: 15,
     timeFactor: 1.2,
+    baseScore: 14,
+    scoreFactor: 1.4,
     additional: {
       production: {
         base: 30,
@@ -390,6 +398,8 @@ const buildingList = [
     },
     baseTime: 18,
     timeFactor: 1.2,
+    baseScore: 14,
+    scoreFactor: 1.4,
     additional: {
       production: {
         base: 30,
@@ -416,6 +426,8 @@ const buildingList = [
     },
     baseTime: 60,
     timeFactor: 1.2,
+    baseScore: 10,
+    scoreFactor: 1.5,
     additional: {
       defense: {
         base: 1.04,
@@ -442,6 +454,8 @@ const buildingList = [
     },
     baseTime: 17,
     timeFactor: 1.2,
+    baseScore: 13,
+    scoreFactor: 1.44,
     additional: {
       storage: {
         base: 1000,
@@ -468,6 +482,8 @@ const buildingList = [
     },
     baseTime: 20,
     timeFactor: 1.2,
+    baseScore: 16,
+    scoreFactor: 1.38,
     additional: {
       population: {
         base: 240,
@@ -491,6 +507,8 @@ const buildingList = [
     },
     baseTime: 14400,
     timeFactor: 1,
+    baseScore: 300,
+    scoreFactor: 2,
     requirements: [{
       item: 'headquarters',
       level: 15,
@@ -591,6 +609,7 @@ exports.seed = (knex, Promise) => knex('Unit').del()
           clay: Math.ceil(building.costs.clay.base * (building.costs.clay.factor ** i)),
           iron: Math.ceil(building.costs.iron.base * (building.costs.iron.factor ** i)),
         },
+        score:  Math.ceil(building.baseScore * (building.scoreFactor ** i))
       };
       if (building.additional) {
         Object.entries(building.additional).forEach(([key, value]) => {
