@@ -515,6 +515,43 @@ const buildingList = [
     }],
   },
 ];
+function generateBuildings(list = buildingList) {
+  return list.map((building) => {
+    const item = {
+      name: building.name,
+      levels: { max: building.levels, min: building.min },
+      requirements: building.requirements,
+      data: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+  
+    for (let i = 0; i <= item.levels.max; i++) {
+      const data = {
+        buildTime: Math.ceil((building.baseTime * (building.timeFactor ** i)) / speed) * 1000,
+        costs: {
+          wood: Math.ceil(building.costs.wood.base * (building.costs.wood.factor ** i)),
+          clay: Math.ceil(building.costs.clay.base * (building.costs.clay.factor ** i)),
+          iron: Math.ceil(building.costs.iron.base * (building.costs.iron.factor ** i)),
+        },
+        score:  Math.ceil(building.baseScore * (building.scoreFactor ** i))
+      };
+      if (building.additional) {
+        Object.entries(building.additional).forEach(([key, value]) => {
+          const factor = i ? value.factor ** (i - 1) : 0;
+          let base = value.base;
+          data[key] = +(base * factor).toPrecision(3);
+          if (key === 'production') {
+            base *= speed;
+            data[key] = Math.ceil(data[key]);
+          }
+        });
+      }
+      item.data.push(data);
+    }
+    return item;
+  })
+}
 const speed = process.env.WORLD_SPEED || 1;
 const baseProduction = process.env.BASE_PRODUCTION || 5000;
 
@@ -591,46 +628,11 @@ exports.seed = (knex, Promise) => knex('Unit').del()
     return unit;
   })))
   .then(() => knex('Building').del())
-  .then(() => knex('Building').insert(buildingList.map((building) => {
-    const item = {
-      name: building.name,
-      levels: { max: building.levels, min: building.min },
-      requirements: building.requirements,
-      data: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-  
-    for (let i = 0; i <= item.levels.max; i++) {
-      const data = {
-        buildTime: Math.ceil((building.baseTime * (building.timeFactor ** i)) / speed) * 1000,
-        costs: {
-          wood: Math.ceil(building.costs.wood.base * (building.costs.wood.factor ** i)),
-          clay: Math.ceil(building.costs.clay.base * (building.costs.clay.factor ** i)),
-          iron: Math.ceil(building.costs.iron.base * (building.costs.iron.factor ** i)),
-        },
-        score:  Math.ceil(building.baseScore * (building.scoreFactor ** i))
-      };
-      if (building.additional) {
-        Object.entries(building.additional).forEach(([key, value]) => {
-          const factor = i ? value.factor ** (i - 1) : 0;
-          let base = value.base;
-          data[key] = +(base * factor).toPrecision(3);
-          if (key === 'production') {
-            base *= speed;
-            data[key] = Math.ceil(data[key]);
-          }
-        });
-      }
-      item.data.push(data);
-    }
-    return item;
-  })))
+  .then(() => knex('Building').insert(generateBuildings()))
   .then(() => knex('Town').del())
   .then(() => {
     const coords = getCoordsInRange(townGenerationData.area, townGenerationData.furthestRing, townGenerationData.size);
     const factor = townGenerationData.percent;
-    // const units = 
     const resources = {
       wood: 800,
       clay: 800,
@@ -645,6 +647,7 @@ exports.seed = (knex, Promise) => knex('Unit').del()
       result[item.name] = { level: item.min, queued: 0 };
       return result;
     }, {});
+    const score = buildingList.reduce((result, item) => result + item.min * item.baseScore, 0);
     const units = unitList.reduce((result, item) => {
       result[item.name] = { inside: 0, outside: 0, queued: 0 };
       return result;
@@ -660,9 +663,13 @@ exports.seed = (knex, Promise) => knex('Unit').del()
         production,
         buildings,
         units,
+        score,
         createdAt: Date.now(),
         updatedAt: Date.now(),  
       }); }
       return towns;
     }, []))
   })
+
+exports.buildingList = buildingList;
+exports.generateBuildings = generateBuildings;

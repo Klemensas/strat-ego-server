@@ -38,6 +38,7 @@ exports.up = function(knex, Promise) {
       table.jsonb('resources').notNullable();
       table.jsonb('units').notNullable();
       table.jsonb('buildings').notNullable();
+      table.integer('score').notNullable();
       table.integer('playerId').unsigned().references('id').inTable('Player');
       table.bigInteger('createdAt').unsigned().notNullable();
       table.bigInteger('updatedAt').unsigned().notNullable();
