@@ -42,11 +42,80 @@ const testTownData = {
     return result;
   }, {}),
   score: 0,
+  updatedAt: Date.now(),
+  createdAt: Date.now(),
 };
 
 let testTown: Town;
 beforeEach(() => {
   testTown  = Town.fromJson(testTownData, { skipValidation: true });
+});
+
+describe('$beforeUpdate', () => {
+  let getResourcesSpy;
+  let getLoyaltySpy;
+  let calculateScoreSpy;
+  const patchData = {
+    updatedAt: Date.now() + 500000,
+  };
+
+  beforeEach(() => {
+    getResourcesSpy = jest.spyOn(testTown, 'getResources').mockImplementation(() => ({}));
+    getLoyaltySpy = jest.spyOn(testTown, 'getLoyalty').mockImplementation(() => ({}));
+    calculateScoreSpy = jest.spyOn(testTown, 'calculateScore').mockImplementation(() => ({}));
+  });
+
+  test('should only work if old value is available and set date as needed', () => {
+    testTown.$beforeUpdate({}, {});
+    expect(testTown.updatedAt).toBe(testTownData.updatedAt);
+
+    // Remove updatedAt to simulate patch as patch only has the updated properties
+    delete testTown.updatedAt;
+    testTown.$beforeUpdate({ old: patchData }, {});
+    expect(testTown.updatedAt).toBeTruthy();
+    expect(testTown.updatedAt).not.toBe(testTownData.updatedAt);
+  });
+
+  test('should update resources only on no resourcesUpdated flag', () => {
+    testTown.$beforeUpdate({ old: patchData }, { resourcesUpdated: true });
+    expect(getResourcesSpy).not.toHaveBeenCalled();
+    expect(testTown.resources).toBe(testTownData.resources);
+
+    testTown.$beforeUpdate({ old: patchData }, {});
+    expect(getResourcesSpy).toHaveBeenCalledWith(testTownData.updatedAt, patchData.updatedAt, patchData);
+    expect(testTown.resources).not.toBe(testTownData.resources);
+  });
+
+  test('should update loyalty only on no loyaltyUpdated flag', () => {
+    testTown.$beforeUpdate({ old: patchData }, { loyaltyUpdated: true });
+    expect(getLoyaltySpy).not.toHaveBeenCalled();
+    expect(testTown.loyalty).toBe(testTownData.loyalty);
+
+    testTown.$beforeUpdate({ old: patchData }, {});
+    expect(getLoyaltySpy).toHaveBeenCalledWith(testTownData.updatedAt, patchData.updatedAt, patchData);
+    expect(testTown.loyalty).not.toBe(testTownData.loyalty);
+  });
+
+  test('should update score only if updateScore flag is present', () => {
+    testTown.$beforeUpdate({ old: patchData }, {});
+    expect(calculateScoreSpy).not.toHaveBeenCalled();
+    expect(testTown.score).toBe(testTownData.score);
+
+    testTown.$beforeUpdate({ old: patchData }, { updateScore: true });
+    expect(calculateScoreSpy).toHaveBeenCalledWith();
+    expect(testTown.score).not.toBe(testTownData.score);
+  });
+
+  test('should work with mixed flags', () => {
+    testTown.$beforeUpdate({ old: patchData }, { updateScore: true });
+    expect(getResourcesSpy).toHaveBeenCalledWith(testTownData.updatedAt, patchData.updatedAt, patchData);
+    expect(testTown.resources).not.toBe(testTownData.resources);
+    expect(getLoyaltySpy).toHaveBeenCalledWith(testTownData.updatedAt, patchData.updatedAt, patchData);
+    expect(testTown.loyalty).not.toBe(testTownData.loyalty);
+    expect(calculateScoreSpy).toHaveBeenCalledWith();
+    expect(testTown.score).not.toBe(testTownData.score);
+
+  });
 });
 
 test('calculateScore should return total town score', () => {
