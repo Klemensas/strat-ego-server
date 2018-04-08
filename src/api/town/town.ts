@@ -246,8 +246,9 @@ export class Town extends BaseModel {
 
   calculateScore(): number {
     return worldData.buildings.reduce((result, building) => {
-      const target = this.buildings[building.name].level;
-      return result + building.data[target].score;
+      const target = building.data[this.buildings[building.name].level - 1];
+      const score = target ? target.score : 0;
+      return result + score;
     }, 0);
   }
 
