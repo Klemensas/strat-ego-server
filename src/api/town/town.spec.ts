@@ -1,5 +1,3 @@
-import { test } from 'ava';
-
 import { knexDb } from '../../sqldb';
 import { worldData } from '../world/worldData';
 import { Town } from './town';
@@ -47,18 +45,18 @@ const testTownData = {
 };
 
 let testTown: Town;
-test.beforeEach(() => {
+beforeEach(() => {
   testTown  = Town.fromJson(testTownData, { skipValidation: true });
 });
 
-test('calculateScore should return total town score', (t) => {
+test('calculateScore should return total town score', () => {
   const score = buildings.reduce((result, item) => result + item.levels.min * item.data[0].score, 0);
-  t.is(testTown.calculateScore(), score);
+  expect(testTown.calculateScore()).toBe(score);
 
   const maxScore = buildings.reduce((result, item) => result + item.data[item.data.length - 1].score, 0);
   testTown.buildings = buildings.reduce((result, item) => {
     result[item.name] = { level: item.levels.max, queued: 0 };
     return result;
   }, {});
-  t.is(testTown.calculateScore(), maxScore);
+  expect(testTown.calculateScore()).toBe(maxScore);
 });
