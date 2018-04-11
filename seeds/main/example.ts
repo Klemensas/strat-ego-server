@@ -1,11 +1,24 @@
-const speed = process.env.WORLD_SPEED || 1;
+import { User } from '../../src/api/user/user';
+import { World } from '../../src/api/world/world';
 
-exports.seed = (knex, Promise) => knex('User').del()
-  .then(() => knex('User').insert([{
+export const seed = (knex, speed = 1, demoUserCount = 100) => Promise.all([
+  User.query(knex).del().then(() => {
+    const demoUsers = [];
+    for (let i = 0; i < demoUserCount; i++) {
+      demoUsers.push({
+        name: `demo#${i}`,
+        email: `user${i}@demo.com`,
+        password: 'test',
+        role: 'member',
+        provider: 'local',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    }
+    return User.query(knex).insert([{
       name: 'admin',
       email: 'admin@admin.com',
-      password: 'dbgkNbBtNRPKI0Gvnz8bnvCpBipvCSjRHiDbd9y1+ctZN59vmbLHzDF5cNjYL8EjHUJTSE4tWSDpAvWBapvvHw==',
-      salt: 'mepyIyafki7lYV/SjUemBg==',
+      password: 'test',
       role: 'admin',
       provider: 'local',
       createdAt: Date.now(),
@@ -13,16 +26,16 @@ exports.seed = (knex, Promise) => knex('User').del()
     }, {
       name: 'test',
       email: 'test@test.com',
-      password: 'm0on7YE189BX+w89s5dvPwUX1+C1J9ZT8MrE23gR7RBT5KEolUiSJBOqpXpKMCtzgO1MCIVQojQv1ImGfYa9xQ==',
+      password: 'test',
       salt: 'AzhSjDA2sFinkcPEOY4ZuA==',
       role: 'member',
       provider: 'local',
       createdAt: Date.now(),
       updatedAt: Date.now(),
-    }])
-  )
-  .then(() => knex('World').del())
-  .then(() => knex('World').insert([{
+    },
+  ...demoUsers]);
+  }),
+  World.query(knex).del().then(() => World.query(knex).insert([{
     name: 'megapolis',
     baseProduction: 5000,
     speed,
@@ -39,4 +52,5 @@ exports.seed = (knex, Promise) => knex('User').del()
     loyaltyReductionRange: [100, 105],
     createdAt: Date.now(),
     updatedAt: Date.now(),
-}]))
+  }])),
+]);

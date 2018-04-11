@@ -12,7 +12,7 @@
     "test:full": "export NODE_ENV=test|| set NODE_ENV=test&& npm run migrate && npm run seed && npm run test",
     "dev": "nodemon -e ts --exec ts-node --project . ./src",
     "lint": "tslint ./src/**/*.ts",
-    "seed": "npm run seed:main && npm run seed:world",
+    "seed": "ts-node ./seeds",
     "seed:main": "knex seed:run --knexfile knexfile.main.js",
     "seed:world": "knex seed:run --knexfile knexfile.world.js",
     "migrate": "npm run migrate:main && npm run migrate:world",
