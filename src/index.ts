@@ -48,7 +48,7 @@ routing(app);
 
 worldData.readWorld(worldName)
   .then(() => mapManager.initialize(worldName))
-  .then(() => scoreTracker.readScores(worldName))
+  .then(() => scoreTracker.readScores())
   .then(() => initializeSocket(io))
   .then(() => logger.info('server ready!'));
   // .then(() => queue.go());

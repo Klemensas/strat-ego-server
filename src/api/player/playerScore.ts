@@ -6,7 +6,7 @@ import { Player } from './player';
 import { Town } from '../town/town';
 
 // TODO: consider using better data structure and better sorting
-class ScoreTracker {
+export class ScoreTracker {
   public playerScores: { [id: number]: RankProfile } = {};
   public rankings = [];
   public lastUpdate = null;
@@ -15,7 +15,7 @@ class ScoreTracker {
     return this.rankings.map((id) => this.playerScores[id]);
   }
 
-  public async readScores(name: string) {
+  public async readScores() {
     try {
       const players: RankProfile[] = await Player.query(knexDb.world)
         .select(
@@ -33,6 +33,7 @@ class ScoreTracker {
       this.sortRankings();
     } catch (err) {
       logger.error(err, 'Error while readng scores');
+      throw err;
     }
   }
 
@@ -42,10 +43,7 @@ class ScoreTracker {
   }
 
   public sortRankings() {
-    this.rankings.sort((a, b) => {
-      const scoreDiff = +this.playerScores[b].score - +this.playerScores[a].score;
-      return scoreDiff !== 0 ? scoreDiff : this.playerScores[a].id - this.playerScores[b].id;
-    });
+    this.rankings.sort((a, b) => +this.playerScores[b].score - +this.playerScores[a].score || this.playerScores[a].id - this.playerScores[b].id);
     this.lastUpdate = Date.now();
   }
 
