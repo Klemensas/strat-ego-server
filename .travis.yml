@@ -1,8 +1,15 @@
+sudo: required
+
 language: node_js
+
+services:
+- docker
 
 node_js:
 - "node"
 before_install:
+- docker-compose up -d
+- docker-compose ps
 - npm install -g typescript
 
 script:

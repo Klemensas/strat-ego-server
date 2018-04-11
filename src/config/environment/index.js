@@ -28,8 +28,8 @@ module.exports = {
         tableName: 'knex_migrations'
       },
     },
-    main: process.env.DB_MAIN || 'postgres://stratego:supasecretpassword@localhost:5432/stratego',
-    world: process.env.DB_WORLD || 'postgres://stratego:supasecretpassword@localhost:5432/strategoWorld'
+    main: process.env.DB_MAIN || 'postgres://stratego:supasecretpassword@localhost:5433/stratego',
+    world: process.env.DB_WORLD || 'postgres://stratego:supasecretpassword@localhost:5433/strategoWorld'
   },
   ...envVariables[env],
 };

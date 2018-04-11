@@ -6,7 +6,7 @@ module.exports = {
         tableName: 'knex_migrations'
       },
     },
-    main: 'postgres://stratego:supasecretpassword@localhost:5432/testStratego',
-    world: 'postgres://stratego:supasecretpassword@localhost:5432/testStrategoWorld'
+    main: 'postgres://stratego:supasecretpassword@localhost:5433/testStratego',
+    world: 'postgres://stratego:supasecretpassword@localhost:5433/testStrategoWorld'
   }
 };
