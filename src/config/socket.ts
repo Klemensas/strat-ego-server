@@ -8,6 +8,7 @@ import { TownSocket } from '../api/town/town.socket';
 import { MapSocket } from '../api/map/map.socket';
 import { logger } from '../logger';
 import { serializeError } from '../errorSerializer';
+import { RankingsSocket } from '../api/player/rankings.socket';
 
 export interface AuthenticatedSocket extends SocketIO.Socket {
   decoded_token: {
@@ -82,5 +83,6 @@ export function setupUserSocket(socket: UserSocket) {
     .then(() => TownSocket.onConnect(socket))
     .then(() => MapSocket.onConnect(socket))
     .then(() => AllianceSocket.onConnect(socket))
+    .then(() => RankingsSocket.onConnect(socket))
     .then(() => socket.log(`${socket.userData.username} connected`));
 }

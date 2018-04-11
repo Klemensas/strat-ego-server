@@ -19,6 +19,7 @@ import { initializeSocket } from './config/socket';
 import { worldData } from './api/world/worldData';
 import { mapManager } from './api/map/mapManager';
 import { logger } from './logger';
+import { scoreTracker } from './api/player/playerScore';
 // import queue from './api/world/queue';
 
 const app = express();
@@ -47,6 +48,7 @@ routing(app);
 
 worldData.readWorld(worldName)
   .then(() => mapManager.initialize(worldName))
+  .then(() => scoreTracker.readScores(worldName))
   .then(() => initializeSocket(io))
   .then(() => logger.info('server ready!'));
   // .then(() => queue.go());
