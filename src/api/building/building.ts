@@ -1,4 +1,4 @@
-import { Requirements, Resources } from 'strat-ego-common';
+import { Requirements, Resources, BuildingLevelData } from 'strat-ego-common';
 
 import { BaseModel } from '../../sqldb/baseModel';
 
@@ -10,16 +10,7 @@ export class Building extends BaseModel {
     min: number;
   };
   requirements?: Requirements[];
-  data: [{
-    score: number;
-    buildTime: number;
-    costs: Resources;
-    storage?: number;
-    population?: number;
-    recruitment?: number;
-    production?: number;
-    defense?: number;
-  }];
+  data: BuildingLevelData;
 
   static tableName = 'Building';
 
@@ -36,39 +27,39 @@ export class Building extends BaseModel {
           min: { type: 'number' },
         },
       },
-      requirements: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            item: { type: 'string' },
-            level: { type: 'number' },
-          },
-        },
-      },
-      data: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            buildTime: { type: 'integer' },
-            costs: {
-              type: 'object',
-              properties: {
-                wood: { type: 'integer' },
-                clay: { type: 'integer' },
-                iron: { type: 'integer' },
-              },
-            },
-          },
-          score: { type: 'integer' },
-          storage: { type: 'integer' },
-          population: { type: 'integer' },
-          recruitment: { type: 'number' },
-          production: { type: 'integer' },
-          defense: { type: 'number' },
-        },
-      },
+      // requirements: {
+      //   type: 'array',
+      //   items: {
+      //     type: 'object',
+      //     properties: {
+      //       item: { type: 'string' },
+      //       level: { type: 'number' },
+      //     },
+      //   },
+      // },
+      // data: {
+      //   type: 'array',
+      //   items: {
+      //     type: 'object',
+      //     properties: {
+      //       buildTime: { type: 'integer' },
+      //       costs: {
+      //         type: 'object',
+      //         properties: {
+      //           wood: { type: 'integer' },
+      //           clay: { type: 'integer' },
+      //           iron: { type: 'integer' },
+      //         },
+      //       },
+      //     },
+      //     score: { type: 'integer' },
+      //     storage: { type: 'integer' },
+      //     population: { type: 'integer' },
+      //     recruitment: { type: 'number' },
+      //     production: { type: 'integer' },
+      //     defense: { type: 'number' },
+      //   },
+      // },
     },
   };
 }

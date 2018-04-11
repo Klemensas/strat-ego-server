@@ -74,19 +74,17 @@ export class World extends BaseModel {
       currentRing: { type: 'integer' },
       initialLoyalty: { type: 'integer' },
       loyaltyRegeneration: { type: 'integer' },
-      loyaltyReductionRange: {
-        type: 'array',
-        items: [
-          { type: 'number' },
-          { type: 'number' },
-        ],
-      },
+      // loyaltyReductionRange: {
+      //   type: 'array',
+      //   minItems: 2,
+      //   maxItems: 2,
+      // },
     },
   };
 
   $beforeInsert(queryContext) {
     super.$beforeInsert(queryContext);
-    if (this.size % 2) {
+    if (!(this.size % 2)) {
       throw new ValidationError({
         message: 'World size must be an odd number',
         type: 'WorldSize',
