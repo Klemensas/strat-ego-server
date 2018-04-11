@@ -200,7 +200,7 @@ export class MovementResolver {
       const destinationPlayerId = targetTown.playerId;
       targetOutcome.playerId = originTown.playerId;
       targetOutcome.loyalty = worldData.world.initialLoyalty;
-      targetOutcome.units = Town.setInitialUnits();
+      targetOutcome.units = Town.getInitialUnits();
       attackResult.unitChange = true;
     }
 

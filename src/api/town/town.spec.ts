@@ -47,6 +47,13 @@ const testTownData = {
 };
 
 let testTown: Town;
+let calculateScoreSpy;
+beforeAll(() => {
+  calculateScoreSpy = jest.spyOn(Town, 'calculateScore');
+});
+afterAll(() => {
+  calculateScoreSpy.mockRestore();
+});
 beforeEach(() => {
   testTown  = Town.fromJson(testTownData, { skipValidation: true });
 });
@@ -54,7 +61,6 @@ beforeEach(() => {
 describe('$beforeUpdate', () => {
   let getResourcesSpy;
   let getLoyaltySpy;
-  let calculateScoreSpy;
   const patchData = {
     updatedAt: Date.now() + 500000,
   };
@@ -62,7 +68,6 @@ describe('$beforeUpdate', () => {
   beforeEach(() => {
     getResourcesSpy = jest.spyOn(testTown, 'getResources').mockImplementation(() => ({}));
     getLoyaltySpy = jest.spyOn(testTown, 'getLoyalty').mockImplementation(() => ({}));
-    calculateScoreSpy = jest.spyOn(testTown, 'calculateScore').mockImplementation(() => ({}));
   });
 
   test('should only work if old value is available and set date as needed', () => {
@@ -102,7 +107,7 @@ describe('$beforeUpdate', () => {
     expect(testTown.score).toBe(testTownData.score);
 
     testTown.$beforeUpdate({ old: patchData }, { updateScore: true });
-    expect(calculateScoreSpy).toHaveBeenCalledWith();
+    expect(calculateScoreSpy).toHaveBeenCalledWith(testTown.buildings);
     expect(testTown.score).not.toBe(testTownData.score);
   });
 
@@ -112,7 +117,7 @@ describe('$beforeUpdate', () => {
     expect(testTown.resources).not.toBe(testTownData.resources);
     expect(getLoyaltySpy).toHaveBeenCalledWith(testTownData.updatedAt, patchData.updatedAt, patchData);
     expect(testTown.loyalty).not.toBe(testTownData.loyalty);
-    expect(calculateScoreSpy).toHaveBeenCalledWith();
+    expect(calculateScoreSpy).toHaveBeenCalledWith(testTown.buildings);
     expect(testTown.score).not.toBe(testTownData.score);
 
   });
@@ -120,12 +125,12 @@ describe('$beforeUpdate', () => {
 
 test('calculateScore should return total town score', () => {
   const score = buildings.reduce((result, item) => result + item.levels.min * item.data[0].score, 0);
-  expect(testTown.calculateScore()).toBe(score);
+  expect(Town.calculateScore(testTown.buildings)).toBe(score);
 
   const maxScore = buildings.reduce((result, item) => result + item.data[item.data.length - 1].score, 0);
   testTown.buildings = buildings.reduce((result, item) => {
     result[item.name] = { level: item.levels.max, queued: 0 };
     return result;
   }, {});
-  expect(testTown.calculateScore()).toBe(maxScore);
+  expect(Town.calculateScore(testTown.buildings)).toBe(maxScore);
 });

@@ -228,7 +228,7 @@ export class Town extends BaseModel {
     return await MovementResolver.resolveMovement(item, this);
   }
 
-  getAvailablePopulation() {
+  getAvailablePopulation(): number {
     const used = worldData.units.reduce((t, unit) => {
       return t + Object.values(this.units[unit.name]).reduce((a, b) => a + b);
     }, 0);
@@ -236,17 +236,17 @@ export class Town extends BaseModel {
     return total - used;
   }
 
-  getWallBonus() {
+  getWallBonus(): number {
     return worldData.buildingMap.wall.data[this.buildings.wall.level].defense || 1;
   }
 
-  getRecruitmentModifier() {
+  getRecruitmentModifier(): number {
     return worldData.buildingMap.barracks.data[this.buildings.barracks.level].recruitment;
   }
 
-  calculateScore(): number {
+  static calculateScore(buildings): number {
     return worldData.buildings.reduce((result, building) => {
-      const target = building.data[this.buildings[building.name].level - 1];
+      const target = building.data[buildings[building.name].level - 1];
       const score = target ? target.score : 0;
       return result + score;
     }, 0);
@@ -282,26 +282,31 @@ export class Town extends BaseModel {
     };
   }
 
-  static setInitialUnits = () => {
+  static getInitialUnits(): TownUnits {
     return worldData.units.reduce((result, item) => {
       result[item.name] = { inside: 0, outside: 0, queued: 0 };
       return result;
     }, {});
   }
 
+  static getInitialBuildings(): TownBuildings {
+    return worldData.buildings.reduce((result, item) => {
+      result[item.name] = { level: item.levels.min, queued: 0 };
+      return result;
+    }, {});
+  }
+
   $beforeInsert(queryContext) {
     super.$beforeInsert(queryContext);
-    this.resources = {
+    this.resources = this.resources || {
       wood: 800,
       clay: 800,
       iron: 800,
     };
-    this.production = this.getProduction();
-    this.units = Town.setInitialUnits();
-    this.buildings = worldData.buildings.reduce((result, item) => {
-      result[item.name] = { level: item.levels.min, queued: 0 };
-      return result;
-    }, {});
+    this.production = this.production || this.getProduction();
+    this.units = this.units || Town.getInitialUnits();
+    this.buildings = this.buildings || Town.getInitialBuildings();
+    this.score = this.score || Town.calculateScore(this.buildings);
   }
 
   $beforeValidate(jsonSchema, json, opt) {
@@ -367,9 +372,10 @@ export class Town extends BaseModel {
     };
   }
 
+  // Keep in mind that patches only have the updated values on this
+  // Old property might be missing values as well
   $beforeUpdate(opt, queryContext) {
     if (!opt.old) { return; }
-
     const date = +(this.updatedAt || Date.now());
     if (!queryContext.resourcesUpdated) {
       this.resources = this.getResources(date, opt.old.updatedAt, opt.old);
@@ -378,7 +384,7 @@ export class Town extends BaseModel {
       this.loyalty = this.getLoyalty(date, opt.old.updatedAt, opt.old);
     }
     if (queryContext.updateScore) {
-      this.score = this.calculateScore();
+      this.score = Town.calculateScore(this.buildings || opt.old.buildngs);
     }
     this.updatedAt = date;
   }
