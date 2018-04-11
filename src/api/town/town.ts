@@ -1,4 +1,5 @@
 import * as Knex from 'knex';
+import { transaction } from 'objection';
 import { Resources, TownUnits, TownBuildings, Coords, Requirements, QueueType } from 'strat-ego-common';
 
 import { BaseModel } from '../../sqldb/baseModel';
@@ -8,7 +9,6 @@ import { worldData } from '../world/worldData';
 import { BuildingQueue } from '../building/buildingQueue';
 import { UnitQueue } from '../unit/unitQueue';
 import { logger } from '../../logger';
-import { transaction } from 'objection';
 import { Movement } from './movement';
 import { mapManager } from '../map/mapManager';
 import { MovementResolver } from './movement.resolver';

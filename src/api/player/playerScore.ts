@@ -31,7 +31,6 @@ class ScoreTracker {
         this.rankings.push(player.id);
       });
       this.sortRankings();
-      console.log('wawa', players);
     } catch (err) {
       logger.error(err, 'Error while readng scores');
     }
