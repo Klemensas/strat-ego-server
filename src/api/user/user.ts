@@ -24,7 +24,7 @@ export class User extends BaseModel {
   static relationMappings = {
     worlds: {
       relation: BaseModel.ManyToManyRelation,
-      modelClass: 'uorld',
+      modelClass: 'world',
       join: {
         from: 'User.id',
         through: {

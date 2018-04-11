@@ -254,7 +254,6 @@ export class TownSocket {
       if (!socket.userData.townIds.includes(payload.town)) { throw new ErrorMessage('No town found'); }
 
       const { town, processed } = await Town.processTownQueues(payload.town);
-      
 
       await trx.commit();
     } catch (err) {

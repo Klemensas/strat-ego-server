@@ -18,8 +18,8 @@ const demoTownRate = 0.4;
     const users = mainData[0];
     const world = mainData[1][0];
 
-    const worldData = await seedWorld(worldTrx, users, world, maxDemoTowns, demoTownRate, speed, baseProduction);
     await mainTrx.commit();
+    const worldData = await seedWorld(worldTrx, users, world, maxDemoTowns, demoTownRate, speed, baseProduction);
     await worldTrx.commit();
 
     console.timeEnd('seed');
