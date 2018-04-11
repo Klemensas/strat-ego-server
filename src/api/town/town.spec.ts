@@ -58,6 +58,28 @@ beforeEach(() => {
   testTown  = Town.fromJson(testTownData, { skipValidation: true });
 });
 
+// test.only('dumb', async () => {
+//   await Town.query(knexDb.world).delete();
+//   const town = await Town
+//     .query(knexDb.world)
+//     .insert({ name: 'test', location: [401, 402] })
+//     .pick(['name', 'id']);
+//   const spy = jest.spyOn(town, '$beforeUpdate');
+
+//   await town
+//     .$query(knexDb.world)
+//     .patch({
+//       name: 'test',
+//     })
+//     .context({
+//       resourcesUpdated: true,
+//       loyaltyUpdated: true,
+//     });
+//   // const spyResult = 
+//   console.log('spy', spy.mock.calls)
+//   expect(spy).toBe(null);
+// })
+
 describe('$beforeUpdate', () => {
   let getResourcesSpy;
   let getLoyaltySpy;

@@ -45,7 +45,7 @@ export class Town extends BaseModel {
   static relationMappings = {
     player: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Player',
+      modelClass: 'player',
       join: {
         from: 'Town.playerId',
         to: 'Player.id',
@@ -53,7 +53,7 @@ export class Town extends BaseModel {
     },
     buildingQueues: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'BuildingQueue',
+      modelClass: 'buildingQueue',
       join: {
         from: 'Town.id',
         to: 'BuildingQueue.townId',
@@ -61,7 +61,7 @@ export class Town extends BaseModel {
     },
     unitQueues: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'UnitQueue',
+      modelClass: 'unitQueue',
       join: {
         from: 'Town.id',
         to: 'UnitQueue.townId',
@@ -69,7 +69,7 @@ export class Town extends BaseModel {
     },
     originMovements: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'Movement',
+      modelClass: 'movement',
       join: {
         from: 'Town.id',
         to: 'Movement.originTownId',
@@ -77,7 +77,7 @@ export class Town extends BaseModel {
     },
     targetMovements: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'Movement',
+      modelClass: 'movement',
       join: {
         from: 'Town.id',
         to: 'Movement.targetTownId',
@@ -85,7 +85,7 @@ export class Town extends BaseModel {
     },
     originReports: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'Report',
+      modelClass: 'report',
       join: {
         from: 'Town.id',
         to: 'Report.originTownId',
@@ -93,7 +93,7 @@ export class Town extends BaseModel {
     },
     targetReports: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'Report',
+      modelClass: 'report',
       join: {
         from: 'Town.id',
         to: 'Report.targetTownId',

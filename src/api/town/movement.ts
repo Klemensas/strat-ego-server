@@ -20,7 +20,7 @@ export class Movement extends BaseModel {
   static relationMappings = {
     originTown: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Town',
+      modelClass: 'town',
       join: {
         from: 'Movement.originTownId',
         to: 'Town.id',
@@ -28,7 +28,7 @@ export class Movement extends BaseModel {
     },
     targetTown: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Town',
+      modelClass: 'town',
       join: {
         from: 'Movement.targetTownId',
         to: 'Town.id',

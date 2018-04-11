@@ -17,7 +17,7 @@ export class AllianceMessage extends BaseModel {
   static relationMappings = {
     player: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Player',
+      modelClass: 'player',
       join: {
         from: 'AllianceMessage.playerId',
         to: 'Player.id',
@@ -25,7 +25,7 @@ export class AllianceMessage extends BaseModel {
     },
     alliance: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Alliance',
+      modelClass: 'alliance',
       join: {
         from: 'AllianceMessage.allianceId',
         to: 'Alliance.id',

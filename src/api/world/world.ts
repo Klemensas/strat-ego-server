@@ -28,11 +28,11 @@ export class World extends BaseModel {
   static relationMappings = {
     users: {
       relation: BaseModel.ManyToManyRelation,
-      modelClass: 'User',
+      modelClass: 'user',
       join: {
         from: 'World.name',
         through: {
-          modelClass: 'UserWorld',
+          modelClass: 'userWorld',
           from: 'UserWorld.worldName',
           to: 'UserWorld.userId',
         },

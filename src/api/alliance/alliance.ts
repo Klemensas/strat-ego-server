@@ -31,7 +31,7 @@ export class Alliance extends BaseModel {
   static relationMappings = {
     roles: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'AllianceRole',
+      modelClass: 'allianceRole',
       join: {
         from: 'Alliance.id',
         to: 'AllianceRole.allianceId',
@@ -39,7 +39,7 @@ export class Alliance extends BaseModel {
     },
     members: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'Player',
+      modelClass: 'player',
       join: {
         from: 'Alliance.id',
         to: 'Player.allianceId',
@@ -47,7 +47,7 @@ export class Alliance extends BaseModel {
     },
     invitations: {
       relation: BaseModel.ManyToManyRelation,
-      modelClass: 'Player',
+      modelClass: 'player',
       join: {
         from: 'Alliance.id',
         through: {
@@ -60,7 +60,7 @@ export class Alliance extends BaseModel {
     },
     defaultRole: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'AllianceRole',
+      modelClass: 'allianceRole',
       join: {
         from: 'Alliance.defaultRoleId',
         to: 'AllianceRole.id',
@@ -68,7 +68,7 @@ export class Alliance extends BaseModel {
     },
     masterRole: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'AllianceRole',
+      modelClass: 'allianceRole',
       join: {
         from: 'Alliance.masterRoleId',
         to: 'AllianceRole.id',
@@ -76,7 +76,7 @@ export class Alliance extends BaseModel {
     },
     diplomacyOrigin: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'AllianceDiplomacy',
+      modelClass: 'allianceDiplomacy',
       join: {
         from: 'Alliance.id',
         to: 'AllianceDiplomacy.originAllianceId',
@@ -84,7 +84,7 @@ export class Alliance extends BaseModel {
     },
     diplomacyTarget: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'AllianceDiplomacy',
+      modelClass: 'allianceDiplomacy',
       join: {
         from: 'Alliance.id',
         to: 'AllianceDiplomacy.targetAllianceId',
@@ -92,7 +92,7 @@ export class Alliance extends BaseModel {
     },
     eventOrigin: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'AllianceEvent',
+      modelClass: 'allianceEvent',
       join: {
         from: 'Alliance.id',
         to: 'AllianceEvent.originAllianceId',
@@ -100,7 +100,7 @@ export class Alliance extends BaseModel {
     },
     eventTarget: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'AllianceEvent',
+      modelClass: 'allianceEvent',
       join: {
         from: 'Alliance.id',
         to: 'AllianceEvent.targetAllianceId',
@@ -108,7 +108,7 @@ export class Alliance extends BaseModel {
     },
     messages: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'AllianceMessage',
+      modelClass: 'allianceMessage',
       join: {
         from: 'Alliance.id',
         to: 'AllianceMessage.allianceId',

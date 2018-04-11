@@ -19,7 +19,7 @@ export class UnitQueue extends BaseModel {
   static relationMappings = {
     town: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Town',
+      modelClass: 'town',
       join: {
         from: 'UnitQueue.townId',
         to: 'Town.id',
