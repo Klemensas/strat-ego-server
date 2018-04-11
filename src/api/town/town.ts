@@ -12,6 +12,7 @@ import { transaction } from 'objection';
 import { Movement } from './movement';
 import { mapManager } from '../map/mapManager';
 import { MovementResolver } from './movement.resolver';
+import { scoreTracker } from '../player/playerScore';
 
 export interface ProcessingResult {
   town: Town;
@@ -180,12 +181,15 @@ export class Town extends BaseModel {
       update.production = this.getProduction(update.buildings);
     }
     try {
+      const originalScore = this.score;
       await item.$query(trx).delete();
       await this.$query<Town>(trx)
         .patch(update)
         .context({ resourcesUpdated: true, updateScore: true });
       await trx.commit();
 
+      scoreTracker.updateScore(this.score - originalScore, this.playerId);
+      mapManager.setTownScore(this.score, this.location);
       this.buildingQueues = this.buildingQueues.filter(({ id }) => id !== item.id);
       return this;
     } catch (err) {
