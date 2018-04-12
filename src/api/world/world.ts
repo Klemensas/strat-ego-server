@@ -21,6 +21,8 @@ export class World extends BaseModel {
   expansionRate: number;
   expansionGrowth: number;
   lastExpansion: number;
+  townGrowthInterval: number;
+  townLastGrowth: number;
 
   // Associations
   users?: Array<Partial<User[]>>;
@@ -64,6 +66,8 @@ export class World extends BaseModel {
     'expansionRate',
     'expansionGrowth',
     'lastExpansion',
+    'townGrowthInterval',
+    'townLastGrowth',
   ],
 
     properties: {
@@ -83,6 +87,9 @@ export class World extends BaseModel {
       expansionRate: { type: 'integer' },
       expansionGrowth: { type: 'number' },
       lastExpansion: { type: 'integer' },
+      townGrowthInterval: { type: 'integer' },
+      townLastGrowth: { type: 'integer' },
+
       // loyaltyReductionRange: {
       //   type: 'array',
       //   minItems: 2,

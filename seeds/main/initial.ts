@@ -55,5 +55,7 @@ export const seed = (knex, speed = 1, demoUserCount = 100, expansionRate = 17280
     lastExpansion: Date.now(),
     createdAt: Date.now(),
     updatedAt: Date.now(),
+    townGrowthInterval: 10000,
+    townLastGrowth: 0,
   }])),
 ]);
