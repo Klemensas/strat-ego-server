@@ -47,7 +47,7 @@ export class PlayerSocket {
         id: createdPlayer.id,
         name: createdPlayer.name,
         score: createdPlayer.towns[0].score,
-      })
+      });
       return createdPlayer;
     } catch (err) {
       socket.log('Cannot create player', err);
@@ -107,8 +107,11 @@ export class PlayerSocket {
       trxWorld = await transaction.start(knexDb.world);
 
       const location = await mapManager.chooseLocation(trxMain);
-      const town = await Town.query(trxWorld).insert({ location, name: `${socket.userData.playerName}s Town`, playerId: socket.userData.playerId });
       const player = await Player.getPlayer({ userId: socket.userData.playerId });
+      await player.$relatedQuery<Town>('towns', trxWorld).insert({
+        location,
+        name: `${socket.userData.playerName}s Town`,
+      });
 
       await trxMain.commit();
       await trxWorld.commit();

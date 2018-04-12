@@ -257,10 +257,12 @@ export class Town extends BaseModel {
   }
 
   static getAvailableCoords = async (coords: Coords[]) => {
+    // knex requires wrapping in an array http://knexjs.org/#Raw-Bindings
+    const wrappedCoords: any = coords.map((item) => ([item]));
     const towns = await Town
       .query(knexDb.world)
       .select('location')
-      .whereIn('location', coords);
+      .whereIn('location', wrappedCoords);
     const usedLocations = towns.map(({ location }) => location.join(','));
     return coords.filter((c) => !usedLocations.includes(c.join(',')));
   }
@@ -311,6 +313,12 @@ export class Town extends BaseModel {
     this.units = this.units || Town.getInitialUnits();
     this.buildings = this.buildings || Town.getInitialBuildings();
     this.score = this.score || Town.calculateScore(this.buildings);
+
+    // Set for consistent model values
+    this.buildingQueues = [];
+    this.unitQueues = [];
+    this.originMovements = [];
+    this.targetMovements = [];
   }
 
   $beforeValidate(jsonSchema, json, opt) {

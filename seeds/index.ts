@@ -11,25 +11,18 @@ const demoTownRate = 0.4;
 
 (async () => {
   console.time('seed');
-  const mainTrx = await transaction.start(knexDb.main);
-  const worldTrx = await transaction.start(knexDb.world);
   try {
-    const mainData = await seedMain(mainTrx, speed, demoUserCount);
+    const mainData = await seedMain(knexDb.main, speed, demoUserCount);
     const users = mainData[0];
     const world = mainData[1][0];
 
-    await mainTrx.commit();
-    const worldData = await seedWorld(worldTrx, users, world, maxDemoTowns, demoTownRate, speed, baseProduction);
-    await worldTrx.commit();
+    const worldData = await seedWorld(knexDb.world, users, world, maxDemoTowns, demoTownRate, speed, baseProduction);
 
     console.timeEnd('seed');
     console.log('seeding done');
     process.exit(0);
     return 1;
   } catch (err) {
-    await mainTrx.rollback();
-    await worldTrx.rollback();
-
     console.log(err);
     console.timeEnd('seed');
     console.log('failed seeding');
