@@ -1,4 +1,12 @@
-const unitList = [
+import { Unit } from '../../src/api/unit/unit';
+import { User } from '../../src/api/user/user';
+import { Town } from '../../src/api/town/town';
+import { Player } from '../../src/api/player/player';
+import { World } from '../../src/api/world/world';
+import { Building } from '../../src/api/building/building';
+import { worldData } from '../../src/api/world/worldData';
+
+const unitList: Array<Partial<Unit>> = [
   {
     name: 'axe',
     costs: {
@@ -267,7 +275,8 @@ const unitList = [
     }],
   },
 ];
-const buildingList = [
+
+const buildingList: any = [
   {
     name: 'headquarters',
     levels: 15,
@@ -288,6 +297,8 @@ const buildingList = [
     },
     baseTime: 20,
     timeFactor: 1.4,
+    baseScore: 30,
+    scoreFactor: 1.75,
   }, {
     name: 'barracks',
     levels: 20,
@@ -308,6 +319,8 @@ const buildingList = [
     },
     baseTime: 30,
     timeFactor: 1.2,
+    baseScore: 20,
+    scoreFactor: 1.6,
     additional: {
       recruitment: {
         base: 1,
@@ -338,6 +351,8 @@ const buildingList = [
     },
     baseTime: 15,
     timeFactor: 1.2,
+    baseScore: 14,
+    scoreFactor: 1.4,
     additional: {
       production: {
         base: 30,
@@ -364,6 +379,8 @@ const buildingList = [
     },
     baseTime: 15,
     timeFactor: 1.2,
+    baseScore: 14,
+    scoreFactor: 1.4,
     additional: {
       production: {
         base: 30,
@@ -390,6 +407,8 @@ const buildingList = [
     },
     baseTime: 18,
     timeFactor: 1.2,
+    baseScore: 14,
+    scoreFactor: 1.4,
     additional: {
       production: {
         base: 30,
@@ -416,6 +435,8 @@ const buildingList = [
     },
     baseTime: 60,
     timeFactor: 1.2,
+    baseScore: 10,
+    scoreFactor: 1.5,
     additional: {
       defense: {
         base: 1.04,
@@ -442,6 +463,8 @@ const buildingList = [
     },
     baseTime: 17,
     timeFactor: 1.2,
+    baseScore: 13,
+    scoreFactor: 1.44,
     additional: {
       storage: {
         base: 1000,
@@ -468,6 +491,8 @@ const buildingList = [
     },
     baseTime: 20,
     timeFactor: 1.2,
+    baseScore: 16,
+    scoreFactor: 1.38,
     additional: {
       population: {
         base: 240,
@@ -491,19 +516,56 @@ const buildingList = [
     },
     baseTime: 14400,
     timeFactor: 1,
+    baseScore: 300,
+    scoreFactor: 2,
     requirements: [{
       item: 'headquarters',
       level: 15,
     }],
   },
 ];
-const speed = process.env.WORLD_SPEED || 1;
-const baseProduction = process.env.BASE_PRODUCTION || 5000;
+function generateBuildings(speed, list = buildingList) {
+  return list.map((building) => {
+    const item = {
+      name: building.name,
+      levels: { max: building.levels, min: building.min },
+      requirements: building.requirements,
+      data: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    for (let i = 0; i <= item.levels.max; i++) {
+      const data = {
+        buildTime: Math.ceil((building.baseTime * (building.timeFactor ** i)) / speed) * 1000,
+        costs: {
+          wood: Math.ceil(building.costs.wood.base * (building.costs.wood.factor ** i)),
+          clay: Math.ceil(building.costs.clay.base * (building.costs.clay.factor ** i)),
+          iron: Math.ceil(building.costs.iron.base * (building.costs.iron.factor ** i)),
+        },
+        score:  Math.ceil(building.baseScore * (building.scoreFactor ** i)),
+      };
+      if (building.additional) {
+        Object.entries(building.additional).forEach(([key, value]: any) => {
+          const factor = i ? value.factor ** (i - 1) : 0;
+          let base = value.base;
+          data[key] = +(base * factor).toPrecision(3);
+          if (key === 'production') {
+            base *= speed;
+            data[key] = Math.ceil(data[key]);
+          }
+        });
+      }
+      item.data.push(data);
+    }
+    return item;
+  });
+}
 
 const townGenerationData = {
-  percent: 0.5,
-  furthestRing: 9,
-  area: 9,
+  percent: 0.6,
+  furthestRing: 13,
+  area: 13,
   size: Math.ceil(999 / 2),
 };
 function getRingCoords(size, ring) {
@@ -564,86 +626,50 @@ function getCoordsInRange(rings, furthestRing, size) {
   return [...coords.top, ...innards, ...coords.bottom];
 }
 
-exports.seed = (knex, Promise) => knex('Unit').del()
-  .then(() => knex('Unit').insert(unitList.map((unit) => {
+export const seed = (knex, demoUsers: User[], world: World, maxTowns = 5, townRate = 0.4, speed = 1, baseProduction = 30) =>
+  Unit.query(knex).del().then(() => Unit.query(knex).insert(unitList.map((unit) => {
     unit.speed /= speed / 1000;
     unit.recruitTime /= speed / 1000;
     unit.createdAt = Date.now();
     unit.updatedAt = Date.now();
     return unit;
   })))
-  .then(() => knex('Building').del())
-  .then(() => knex('Building').insert(buildingList.map((building) => {
-    const item = {
-      name: building.name,
-      levels: { max: building.levels, min: building.min },
-      requirements: building.requirements,
-      data: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-  
-    for (let i = 0; i <= item.levels.max; i++) {
-      const data = {
-        buildTime: Math.ceil((building.baseTime * (building.timeFactor ** i)) / speed) * 1000,
-        costs: {
-          wood: Math.ceil(building.costs.wood.base * (building.costs.wood.factor ** i)),
-          clay: Math.ceil(building.costs.clay.base * (building.costs.clay.factor ** i)),
-          iron: Math.ceil(building.costs.iron.base * (building.costs.iron.factor ** i)),
-        },
-      };
-      if (building.additional) {
-        Object.entries(building.additional).forEach(([key, value]) => {
-          const factor = i ? value.factor ** (i - 1) : 0;
-          let base = value.base;
-          data[key] = +(base * factor).toPrecision(3);
-          if (key === 'production') {
-            base *= speed;
-            data[key] = Math.ceil(data[key]);
-          }
-        });
-      }
-      item.data.push(data);
-    }
-    return item;
-  })))
-  .then(() => knex('Town').del())
+  .then(() => Building.query(knex).del())
+  .then(() => Building.query(knex).insert(generateBuildings(speed)))
+  .then(() => worldData.readWorld(world.name))
+  .then(() => Town.query(knex).del())
   .then(() => {
     const coords = getCoordsInRange(townGenerationData.area, townGenerationData.furthestRing, townGenerationData.size);
     const factor = townGenerationData.percent;
-    // const units = 
-    const resources = {
-      wood: 800,
-      clay: 800,
-      iron: 800
-    };
-    const production = {
-      wood: baseProduction,
-      clay: baseProduction,
-      iron: baseProduction,
-    };
-    const buildings = buildingList.reduce((result, item) => {
-      result[item.name] = { level: item.min, queued: 0 };
-      return result;
-    }, {});
-    const units = unitList.reduce((result, item) => {
-      result[item.name] = { inside: 0, outside: 0, queued: 0 };
-      return result;
-    }, {});
-    const loyalty = 100;
     const name = 'Abandoned Town';
-    return knex('Town').insert(coords.reduce((towns, location) => {
+    return Town.query(knex).insert(coords.reduce((towns, location) => {
       if (Math.random() <= factor) { towns.push({
         location,
-        loyalty,
         name,
-        resources,
-        production,
-        buildings,
-        units,
         createdAt: Date.now(),
-        updatedAt: Date.now(),  
+        updatedAt: Date.now(),
       }); }
       return towns;
-    }, []))
+    }, []));
   })
+  .then(async (towns: Town[]) => {
+    await Player.query(knex).del();
+
+    const players = demoUsers.map((user, index) => {
+      const assignedTowns = [];
+      for (let i = 0; i < maxTowns && towns.length > i; i++) {
+        const shouldAssign = Math.random() <= townRate;
+        if (shouldAssign) {
+          assignedTowns.push({ id: towns[i].id });
+        }
+      }
+      towns.splice(0, assignedTowns.length);
+      return {
+        userId: user.id,
+        name: user.name,
+        towns: assignedTowns,
+      };
+    });
+    return Player.query(knex).upsertGraph(players, { relate: true });
+
+  });

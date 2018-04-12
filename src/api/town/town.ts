@@ -1,4 +1,5 @@
 import * as Knex from 'knex';
+import { transaction } from 'objection';
 import { Resources, TownUnits, TownBuildings, Coords, Requirements, QueueType } from 'strat-ego-common';
 
 import { BaseModel } from '../../sqldb/baseModel';
@@ -8,10 +9,10 @@ import { worldData } from '../world/worldData';
 import { BuildingQueue } from '../building/buildingQueue';
 import { UnitQueue } from '../unit/unitQueue';
 import { logger } from '../../logger';
-import { transaction } from 'objection';
 import { Movement } from './movement';
 import { mapManager } from '../map/mapManager';
 import { MovementResolver } from './movement.resolver';
+import { scoreTracker } from '../player/playerScore';
 
 export interface ProcessingResult {
   town: Town;
@@ -29,6 +30,7 @@ export class Town extends BaseModel {
   resources?: Resources;
   units?: TownUnits;
   buildings?: TownBuildings;
+  score?: number;
 
   // Associations
   playerId?: number;
@@ -43,7 +45,7 @@ export class Town extends BaseModel {
   static relationMappings = {
     player: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Player',
+      modelClass: 'player',
       join: {
         from: 'Town.playerId',
         to: 'Player.id',
@@ -51,7 +53,7 @@ export class Town extends BaseModel {
     },
     buildingQueues: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'BuildingQueue',
+      modelClass: 'buildingQueue',
       join: {
         from: 'Town.id',
         to: 'BuildingQueue.townId',
@@ -59,7 +61,7 @@ export class Town extends BaseModel {
     },
     unitQueues: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'UnitQueue',
+      modelClass: 'unitQueue',
       join: {
         from: 'Town.id',
         to: 'UnitQueue.townId',
@@ -67,7 +69,7 @@ export class Town extends BaseModel {
     },
     originMovements: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'Movement',
+      modelClass: 'movement',
       join: {
         from: 'Town.id',
         to: 'Movement.originTownId',
@@ -75,7 +77,7 @@ export class Town extends BaseModel {
     },
     targetMovements: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'Movement',
+      modelClass: 'movement',
       join: {
         from: 'Town.id',
         to: 'Movement.targetTownId',
@@ -83,7 +85,7 @@ export class Town extends BaseModel {
     },
     originReports: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'Report',
+      modelClass: 'report',
       join: {
         from: 'Town.id',
         to: 'Report.originTownId',
@@ -91,7 +93,7 @@ export class Town extends BaseModel {
     },
     targetReports: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'Report',
+      modelClass: 'report',
       join: {
         from: 'Town.id',
         to: 'Report.targetTownId',
@@ -179,12 +181,15 @@ export class Town extends BaseModel {
       update.production = this.getProduction(update.buildings);
     }
     try {
+      const originalScore = this.score;
       await item.$query(trx).delete();
       await this.$query<Town>(trx)
         .patch(update)
-        .context({ resourcesUpdated: true });
+        .context({ resourcesUpdated: true, updateScore: true });
       await trx.commit();
 
+      scoreTracker.updateScore(this.score - originalScore, this.playerId);
+      mapManager.setTownScore(this.score, this.location);
       this.buildingQueues = this.buildingQueues.filter(({ id }) => id !== item.id);
       return this;
     } catch (err) {
@@ -227,7 +232,7 @@ export class Town extends BaseModel {
     return await MovementResolver.resolveMovement(item, this);
   }
 
-  getAvailablePopulation() {
+  getAvailablePopulation(): number {
     const used = worldData.units.reduce((t, unit) => {
       return t + Object.values(this.units[unit.name]).reduce((a, b) => a + b);
     }, 0);
@@ -235,12 +240,20 @@ export class Town extends BaseModel {
     return total - used;
   }
 
-  getWallBonus() {
+  getWallBonus(): number {
     return worldData.buildingMap.wall.data[this.buildings.wall.level].defense || 1;
   }
 
-  getRecruitmentModifier() {
+  getRecruitmentModifier(): number {
     return worldData.buildingMap.barracks.data[this.buildings.barracks.level].recruitment;
+  }
+
+  static calculateScore(buildings): number {
+    return worldData.buildings.reduce((result, building) => {
+      const target = building.data[buildings[building.name].level - 1];
+      const score = target ? target.score : 0;
+      return result + score;
+    }, 0);
   }
 
   static getAvailableCoords = async (coords: Coords[]) => {
@@ -273,26 +286,31 @@ export class Town extends BaseModel {
     };
   }
 
-  static setInitialUnits = () => {
+  static getInitialUnits(): TownUnits {
     return worldData.units.reduce((result, item) => {
       result[item.name] = { inside: 0, outside: 0, queued: 0 };
       return result;
     }, {});
   }
 
+  static getInitialBuildings(): TownBuildings {
+    return worldData.buildings.reduce((result, item) => {
+      result[item.name] = { level: item.levels.min, queued: 0 };
+      return result;
+    }, {});
+  }
+
   $beforeInsert(queryContext) {
     super.$beforeInsert(queryContext);
-    this.resources = {
+    this.resources = this.resources || {
       wood: 800,
       clay: 800,
       iron: 800,
     };
-    this.production = this.getProduction();
-    this.units = Town.setInitialUnits();
-    this.buildings = worldData.buildings.reduce((result, item) => {
-      result[item.name] = { level: item.levels.min, queued: 0 };
-      return result;
-    }, {});
+    this.production = this.production || this.getProduction();
+    this.units = this.units || Town.getInitialUnits();
+    this.buildings = this.buildings || Town.getInitialBuildings();
+    this.score = this.score || Town.calculateScore(this.buildings);
   }
 
   $beforeValidate(jsonSchema, json, opt) {
@@ -353,22 +371,26 @@ export class Town extends BaseModel {
             return result;
           }, {}),
         },
+        score: { type: 'integer' },
       },
     };
   }
 
+  // Keep in mind that patches only have the updated values on this
+  // Old property might be missing values as well
   $beforeUpdate(opt, queryContext) {
     if (!opt.old) { return; }
-
     const date = +(this.updatedAt || Date.now());
     if (!queryContext.resourcesUpdated) {
       this.resources = this.getResources(date, opt.old.updatedAt, opt.old);
-      this.updatedAt = date;
     }
     if (!queryContext.loyaltyUpdated) {
       this.loyalty = this.getLoyalty(date, opt.old.updatedAt, opt.old);
-      this.updatedAt = date;
     }
+    if (queryContext.updateScore) {
+      this.score = Town.calculateScore(this.buildings || opt.old.buildngs);
+    }
+    this.updatedAt = date;
   }
 
   static jsonSchema = {

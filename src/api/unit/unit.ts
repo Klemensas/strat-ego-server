@@ -25,16 +25,16 @@ export class Unit extends BaseModel {
       speed: { type: 'number' },
       recruitTime: { type: 'number' },
       haul: { type: 'number' },
-      requirements: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            item: { type: 'string' },
-            level: { type: 'number' },
-          },
-        },
-      },
+      // requirements: {
+      //   type: 'array',
+      //   items: {
+      //     type: 'object',
+      //     properties: {
+      //       item: { type: 'string' },
+      //       level: { type: 'number' },
+      //     },
+      //   },
+      // },
       costs: {
         type: 'object',
         properties: {

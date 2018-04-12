@@ -1,5 +1,5 @@
 import * as Knex from 'knex';
-import { MapTown, Coords, Profile } from 'strat-ego-common';
+import { MapTown, Coords, Profile, Map } from 'strat-ego-common';
 
 import { Town } from '../town/town';
 import { Player } from '../player/player';
@@ -10,7 +10,7 @@ import { worldData } from '../world/worldData';
 import { knexDb } from '../../sqldb';
 
 class MapManager {
-  public mapData: { [name: string]: MapTown } = {};
+  public mapData: Map = {};
   public world: string;
 
   public async initialize(world: string) {
@@ -39,6 +39,7 @@ class MapManager {
         id: town.id,
         name: town.name,
         location: town.location,
+        score: town.score,
       };
     });
   }
@@ -59,23 +60,28 @@ class MapManager {
         } : null;
       }
       this.mapData[town.location.join(',')] = {
-        id: town.id,
-        name: town.name,
         owner,
         alliance,
+        id: town.id,
+        name: town.name,
         location: town.location,
+        score: town.score,
       };
      });
    }
 
   //  TODO: finding might be painful here, consider a different approach
-   public setTownAlliance(alliance: Profile, townIds: number[]) {
+  public setTownAlliance(alliance: Profile, townIds: number[]) {
     const townList = Object.entries(this.mapData);
     townIds.forEach((id) => {
       const target = townList.find(([key, data]) => data.id === id);
       this.mapData[target[0]].alliance = alliance;
     });
    }
+
+  public setTownScore(score: number, coords: Coords) {
+    this.mapData[coords.join(',')].score = score;
+  }
 
   public getRingCoords(size: number, ring: number) {
     const min = size - ring;

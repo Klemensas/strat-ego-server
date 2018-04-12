@@ -98,11 +98,6 @@ export class TownSocket {
     } catch (err) {
       socket.handleError(err, 'movement', 'town:moveTroopsFail', payload);
     }
-
-    // const time = Date.now();
-    // return Town.getTown({ id: payload.town })
-    //   .then((town) => this.tryMoving(town, time, payload))
-    //   .then((town) => town.notify({ type: 'movement' }));
   }
 
   private static async tryBuilding(id: number, time: number, building: string) {
@@ -252,7 +247,19 @@ export class TownSocket {
     }
   }
 
-  private static update(socket: UserSocket, payload: SocketPayload) {
+  private static async update(socket: UserSocket, payload: SocketPayload) {
+    const trx = await transaction.start(knexDb.world);
+    try {
+      if (!payload.town) { throw new ErrorMessage('No town specified'); }
+      if (!socket.userData.townIds.includes(payload.town)) { throw new ErrorMessage('No town found'); }
+
+      const { town, processed } = await Town.processTownQueues(payload.town);
+
+      await trx.commit();
+    } catch (err) {
+      await trx.rollback();
+      socket.handleError(err, 'movement', 'town:moveTroopsFail', payload);
+    }
     // if (!payload.town) { return Promise.reject('No town specified'); }
 
     // const time = new Date();

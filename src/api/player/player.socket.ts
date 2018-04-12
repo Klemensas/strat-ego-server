@@ -1,4 +1,5 @@
 import { transaction, Transaction, lit, raw } from 'objection';
+import { Coords } from 'strat-ego-common';
 
 import { knexDb } from '../../sqldb';
 import { Player } from './player';
@@ -7,7 +8,7 @@ import { UserWorld } from '../user/userWorld';
 import { TownSocket } from '../town/town.socket';
 import { UserSocket } from '../../config/socket';
 import { mapManager } from '../map/mapManager';
-import { Coords } from 'strat-ego-common';
+import { scoreTracker } from './playerScore';
 
 export class PlayerSocket {
   static async onConnect(socket: UserSocket) {
@@ -42,6 +43,11 @@ export class PlayerSocket {
       );
       const createdPlayer = await Player.getPlayer({ userId: socket.userData.userId });
       mapManager.addPlayerTowns(createdPlayer);
+      scoreTracker.addPlayer({
+        id: createdPlayer.id,
+        name: createdPlayer.name,
+        score: createdPlayer.towns[0].score,
+      })
       return createdPlayer;
     } catch (err) {
       socket.log('Cannot create player', err);

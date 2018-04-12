@@ -1,4 +1,4 @@
-import { UserSocket } from 'config/socket';
+import { UserSocket } from '../../config/socket';
 import { mapManager } from './mapManager';
 
 export class MapSocket {

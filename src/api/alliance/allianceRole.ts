@@ -37,7 +37,7 @@ export class  AllianceRole extends BaseModel {
   static relationMappings = {
     alliance: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Alliance',
+      modelClass: 'alliance',
       join: {
         from: 'AllianceRole.allianceId',
         to: 'Alliance.id',
@@ -45,7 +45,7 @@ export class  AllianceRole extends BaseModel {
     },
     defaultAllianceRole: {
       relation: BaseModel.HasOneRelation,
-      modelClass: 'Alliance',
+      modelClass: 'alliance',
       join: {
         from: 'AllianceRole.id',
         to: 'Alliance.defaultRoleId',
@@ -53,7 +53,7 @@ export class  AllianceRole extends BaseModel {
     },
     masterAllianceRole: {
       relation: BaseModel.HasOneRelation,
-      modelClass: 'Alliance',
+      modelClass: 'alliance',
       join: {
         from: 'AllianceRole.id',
         to: 'Alliance.masterRoleId',
@@ -61,7 +61,7 @@ export class  AllianceRole extends BaseModel {
     },
     players: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'Player',
+      modelClass: 'player',
       join: {
         from: 'AllianceRole.id',
         to: 'Player.allianceRoleId',

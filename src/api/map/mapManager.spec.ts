@@ -1,9 +1,8 @@
-import { test } from 'ava';
-
-import { mapManager } from './mapManager';
 import { MapTown } from 'strat-ego-common';
 
-test('getAllData should return mapData', (t) => {
+import { mapManager } from './mapManager';
+
+test('getAllData should return mapData', () => {
   const mapTown: MapTown = {
     id: 1,
     name: 'name',
@@ -15,5 +14,5 @@ test('getAllData should return mapData', (t) => {
     test: mapTown,
   };
   mapManager.mapData = testMapData;
-  t.is(mapManager.getAllData(), testMapData);
+  expect(mapManager.getAllData()).toBe(testMapData);
 });

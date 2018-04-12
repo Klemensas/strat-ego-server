@@ -24,7 +24,7 @@ export class AllianceEvent extends BaseModel {
   static relationMappings = {
     originPlayer: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Player',
+      modelClass: 'player',
       join: {
         from: 'AllianceEvent.originPlayerId',
         to: 'Player.id',
@@ -32,7 +32,7 @@ export class AllianceEvent extends BaseModel {
     },
     targetPlayer: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Player',
+      modelClass: 'player',
       join: {
         from: 'AllianceEvent.targetPlayerId',
         to: 'Player.id',
@@ -40,7 +40,7 @@ export class AllianceEvent extends BaseModel {
     },
     originAlliance: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Alliance',
+      modelClass: 'alliance',
       join: {
         from: 'AllianceEvent.originAllianceId',
         to: 'Alliance.id',
@@ -48,7 +48,7 @@ export class AllianceEvent extends BaseModel {
     },
     targetAlliance: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Alliance',
+      modelClass: 'alliance',
       join: {
         from: 'AllianceEvent.targetAllianceId',
         to: 'Alliance.id',

@@ -25,7 +25,7 @@ export class AllianceDiplomacy extends BaseModel {
   static relationMappings = {
     originPlayer: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Player',
+      modelClass: 'player',
       join: {
         from: 'AllianceDiplomacy.originPlayerId',
         to: 'Player.id',
@@ -33,7 +33,7 @@ export class AllianceDiplomacy extends BaseModel {
     },
     targetPlayer: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Player',
+      modelClass: 'player',
       join: {
         from: 'AllianceDiplomacy.targetPlayerId',
         to: 'Player.id',
@@ -41,7 +41,7 @@ export class AllianceDiplomacy extends BaseModel {
     },
     originAlliance: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Alliance',
+      modelClass: 'alliance',
       join: {
         from: 'AllianceDiplomacy.originAllianceId',
         to: 'Alliance.id',
@@ -49,7 +49,7 @@ export class AllianceDiplomacy extends BaseModel {
     },
     targetAlliance: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Alliance',
+      modelClass: 'alliance',
       join: {
         from: 'AllianceDiplomacy.targetAllianceId',
         to: 'Alliance.id',

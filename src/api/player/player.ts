@@ -24,7 +24,7 @@ export class Player extends BaseModel {
   static relationMappings = {
     towns: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'Town',
+      modelClass: 'town',
       join: {
         from: 'Player.id',
         to: 'Town.playerId',
@@ -32,7 +32,7 @@ export class Player extends BaseModel {
     },
     alliance: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Alliance',
+      modelClass: 'alliance',
       join: {
         from: 'Player.allianceId',
         to: 'Alliance.id',
@@ -40,7 +40,7 @@ export class Player extends BaseModel {
     },
     allianceRole: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'AllianceRole',
+      modelClass: 'allianceRole',
       join: {
         from: 'Player.allianceRoleId',
         to: 'AllianceRole.id',
@@ -48,7 +48,7 @@ export class Player extends BaseModel {
     },
     invitations: {
       relation: BaseModel.ManyToManyRelation,
-      modelClass: 'Alliance',
+      modelClass: 'alliance',
       join: {
         from: 'Player.id',
         through: {
@@ -61,7 +61,7 @@ export class Player extends BaseModel {
     },
     originReports: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'Report',
+      modelClass: 'report',
       join: {
         from: 'Player.id',
         to: 'Report.originPlayerId',
@@ -69,7 +69,7 @@ export class Player extends BaseModel {
     },
     targetReports: {
       relation: BaseModel.HasManyRelation,
-      modelClass: 'Report',
+      modelClass: 'report',
       join: {
         from: 'Player.id',
         to: 'Report.targetPlayerId',

@@ -27,7 +27,7 @@ export class Report extends BaseModel {
   static relationMappings = {
     originTown: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Town',
+      modelClass: 'town',
       join: {
         from: 'Report.originTownId',
         to: 'Town.id',
@@ -35,7 +35,7 @@ export class Report extends BaseModel {
     },
     targetTown: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Town',
+      modelClass: 'town',
       join: {
         from: 'Report.targetTownId',
         to: 'Town.id',
@@ -43,7 +43,7 @@ export class Report extends BaseModel {
     },
     originPlayer: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Player',
+      modelClass: 'player',
       join: {
         from: 'Report.originPlayerId',
         to: 'Player.id',
@@ -51,7 +51,7 @@ export class Report extends BaseModel {
     },
     targetPlayer: {
       relation: BaseModel.BelongsToOneRelation,
-      modelClass: 'Player',
+      modelClass: 'player',
       join: {
         from: 'Report.targetPlayerId',
         to: 'Player.id',

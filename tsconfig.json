@@ -5,13 +5,11 @@
     "moduleResolution": "node",
     "target": "es6",
     "outDir": "./build",
-    "rootDir": "./src",
     "lib": [
         "es6",
         "es2017"
     ],
     "sourceMap": true,
-    "baseUrl": "src",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },
@@ -19,7 +17,6 @@
     "build",
     "node_modules",
     "knexfile.*",
-    "migrations",
-    "seeds"
+    "migrations"
   ]
 }

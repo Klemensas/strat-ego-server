@@ -7,4 +7,4 @@ before_install:
 
 script:
 - npm run lint
-- npm run test
+- npm run test:full
