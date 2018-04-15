@@ -171,7 +171,7 @@ export class MovementResolver {
       unitChange: boolean;
     });
 
-    const { resources, haul } = MovementResolver.getHaul(targetTown.resources, attackResult.maxHaul);
+    const { resources, haul } = MovementResolver.getHaul(targetResources, attackResult.maxHaul);
     const originOutcome: OriginOutcome = {
       town: null,
       movement: {
