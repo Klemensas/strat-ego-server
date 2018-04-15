@@ -1,7 +1,5 @@
 import * as express from 'express';
 import * as http from 'http';
-import * as socket from 'socket.io';
-import * as uws from 'uws';
 
 import * as bodyParser from 'body-parser';
 import * as cors from 'cors';
@@ -15,7 +13,7 @@ import * as statusMonitor from 'express-status-monitor';
 
 import * as config from './config/environment';
 import routing from './routes';
-import { initializeSocket } from './config/socket';
+import { initializeSocket, io, setupIo } from './config/socket';
 import { worldData } from './api/world/worldData';
 import { mapManager } from './api/map/mapManager';
 import { logger } from './logger';
@@ -27,14 +25,7 @@ const env = app.get('env');
 const server = http.createServer(app);
 const worldName = 'megapolis';
 
-export const io = socket(server, {
-  path: '/socket.io-client',
-  serveClient: config.env !== 'production',
-});
-io.engine.ws = new uws.Server({
-  noServer: true,
-  perMessageDeflate: false,
-});
+setupIo(server);
 server.listen(config.port);
 
 app.use(compression());

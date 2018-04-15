@@ -1,9 +1,8 @@
 import { Coords, TownError, MovementType, MovementUnit } from 'strat-ego-common';
 import { transaction } from 'objection';
 
-import { io } from '../../';
 import { knexDb } from '../../sqldb';
-import { UserSocket, AuthenticatedSocket, ErrorMessage } from '../../config/socket';
+import { io, UserSocket, AuthenticatedSocket, ErrorMessage } from '../../config/socket';
 import { worldData } from '../world/worldData';
 import { Town } from './town';
 import { BuildingQueue } from '../building/buildingQueue';

@@ -1,4 +1,7 @@
 import * as socketJwt from 'socketio-jwt';
+import * as socket from 'socket.io';
+import * as http from 'http';
+import * as uws from 'uws';
 import { AlliancePermissions } from 'strat-ego-common';
 
 import * as config from './environment';
@@ -44,6 +47,19 @@ export class ErrorMessage extends Error {
 
   toString() { return this.error; }
 }
+
+export let io: socket.Server;
+
+export const setupIo = (server: http.Server) => {
+  io = socket(server, {
+    path: '/socket.io-client',
+    serveClient: config.env !== 'production',
+  });
+  io.engine.ws = new uws.Server({
+    noServer: true,
+    perMessageDeflate: false,
+  });
+};
 
 export function initializeSocket(socketio: SocketIO.Server) {
     socketio.use(socketJwt.authorize({
