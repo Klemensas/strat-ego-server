@@ -8,6 +8,7 @@ import { Town } from './town';
 import { BuildingQueue } from '../building/buildingQueue';
 import { UnitQueue } from '../unit/unitQueue';
 import { Movement } from './movement';
+import { townQueue } from '../townQueue';
 
 export interface SocketPayload { town: number; }
 export interface NamePayload extends SocketPayload { name: string; }
@@ -123,7 +124,7 @@ export class TownSocket {
       const lastQueue = town.getLastQueue('buildingQueues');
       const endsAt = (lastQueue ? +lastQueue.endsAt : time) + buildingData.buildTime;
 
-      await town.$relatedQuery<BuildingQueue>('buildingQueues', trx).insert({
+      const buildingQueue = await town.$relatedQuery<BuildingQueue>('buildingQueues', trx).insert({
         level,
         endsAt,
         name: building,
@@ -135,11 +136,10 @@ export class TownSocket {
           buildings: town.buildings,
           updatedAt: time,
         })
-        .eager(Town.townRelations)
         .context({ resourcesUpdated: true });
-
       await trx.commit();
 
+      townQueue.addToQueue(buildingQueue);
       return town;
     } catch (err) {
       await trx.rollback();
@@ -184,18 +184,18 @@ export class TownSocket {
 
       if (usedPop > availablePopulation) { throw new ErrorMessage('Population limit exceeded'); }
 
-      await town.$relatedQuery<UnitQueue>('unitQueues', trx).insert(unitsToQueue);
+      const unitQueue = await town.$relatedQuery<UnitQueue>('unitQueues', trx).insert(unitsToQueue);
       await town.$query(trx)
         .patch({
           resources: town.resources,
           units: town.units,
           updatedAt: time,
         })
-        .eager(Town.townRelations)
         .context({ resourcesUpdated: true });
 
       await trx.commit();
 
+      townQueue.addToQueue(unitQueue);
       return town;
       } catch (error) {
         await trx.rollback();
@@ -226,7 +226,7 @@ export class TownSocket {
         slowest = Math.max(unitData[unit[0]].speed, slowest);
       }
       const movementTime = slowest * distance;
-      await town.$relatedQuery<Movement>('originMovements', trx).insert({
+      const movement = await town.$relatedQuery<Movement>('originMovements', trx).insert({
         units,
         type: payload.type,
         targetTownId: targetTown.id,
@@ -235,10 +235,10 @@ export class TownSocket {
       await town.$query(trx)
         .patch({
           units: town.units,
-        })
-        .eager(Town.townRelations);
+        });
       await trx.commit();
 
+      townQueue.addToQueue(movement);
       return town;
     } catch (err) {
       await trx.rollback();
