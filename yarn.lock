@@ -1034,7 +1034,7 @@ data-urls@^1.0.0:
     whatwg-mimetype "^2.0.0"
     whatwg-url "^6.4.0"
 
-debug@2.6.9, debug@^2.2.0, debug@^2.3.3, debug@^2.6.8, debug@^2.6.9:
+debug@2.6.9, debug@^2.2.0, debug@^2.3.3, debug@^2.6.8:
   version "2.6.9"
   resolved "https://registry.yarnpkg.com/debug/-/debug-2.6.9.tgz#5d128515df134ff327e90a4c93f4e077a536341f"
   dependencies:
@@ -1387,15 +1387,6 @@ express-session@^1.15.6:
     parseurl "~1.3.2"
     uid-safe "~2.1.5"
     utils-merge "1.0.1"
-
-express-status-monitor@^1.0.1:
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/express-status-monitor/-/express-status-monitor-1.0.1.tgz#311288347b7aabfeaec0a01547e55c77652bb298"
-  dependencies:
-    debug "^2.6.9"
-    on-headers "^1.0.1"
-    pidusage "^1.1.6"
-    socket.io "^2.0.3"
 
 express-unless@^0.3.0:
   version "0.3.1"
@@ -3389,7 +3380,7 @@ on-finished@~2.3.0:
   dependencies:
     ee-first "1.1.1"
 
-on-headers@^1.0.1, on-headers@~1.0.1:
+on-headers@~1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/on-headers/-/on-headers-1.0.1.tgz#928f5d0f470d49342651ea6794b0857c100693f7"
 
@@ -3650,10 +3641,6 @@ pgpass@1.x:
   resolved "https://registry.yarnpkg.com/pgpass/-/pgpass-1.0.2.tgz#2a7bb41b6065b67907e91da1b07c1847c877b306"
   dependencies:
     split "^1.0.0"
-
-pidusage@^1.1.6:
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/pidusage/-/pidusage-1.2.0.tgz#65ee96ace4e08a4cd3f9240996c85b367171ee92"
 
 pify@^2.0.0:
   version "2.3.0"
@@ -4257,7 +4244,7 @@ socket.io-parser@~3.2.0:
     debug "~3.1.0"
     isarray "2.0.1"
 
-socket.io@^2.0.3, socket.io@^2.0.4:
+socket.io@^2.0.4:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/socket.io/-/socket.io-2.1.0.tgz#de77161795b6303e7aefc982ea04acb0cec17395"
   dependencies:

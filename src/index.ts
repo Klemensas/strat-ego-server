@@ -9,8 +9,6 @@ import * as methodOverride from 'method-override';
 import * as errorHandler from 'errorhandler';
 import * as passport from 'passport';
 
-import * as statusMonitor from 'express-status-monitor';
-
 import * as config from './config/environment';
 import routing from './routes';
 import { initializeSocket, io, setupIo } from './config/socket';
@@ -45,7 +43,6 @@ worldData.readWorld(worldName)
   // .then(() => queue.go());
 
 if (env === 'development' || env === 'test') {
-  app.use(statusMonitor());
   app.use(errorHandler({ log: errorNotification }));
 }
 
