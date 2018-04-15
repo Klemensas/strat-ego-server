@@ -52,7 +52,7 @@ export class MovementResolver {
     const isOrigin = movement.originTownId === town.id;
     const missingTown = isOrigin ? movement.targetTownId : movement.originTownId;
 
-    const processingResult = await Town.processTownQueues(missingTown, movement.endsAt);
+    const processingResult = await Town.processTownQueues(missingTown, movement.endsAt - 1);
     const otherTown: Town = processingResult.town;
 
     let result: ResolvedAttack;

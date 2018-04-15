@@ -453,12 +453,10 @@ export class Town extends BaseModel {
         ...town.originMovements,
         ...town.targetMovements,
       ]
-        .filter((queue) => +queue.endsAt < queueTime)
+        .filter((queue) => +queue.endsAt <= queueTime)
         .sort((a, b) => +a.endsAt - +b.endsAt);
 
-      if (!queues.length) {
-        return { town, processed };
-      }
+      if (!queues.length) { return { town, processed }; }
 
       return await town.processQueues(queues, processed);
     } catch (err) {
