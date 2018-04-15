@@ -16,10 +16,10 @@ import { scoreTracker } from '../player/playerScore';
 
 export interface ProcessingResult {
   town: Town;
-  processed: TownQueues;
+  processed: TownQueue[];
 }
 
-export type TownQueues = Array<Partial<BuildingQueue | UnitQueue | Movement>>;
+export type TownQueue = Partial<BuildingQueue> | Partial<UnitQueue> | Partial<Movement>;
 
 export class Town extends BaseModel {
   readonly id?: number;
@@ -144,10 +144,10 @@ export class Town extends BaseModel {
   getLastQueue(queueType: string) {
     const queue: Array<BuildingQueue | UnitQueue> = this[queueType];
 
-    return queue && queue.length ? queue.sort((a, b) => +b.endsAt - +a.endsAt)[0] : null;
+    return queue && queue.length ? queue[queue.length - 1] : null;
   }
 
-  async processQueues(queues: TownQueues, processed: TownQueues = []): Promise<ProcessingResult> {
+  async processQueues(queues: TownQueue[], processed: TownQueue[] = []): Promise<ProcessingResult> {
     if (!queues.length) { return { town: this, processed }; }
 
     const item = queues.shift();
@@ -406,7 +406,7 @@ export class Town extends BaseModel {
     properties: {
       id: { type: 'integer' },
       name: { type: 'string', default: 'Abandoned Town' },
-      loyalty: { type: 'integer', default: 100 },
+      loyalty: { type: 'number', default: 100 },
       // location: { type: 'array' },
       resources: {
         type: 'object',
