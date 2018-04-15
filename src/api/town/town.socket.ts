@@ -30,7 +30,7 @@ export class TownSocket {
     socket.on('town:build', (payload: BuildPayload) => this.build(socket, payload));
     socket.on('town:recruit', (payload: RecruitPayload) => this.recruit(socket, payload));
     socket.on('town:moveTroops', (payload: TroopMovementPayload) => this.moveTroops(socket, payload));
-    socket.on('town:update', (payload: SocketPayload) => this.update(socket, payload));
+    // socket.on('town:update', (payload: SocketPayload) => this.update(socket, payload));
   }
 
   static joinTownRoom(socket: UserSocket) {
@@ -246,19 +246,19 @@ export class TownSocket {
     }
   }
 
-  private static async update(socket: UserSocket, payload: SocketPayload) {
-    const trx = await transaction.start(knexDb.world);
-    try {
-      if (!payload.town) { throw new ErrorMessage('No town specified'); }
-      if (!socket.userData.townIds.includes(payload.town)) { throw new ErrorMessage('No town found'); }
+  // private static async update(socket: UserSocket, payload: SocketPayload) {
+  //   const trx = await transaction.start(knexDb.world);
+  //   try {
+  //     if (!payload.town) { throw new ErrorMessage('No town specified'); }
+  //     if (!socket.userData.townIds.includes(payload.town)) { throw new ErrorMessage('No town found'); }
 
-      const { town, processed } = await Town.processTownQueues(payload.town);
+  //     const { town, processed } = await Town.processTownQueues(payload.town);
 
-      await trx.commit();
-    } catch (err) {
-      await trx.rollback();
-      socket.handleError(err, 'movement', 'town:moveTroopsFail', payload);
-    }
+  //     await trx.commit();
+  //   } catch (err) {
+  //     await trx.rollback();
+  //     socket.handleError(err, 'movement', 'town:moveTroopsFail', payload);
+  //   }
     // if (!payload.town) { return Promise.reject('No town specified'); }
 
     // const time = new Date();
@@ -280,5 +280,5 @@ export class TownSocket {
     //         socket.emit('player', player);
     //       });
     //   });
-  }
+  // }
 }
