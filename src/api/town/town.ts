@@ -425,23 +425,27 @@ export class Town extends BaseModel {
   };
 
   static townRelations = '[buildingQueues, unitQueues, originMovements, targetMovements, originReports, targetReports]';
+  static townRelationsFiltered = `[
+    buildingQueues(orderByEnd),
+    unitQueues(orderByEnd),
+    originMovements(orderByEnd),
+    targetMovements(orderByEnd),
+  ]`;
+  static townRelationFilters = {
+    orderByEnd: (builder) => builder.orderBy('endsAt', 'asc'),
+  };
 
   static getTown(where: Partial<Town>, trx: Knex.Transaction | Knex = knexDb.world) {
     return Town
       .query(trx)
       .findOne(where)
-      .eager(this.townRelations);
+      .eager(this.townRelationsFiltered, this.townRelationFilters);
   }
 
   static async processTownQueues(item: number | Town, time?: number, processed = []): Promise<ProcessingResult> {
     const queueTime = time || Date.now();
     try {
-      const town = typeof item === 'number' ?
-        await Town
-          .query(knexDb.world)
-          .findById(item)
-          .eager(Town.townRelations) :
-        item;
+      const town = typeof item === 'number' ? await Town.getTown({ id: item }, knexDb.world) : item;
 
       const queues = [
         ...town.buildingQueues,

@@ -53,7 +53,7 @@ export class TownSocket {
           id: payload.town,
           playerId: socket.userData.playerId,
         })
-        .eager(Town.townRelations);
+        .eager(Town.townRelationsFiltered, Town.townRelationFilters);
       this.emitToTownRoom(payload.town, payload.name, 'town:renameSuccess');
     } catch (err) {
       socket.handleError(err, 'name', 'town:renameFail', payload);
@@ -105,7 +105,7 @@ export class TownSocket {
       const targetBuilding = worldData.buildingMap[building];
       if (!targetBuilding) { throw new ErrorMessage('Invalid target building'); }
 
-      const town = await Town.query(trx).findById(id).eager(Town.townRelations);
+      const town = await Town.query(trx).findById(id).eager(Town.townRelationsFiltered, Town.townRelationFilters);
       const target = town.buildings[building];
 
       const level = target.queued || target.level;
@@ -150,7 +150,7 @@ export class TownSocket {
   private static async tryRecruiting(id: number, time: number, units: PayloadUnit[]) {
     const trx = await transaction.start(knexDb.world);
     try {
-      const town = await Town.query(trx).findById(id).eager(Town.townRelations);
+      const town = await Town.query(trx).findById(id).eager(Town.townRelationsFiltered, Town.townRelationFilters);
       town.resources = town.getResources(time);
       const unitData = worldData.unitMap;
       const unitsToQueue = [];
@@ -209,10 +209,10 @@ export class TownSocket {
       const unitData = worldData.unitMap;
       let slowest = 0;
 
-      const town = await Town.query(trx).findById(id).eager(Town.townRelations);
+      const town = await Town.query(trx).findById(id).eager(Town.townRelationsFiltered, Town.townRelationFilters);
       if (payload.target === town.location) { throw new ErrorMessage('A town can\'t attack itself'); }
 
-      const targetTown = await Town.query(trx).findOne({ location: payload.target }).eager(Town.townRelations);
+      const targetTown = await Town.query(trx).findOne({ location: payload.target }).eager(Town.townRelationsFiltered, Town.townRelationFilters);
       if (!targetTown) { throw new ErrorMessage('Invalid target'); }
 
       const distance = Town.calculateDistance(town.location, targetTown.location);
