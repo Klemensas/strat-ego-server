@@ -16,7 +16,7 @@ import { worldData } from './api/world/worldData';
 import { mapManager } from './api/map/mapManager';
 import { logger } from './logger';
 import { scoreTracker } from './api/player/playerScore';
-// import queue from './api/world/queue';
+import { townQueue } from './api/townQueue';
 
 const app = express();
 const env = app.get('env');
@@ -36,11 +36,11 @@ app.use(cors());
 routing(app);
 
 worldData.readWorld(worldName)
-  .then(() => mapManager.initialize(worldName))
   .then(() => scoreTracker.readScores())
+  .then(() => townQueue.loadQueues())
+  .then(() => mapManager.initialize(worldName))
   .then(() => initializeSocket(io))
   .then(() => logger.info('server ready!'));
-  // .then(() => queue.go());
 
 if (env === 'development' || env === 'test') {
   app.use(errorHandler({ log: errorNotification }));
