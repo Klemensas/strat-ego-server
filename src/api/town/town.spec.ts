@@ -75,7 +75,7 @@ beforeEach(() => {
 //       resourcesUpdated: true,
 //       loyaltyUpdated: true,
 //     });
-//   // const spyResult = 
+//   // const spyResult =
 //   console.log('spy', spy.mock.calls)
 //   expect(spy).toBe(null);
 // })
