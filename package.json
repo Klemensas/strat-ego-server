@@ -9,7 +9,7 @@
     "start:watch": "nodemon -e ts --exec npm run start",
     "build": "tsc",
     "test": "export NODE_ENV=test|| set NODE_ENV=test&& jest",
-    "test:full": "export NODE_ENV=test|| set NODE_ENV=test&& jest --coverage --coverageReporters=text-lcov | coveralls",
+    "test:ci": "export NODE_ENV=test|| set NODE_ENV=test&& jest --coverage && codecov",
     "dev": "nodemon -e ts --exec ts-node --project ./tsconfig.json ./src",
     "lint": "tslint ./src/**/*.ts",
     "seed": "ts-node ./seeds",
@@ -21,6 +21,7 @@
     "migrate:rollback:world": "knex migrate:rollback --knexfile knexfile.world.js"
   },
   "jest": {
+    "coverageDirectory": "./coverage/",
     "transform": {
       "^.+\\.ts?$": "ts-jest"
     },
@@ -67,7 +68,7 @@
     "@types/node": "^8.10.8",
     "@types/seedrandom": "^2.4.27",
     "@types/socket.io": "^1.4.31",
-    "coveralls": "^3.0.0",
+    "codecov": "^3.0.0",
     "jest": "^22.4.3",
     "nodemon": "^1.12.1",
     "ts-jest": "^22.4.3",
