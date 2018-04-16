@@ -26,7 +26,7 @@ export class ScoreTracker {
             .as('score'),
         ).orderBy('score', 'desc');
       players.forEach((player) => {
-        player.score = player.score || 0;
+        player.score = +(player.score || 0);
         this.playerScores[player.id] = player;
         this.rankings.push(player.id);
       });
@@ -38,6 +38,7 @@ export class ScoreTracker {
   }
 
   public updateScore(change: number, playerId: number) {
+    if (!playerId || !this.playerScores[playerId]) { return; }
     this.playerScores[playerId].score += change;
     this.sortRankings();
   }

@@ -97,9 +97,9 @@ export class Player extends BaseModel {
         allianceRole,
         originReports.[originTown, targetTown],
         targetReports.[originTown, targetTown],
-        towns.[buildingQueues, unitQueues, originMovements, targetMovements],
+        towns.${Town.townRelationsFiltered},
         invitations(selectAllianceProfile)
-      ]`)
+      ]`, Town.townRelationFilters)
       .modifyEager(`[
         originReports.[originTown,targetTown],
         targetReports.[originTown, targetTown]

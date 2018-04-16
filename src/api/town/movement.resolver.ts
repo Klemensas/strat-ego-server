@@ -6,6 +6,8 @@ import { worldData } from '../world/worldData';
 import { Town } from './town';
 import { Movement } from './movement';
 import { Report } from './report';
+import { townQueue } from '../townQueue';
+import { TownSocket } from './town.socket';
 
 const defaultStrength: CombatStrength = { general: 0, cavalry: 0, archer: 0 };
 const combatTypes = ['general', 'cavalry', 'archer'];
@@ -52,19 +54,26 @@ export class MovementResolver {
     const isOrigin = movement.originTownId === town.id;
     const missingTown = isOrigin ? movement.targetTownId : movement.originTownId;
 
-    const processingResult = await Town.processTownQueues(missingTown, movement.endsAt);
+    const processingResult = await Town.processTownQueues(missingTown, movement.endsAt - 1);
+    townQueue.removeFromQueue(...processingResult.processed);
     const otherTown: Town = processingResult.town;
 
     let result: ResolvedAttack;
     if (isOrigin) {
       result = await MovementResolver.resolveAttack(movement, otherTown, town);
       result.originTown.originMovements = result.originTown.originMovements.filter(({ id }) => id !== movement.id);
-      if (result.movement) { result.originTown.targetMovements.push(result.movement); }
+      if (result.movement) {
+        result.originTown.targetMovements.push(result.movement);
+        townQueue.addToQueue(result.movement);
+      }
+      TownSocket.emitToTownRoom(result.targetTown.id, result.targetTown, 'town:update');
+      return result.originTown;
     } else {
       result = await MovementResolver.resolveAttack(movement, town, otherTown);
       result.targetTown.targetMovements = result.targetTown.targetMovements.filter(({ id }) => id !== movement.id);
+      TownSocket.emitToTownRoom(result.originTown.id, result.originTown, 'town:update');
+      return result.targetTown;
     }
-    return isOrigin ? result.originTown : result.targetTown;
   }
 
   static async resolveAttack(movement: Movement, targetTown: Town, originTown: Town) {
@@ -171,7 +180,7 @@ export class MovementResolver {
       unitChange: boolean;
     });
 
-    const { resources, haul } = MovementResolver.getHaul(targetTown.resources, attackResult.maxHaul);
+    const { resources, haul } = MovementResolver.getHaul(targetResources, attackResult.maxHaul);
     const originOutcome: OriginOutcome = {
       town: null,
       movement: {

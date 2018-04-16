@@ -61,7 +61,7 @@ export class Report extends BaseModel {
 
   static jsonSchema = {
     type: 'object',
-    required: ['outcome', 'origin', 'target', 'haul'],
+    required: ['outcome', 'origin', 'target'],
 
     properties: {
       outcome: { type: 'integer' },

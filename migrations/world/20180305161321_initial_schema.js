@@ -32,7 +32,7 @@ exports.up = function(knex, Promise) {
     .createTable('Town', table => {
       table.increments('id').primary();
       table.string('name').notNullable();
-      table.integer('loyalty').notNullable();
+      table.float('loyalty').notNullable();
       table.specificType('location', 'integer[]').unique();
       table.jsonb('production').notNullable();
       table.jsonb('resources').notNullable();
@@ -48,7 +48,7 @@ exports.up = function(knex, Promise) {
       table.integer('level').unsigned().notNullable();
       table.integer('buildTime').unsigned().notNullable();
       table.bigInteger('endsAt').unsigned().notNullable();
-      table.integer('townId').unsigned().references('id').inTable('Town');
+      table.integer('townId').unsigned().references('id').inTable('Town').onDelete('CASCADE');
       table.bigInteger('createdAt').unsigned().notNullable();
       table.bigInteger('updatedAt').unsigned().notNullable();
     })
@@ -58,7 +58,7 @@ exports.up = function(knex, Promise) {
       table.integer('amount').unsigned().notNullable();
       table.integer('recruitTime').unsigned().notNullable();
       table.bigInteger('endsAt').unsigned().notNullable();
-      table.integer('townId').unsigned().references('id').inTable('Town');
+      table.integer('townId').unsigned().references('id').inTable('Town').onDelete('CASCADE');
       table.bigInteger('createdAt').unsigned().notNullable();
       table.bigInteger('updatedAt').unsigned().notNullable();
     })
@@ -68,8 +68,8 @@ exports.up = function(knex, Promise) {
       table.jsonb('haul');
       table.integer('type').unsigned().notNullable();
       table.bigInteger('endsAt').unsigned().notNullable();
-      table.integer('originTownId').unsigned().references('id').inTable('Town');
-      table.integer('targetTownId').unsigned().references('id').inTable('Town');
+      table.integer('originTownId').unsigned().references('id').inTable('Town').onDelete('CASCADE');
+      table.integer('targetTownId').unsigned().references('id').inTable('Town').onDelete('CASCADE');
       table.bigInteger('createdAt').unsigned().notNullable();
       table.bigInteger('updatedAt').unsigned().notNullable();
     })
@@ -80,10 +80,10 @@ exports.up = function(knex, Promise) {
       table.jsonb('target');
       table.jsonb('haul');
       table.specificType('loyaltyChange', 'jsonb[]');
-      table.integer('originTownId').unsigned().references('id').inTable('Town');
-      table.integer('targetTownId').unsigned().references('id').inTable('Town');
-      table.integer('originPlayerId').unsigned().references('id').inTable('Player');
-      table.integer('targetPlayerId').unsigned().references('id').inTable('Player');
+      table.integer('originTownId').unsigned().references('id').inTable('Town').onDelete('CASCADE');
+      table.integer('targetTownId').unsigned().references('id').inTable('Town').onDelete('CASCADE');
+      table.integer('originPlayerId').unsigned().references('id').inTable('Player').onDelete('CASCADE');
+      table.integer('targetPlayerId').unsigned().references('id').inTable('Player').onDelete('CASCADE');
       table.bigInteger('createdAt').unsigned().notNullable();
       table.bigInteger('updatedAt').unsigned().notNullable();
     })

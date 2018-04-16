@@ -1,4 +1,7 @@
 import * as socketJwt from 'socketio-jwt';
+import * as socket from 'socket.io';
+import * as http from 'http';
+import * as uws from 'uws';
 import { AlliancePermissions } from 'strat-ego-common';
 
 import * as config from './environment';
@@ -45,6 +48,19 @@ export class ErrorMessage extends Error {
   toString() { return this.error; }
 }
 
+export let io: socket.Server;
+
+export const setupIo = (server: http.Server) => {
+  io = socket(server, {
+    path: '/socket.io-client',
+    serveClient: config.env !== 'production',
+  });
+  io.engine.ws = new uws.Server({
+    noServer: true,
+    perMessageDeflate: false,
+  });
+};
+
 export function initializeSocket(socketio: SocketIO.Server) {
     socketio.use(socketJwt.authorize({
       secret: config.secrets.session,
@@ -53,16 +69,16 @@ export function initializeSocket(socketio: SocketIO.Server) {
     socketio.on('connection', setupUserSocket);
 }
 
-export function setupUserSocket(socket: UserSocket) {
-  socket.address = `${socket.request.connection.remoteAddress}:${socket.request.connection.remotePort}`;
-  socket.userData = {
-    worldName: socket.handshake.query.world,
-    userId: socket.decoded_token.id,
-    username: socket.decoded_token.name,
+export function setupUserSocket(client: UserSocket) {
+  client.address = `${client.request.connection.remoteAddress}:${client.request.connection.remotePort}`;
+  client.userData = {
+    worldName: client.handshake.query.world,
+    userId: client.decoded_token.id,
+    username: client.decoded_token.name,
     connectedAt: Date.now(),
   };
-  socket.log = (data) => logger.error(serializeError(data), `SocketIO ${socket.nsp.name} [${socket.address}]`);
-  socket.handleError = (err: Error, type: string, target?: string, payload?: any) => {
+  client.log = (data) => logger.error(serializeError(data), `SocketIO ${client.nsp.name} [${client.address}]`);
+  client.handleError = (err: Error, type: string, target?: string, payload?: any) => {
     const message = err && typeof err.toString === 'function' ? err.toString() : err;
     const error = {
       type,
@@ -70,19 +86,19 @@ export function setupUserSocket(socket: UserSocket) {
       data: payload,
     };
 
-    socket.log(error);
+    client.log(error);
     if (target) {
-      socket.emit(target, error);
+      client.emit(target, error);
     }
   };
-  socket.on('disconnect', () => {
-    socket.log(`${socket.userData.username} disconnected`);
+  client.on('disconnect', () => {
+    client.log(`${client.userData.username} disconnected`);
   });
 
-  return PlayerSocket.onConnect(socket)
-    .then(() => TownSocket.onConnect(socket))
-    .then(() => MapSocket.onConnect(socket))
-    .then(() => AllianceSocket.onConnect(socket))
-    .then(() => RankingsSocket.onConnect(socket))
-    .then(() => socket.log(`${socket.userData.username} connected`));
+  return PlayerSocket.onConnect(client)
+    .then(() => TownSocket.onConnect(client))
+    .then(() => MapSocket.onConnect(client))
+    .then(() => AllianceSocket.onConnect(client))
+    .then(() => RankingsSocket.onConnect(client))
+    .then(() => client.log(`${client.userData.username} connected`));
 }

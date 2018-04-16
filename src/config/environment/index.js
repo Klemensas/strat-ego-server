@@ -20,7 +20,6 @@ module.exports = {
     session: process.env.APP_SECRET || 'secret',
   },
   userRoles: ['member', 'admin'],
-  seedDB: process.env.SEED_DATA || false,
   knex: {
     options: {
       client: 'postgresql',
@@ -30,6 +29,14 @@ module.exports = {
     },
     main: process.env.DB_MAIN || 'postgres://stratego:supasecretpassword@localhost:5432/stratego',
     world: process.env.DB_WORLD || 'postgres://stratego:supasecretpassword@localhost:5432/strategoWorld'
+  },
+  seed: {
+    queueRate: +(process.env.QUEUE_RATE || 0.5),
+    queueCount: +(process.env.QUEUE_COUNT || 100),
+    queueSpread: +(process.env.QUEUE_SPREAD || 86400000),
+    speed: +(process.env.WORLD_SPEED || 1),
+    demoUserCount: +(process.env.DEMO_USERS || 100),
+    baseProduction: +(process.env.BASE_PRODUCTION || 5000),
   },
   ...envVariables[env],
 };

@@ -1,15 +1,23 @@
-import { seed as seedMain } from './main/example';
-import { seed as seedWorld } from './world/example';
-import { knexDb } from '../src/sqldb';
 import { transaction } from 'objection';
 
-const speed = +(process.env.WORLD_SPEED || 1);
-const demoUserCount = +(process.env.DEMO_USERS || 100);
-const baseProduction = +(process.env.BASE_PRODUCTION || 5000);
+import * as config from '../src/config/environment';
+import { knexDb } from '../src/sqldb';
+import { seed as seedMain } from './main/example';
+import { seed as seedWorld } from './world/example';
+import { seed as seedQueues } from './world/queues';
+
+const speed = config.seed.speed;
+const demoUserCount = config.seed.demoUserCount;
+const baseProduction = config.seed.baseProduction;
+const queueRate = config.seed.queueRate;
+const queueCount = config.seed.queueCount;
+const queueSpread = config.seed.queueSpread;
 const maxDemoTowns = 5;
 const demoTownRate = 0.4;
+const seedString = 'megapolis';
 
 (async () => {
+  console.log('Seeding in progress, this might take a while, please wait');
   console.time('seed');
   try {
     const mainData = await seedMain(knexDb.main, speed, demoUserCount);
@@ -17,15 +25,15 @@ const demoTownRate = 0.4;
     const world = mainData[1][0];
 
     const worldData = await seedWorld(knexDb.world, users, world, maxDemoTowns, demoTownRate, speed, baseProduction);
+    await seedQueues(knexDb.world, seedString, worldData.towns, queueRate, queueCount, queueSpread);
 
     console.timeEnd('seed');
     console.log('seeding done');
     process.exit(0);
     return 1;
   } catch (err) {
-    console.log(err);
     console.timeEnd('seed');
-    console.log('failed seeding');
+    console.log('failed seeding, might need to rollback', err);
     process.exit(1);
   }
 })();

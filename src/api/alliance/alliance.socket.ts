@@ -13,8 +13,7 @@ import {
 } from 'strat-ego-common';
 
 import { knexDb } from '../../sqldb';
-import { io } from '../../';
-import { UserSocket, AuthenticatedSocket, ErrorMessage } from '../../config/socket';
+import { io, UserSocket, AuthenticatedSocket, ErrorMessage } from '../../config/socket';
 import { Alliance } from './alliance';
 import { transaction } from 'objection';
 import { setAlliancePermissions, AllianceRole } from './allianceRole';

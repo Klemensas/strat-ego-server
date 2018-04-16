@@ -13,7 +13,6 @@ import { scoreTracker } from './playerScore';
 export class PlayerSocket {
   static async onConnect(socket: UserSocket) {
     const player = await this.getOrCreatePlayer(socket);
-    await this.processPlayerTowns(player);
     socket.userData = {
       ...socket.userData,
       playerId: player.id,
@@ -88,11 +87,11 @@ export class PlayerSocket {
     }
   }
 
-  private static async processPlayerTowns(player: Player) {
-    const playerTowns = await Promise.all(player.towns.map((town) => Town.processTownQueues(town)));
-    player.towns = playerTowns.map(({ town, processed }) => town);
-    return player;
-  }
+  // private static async processPlayerTowns(player: Player) {
+  //   const playerTowns = await Promise.all(player.towns.map((town) => Town.processTownQueues(town)));
+  //   player.towns = playerTowns.map(({ town, processed }) => town);
+  //   return player;
+  // }
 
   private static async restart(socket: UserSocket) {
     socket.log(`player ${socket.userData.username} is restarting`);

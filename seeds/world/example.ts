@@ -638,7 +638,7 @@ export const seed = (knex, demoUsers: User[], world: World, maxTowns = 5, townRa
   .then(() => Building.query(knex).insert(generateBuildings(speed)))
   .then(() => worldData.readWorld(world.name))
   .then(() => Town.query(knex).del())
-  .then(() => {
+  .then(async () => {
     const coords = getCoordsInRange(townGenerationData.area, townGenerationData.furthestRing, townGenerationData.size);
     const factor = townGenerationData.percent;
     const name = 'Abandoned Town';
@@ -655,21 +655,26 @@ export const seed = (knex, demoUsers: User[], world: World, maxTowns = 5, townRa
   .then(async (towns: Town[]) => {
     await Player.query(knex).del();
 
+    const availableTowns = towns.map(({ id }) => id);
     const players = demoUsers.map((user, index) => {
       const assignedTowns = [];
-      for (let i = 0; i < maxTowns && towns.length > i; i++) {
+      for (let i = 0; i < maxTowns && availableTowns.length > i; i++) {
         const shouldAssign = Math.random() <= townRate;
         if (shouldAssign) {
-          assignedTowns.push({ id: towns[i].id });
+          assignedTowns.push({ id: availableTowns[i] });
+          // Remove towns to avoid queue generation for admin user
+          if ( i === 0) {
+            towns.splice(towns.findIndex(({ id }) => id === availableTowns[i]), 1);
+          }
         }
       }
-      towns.splice(0, assignedTowns.length);
+      availableTowns.splice(0, assignedTowns.length);
       return {
         userId: user.id,
         name: user.name,
         towns: assignedTowns,
       };
     });
-    return Player.query(knex).upsertGraph(players, { relate: true });
-
+    await Player.query(knex).upsertGraph(players, { relate: true });
+    return { players, towns };
   });
