@@ -9,12 +9,19 @@ import { Alliance } from '../alliance/alliance';
 import { worldData } from '../world/worldData';
 import { knexDb } from '../../sqldb';
 
-class MapManager {
+export class MapManager {
   public mapData: Map = {};
   public world: string;
+  public lastExpansion: number;
+  public expansionRate: number;
+  public expansionGrowth: number;
+  constructor(private worldData: WorldData) {}
 
   public async initialize(world: string) {
     this.world = world;
+    this.lastExpansion = +this.worldData.world.lastExpansion;
+    this.expansionRate = +this.worldData.world.expansionRate;
+    this.expansionGrowth = +this.worldData.world.expansionGrowth;
     const towns = await Town
       .query(knexDb.world)
       .eager('[player, player.alliance]')
@@ -159,6 +166,10 @@ class MapManager {
   public getAllData() {
     return this.mapData;
   }
+  public async expandRing(trx?: Transaction | Knex) {
+    await this.worldData.increaseRing(this.world, trx);
+    this.lastExpansion = +this.worldData.world.lastExpansion;
+  }
 }
 
-export const mapManager = new MapManager();
+export const mapManager = new MapManager(worldDataInstance);
