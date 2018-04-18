@@ -6,8 +6,8 @@ module.exports = {
         tableName: 'knex_migrations'
       },
     },
-    main: 'postgres://stratego:supasecretpassword@localhost:5432/testStratego',
-    world: 'postgres://stratego:supasecretpassword@localhost:5432/testStrategoWorld'
+    main: 'postgres://stratego:supasecretpassword@localhost:5433/testStratego',
+    world: 'postgres://stratego:supasecretpassword@localhost:5433/testStrategoWorld'
   },
   seed: {
     townPercent: +(process.env.TOWN_PERCENT || 0.5),
