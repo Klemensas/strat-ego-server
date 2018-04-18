@@ -9,7 +9,7 @@ postgres:
   environment:
     - DB_USER=stratego
     - DB_PASS=supasecretpassword
-    - DB_NAME=stratego,strategoWorld
+    - DB_NAME=stratego,strategoWorld,testStratego,testStrategoWorld
   ports:
     - "5432:5432"
   volumes_from:
