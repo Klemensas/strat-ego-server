@@ -18,6 +18,9 @@ export class World extends BaseModel {
   initialLoyalty: number;
   loyaltyRegeneration: number;
   loyaltyReductionRange: [number, number];
+  expansionRate: number;
+  expansionGrowth: number;
+  lastExpansion: number;
 
   // Associations
   users?: Array<Partial<User[]>>;
@@ -58,6 +61,9 @@ export class World extends BaseModel {
     'initialLoyalty',
     'loyaltyRegeneration',
     'loyaltyReductionRange',
+    'expansionRate',
+    'expansionGrowth',
+    'lastExpansion',
   ],
 
     properties: {
@@ -74,6 +80,9 @@ export class World extends BaseModel {
       currentRing: { type: 'integer' },
       initialLoyalty: { type: 'integer' },
       loyaltyRegeneration: { type: 'integer' },
+      expansionRate: { type: 'integer' },
+      expansionGrowth: { type: 'number' },
+      lastExpansion: { type: 'integer' },
       // loyaltyReductionRange: {
       //   type: 'array',
       //   minItems: 2,
