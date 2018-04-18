@@ -154,19 +154,14 @@ export class MapManager {
     return [...coords.top, ...innards, ...coords.bottom];
   }
 
-  public async chooseLocation(trx: Knex.Transaction | Knex = knexDb.main): Promise<Coords> {
-    const coords = await Town.getAvailableCoords(this.getCoordsInRange(
-      worldData.world.generationArea,
-      worldData.world.currentRing,
-      Math.ceil(worldData.world.size / 2),
-    ));
-    // TODO: better handling running out of locations
-    if (!coords.length) {
-      await worldData.increaseRing(this.world, trx);
+  public async chooseLocation(trx: Transaction | Knex = knexDb.main): Promise<Coords> {
+    await this.isExpanded;
+    if (!this.availableCoords.length) {
+      await this.expandRing(trx);
       return this.chooseLocation(trx);
     }
-    logger.info('available coords:', coords, coords[Math.round(Math.random() * (coords.length - 1))]);
-    return coords[Math.round(Math.random() * (coords.length - 1))];
+    const coord = this.availableCoords.splice(Math.floor(Math.random() * (this.availableCoords.length)));
+    return coord[0];
   }
 
   public getAllData() {
