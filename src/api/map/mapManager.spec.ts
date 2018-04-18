@@ -62,7 +62,7 @@ describe('map expansion', () => {
       [499, 501],
     ];
     beforeEach(async () => {
-      await Town.query(knexDb.world).insertGraph(usedCoords.map((location: Coords) => ({ location })));
+      return await Town.query(knexDb.world).insertGraph(usedCoords.map((location: Coords) => ({ location })));
     });
     test('should return only available coords ', async () => {
       const checkedCoords = testCoords.slice(2);
@@ -72,7 +72,7 @@ describe('map expansion', () => {
       expect(result.some((coord) => omitted.some((missing) => missing.join(',') === coord.join(',')))).toBeFalsy();
     });
     afterEach(async () => {
-      await Town.query(knexDb.world).del();
+      return await Town.query(knexDb.world).del();
     });
   });
 });

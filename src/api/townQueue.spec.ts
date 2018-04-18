@@ -62,14 +62,14 @@ beforeEach(async () => {
   setEalierSpy = jest.spyOn(townQueue, 'setEarliestItem');
   processSpy = jest.spyOn(townQueue, 'processItem').mockImplementation(() => Promise.resolve());
 
-  await Promise.all([
+  return await Promise.all([
     Movement.query(knexDb.world).insert(movementQueues),
     BuildingQueue.query(knexDb.world).insert(buildingQueues),
     UnitQueue.query(knexDb.world).insert(unitQueues),
   ]);
 });
 afterEach(async () => {
-  await Promise.all([
+  return await Promise.all([
     Movement.query(knexDb.world).del(),
     BuildingQueue.query(knexDb.world).del(),
     UnitQueue.query(knexDb.world).del(),
