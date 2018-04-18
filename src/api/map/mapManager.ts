@@ -15,6 +15,7 @@ export class MapManager {
   public lastExpansion: number;
   public expansionRate: number;
   public expansionGrowth: number;
+  public availableCoords: Coords[];
   constructor(private worldData: WorldData) {}
 
   public async initialize(world: string) {
@@ -169,6 +170,17 @@ export class MapManager {
   public async expandRing(trx?: Transaction | Knex) {
     await this.worldData.increaseRing(this.world, trx);
     this.lastExpansion = +this.worldData.world.lastExpansion;
+  }
+
+  public async getAvailableCoords(coords: Coords[]) {
+    // knex requires wrapping in an array http://knexjs.org/#Raw-Bindings
+    const wrappedCoords: any = coords.map((item) => ([item]));
+    const towns = await Town
+      .query(knexDb.world)
+      .select('location')
+      .whereIn('location', wrappedCoords);
+    const usedLocations = towns.map(({ location }) => location.join(','));
+    return coords.filter((c) => !usedLocations.includes(c.join(',')));
   }
 }
 
