@@ -14,3 +14,4 @@ postgres:
     - "5432:5432"
   volumes_from:
     - postgres-data
+  command: -c "max_stack_depth=6MB"
