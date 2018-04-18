@@ -6,8 +6,9 @@ import { Player } from '../player/player';
 import { World } from '../world/world';
 import { logger } from '../../logger';
 import { Alliance } from '../alliance/alliance';
-import { worldData } from '../world/worldData';
+import { worldData as worldDataInstance, WorldData } from '../world/worldData';
 import { knexDb } from '../../sqldb';
+import { Transaction } from 'objection';
 
 export class MapManager {
   public mapData: Map = {};
@@ -15,7 +16,9 @@ export class MapManager {
   public lastExpansion: number;
   public expansionRate: number;
   public expansionGrowth: number;
+  public isExpanded = Promise.resolve();
   public availableCoords: Coords[];
+
   constructor(private worldData: WorldData) {}
 
   public async initialize(world: string) {
@@ -23,6 +26,8 @@ export class MapManager {
     this.lastExpansion = +this.worldData.world.lastExpansion;
     this.expansionRate = +this.worldData.world.expansionRate;
     this.expansionGrowth = +this.worldData.world.expansionGrowth;
+    await this.scheduleExpansion();
+
     const towns = await Town
       .query(knexDb.world)
       .eager('[player, player.alliance]')
@@ -167,6 +172,28 @@ export class MapManager {
   public getAllData() {
     return this.mapData;
   }
+
+  // TODO: consider making expansion smarter to take into account distance from current towns
+  public async scheduleExpansion() {
+    const nextExpansion = +this.lastExpansion + Math.floor(this.expansionGrowth ** this.worldData.world.currentRing * this.expansionRate);
+    const timeLeft = nextExpansion - Date.now();
+
+    if (timeLeft <= 0) {
+      await this.expandRing();
+      return this.scheduleExpansion();
+    }
+
+    setTimeout(() => {
+      this.isExpanded = this.scheduleExpansion();
+    }, timeLeft);
+    const coords = await this.getAvailableCoords(this.getCoordsInRange(
+      this.worldData.world.generationArea,
+      this.worldData.world.currentRing,
+      Math.ceil(this.worldData.world.size / 2),
+    ));
+    this.availableCoords = coords;
+  }
+
   public async expandRing(trx?: Transaction | Knex) {
     await this.worldData.increaseRing(this.world, trx);
     this.lastExpansion = +this.worldData.world.lastExpansion;
