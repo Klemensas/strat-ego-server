@@ -1,5 +1,6 @@
 import * as Knex from 'knex';
-import { MapTown, Coords, Profile, Map } from 'strat-ego-common';
+import { Transaction } from 'objection';
+import { MapTown, Coords, Profile, Dict } from 'strat-ego-common';
 
 import { Town } from '../town/town';
 import { Player } from '../player/player';
@@ -8,10 +9,9 @@ import { logger } from '../../logger';
 import { Alliance } from '../alliance/alliance';
 import { worldData as worldDataInstance, WorldData } from '../world/worldData';
 import { knexDb } from '../../sqldb';
-import { Transaction } from 'objection';
 
 export class MapManager {
-  public mapData: Map = {};
+  public mapData: Dict<MapTown> = {};
   public world: string;
   public lastExpansion: number;
   public expansionRate: number;
