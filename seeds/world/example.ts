@@ -562,12 +562,7 @@ function generateBuildings(speed, list = buildingList) {
   });
 }
 
-const townGenerationData = {
-  percent: 0.6,
-  furthestRing: 13,
-  area: 13,
-  size: Math.ceil(999 / 2),
-};
+const mapSize = Math.ceil(999 / 2);
 function getRingCoords(size, ring) {
   const min = size - ring;
   const max = size + ring;
@@ -626,7 +621,18 @@ function getCoordsInRange(rings, furthestRing, size) {
   return [...coords.top, ...innards, ...coords.bottom];
 }
 
-export const seed = (knex, demoUsers: User[], world: World, maxTowns = 5, townRate = 0.4, speed = 1, baseProduction = 30) =>
+export const seed = (
+  knex,
+  demoUsers: User[],
+  world: World,
+  maxTowns = 5,
+  townRate = 0.4,
+  speed = 1,
+  baseProduction = 30,
+  townPercent = 0.6,
+  townArea = 13,
+  townDistance = 13,
+) =>
   Unit.query(knex).del().then(() => Unit.query(knex).insert(unitList.map((unit) => {
     unit.speed /= speed / 1000;
     unit.recruitTime /= speed / 1000;
@@ -639,8 +645,8 @@ export const seed = (knex, demoUsers: User[], world: World, maxTowns = 5, townRa
   .then(() => worldData.readWorld(world.name))
   .then(() => Town.query(knex).del())
   .then(async () => {
-    const coords = getCoordsInRange(townGenerationData.area, townGenerationData.furthestRing, townGenerationData.size);
-    const factor = townGenerationData.percent;
+    const coords = getCoordsInRange(townArea, townDistance, mapSize);
+    const factor = townPercent;
     const name = 'Abandoned Town';
     return Town.query(knex).insert(coords.reduce((towns, location) => {
       if (Math.random() <= factor) { towns.push({

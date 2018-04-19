@@ -43,13 +43,17 @@ export class WorldData {
     }
   }
 
-  public async increaseRing(name: string, query: Knex.Transaction | Knex = knexDb.main,  ring = this.world.currentRing) {
+  // Note: this gets called on a time basis and running out of locations, as a result of this
+  // updating lastExpansion it will considerably hasten expansion rate on faster growth
+  public async increaseRing(name: string, query: Knex.Transaction | Knex = knexDb.main) {
     try {
-      const update = await World.query(query)
-        .patch({ currentRing: ring + 1 })
+      await this.world.$query(query)
+        .patch({
+          currentRing: this.world.currentRing + 1,
+          lastExpansion: +this.world.lastExpansion + +this.world.expansionRate,
+        })
         .where({ name });
 
-      this.world.currentRing++;
       logger.info('increased current ring');
     } catch (err) {
       logger.error(err, 'Error while updating world ring size.');

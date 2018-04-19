@@ -256,17 +256,6 @@ export class Town extends BaseModel {
     }, 0);
   }
 
-  static getAvailableCoords = async (coords: Coords[]) => {
-    // knex requires wrapping in an array http://knexjs.org/#Raw-Bindings
-    const wrappedCoords: any = coords.map((item) => ([item]));
-    const towns = await Town
-      .query(knexDb.world)
-      .select('location')
-      .whereIn('location', wrappedCoords);
-    const usedLocations = towns.map(({ location }) => location.join(','));
-    return coords.filter((c) => !usedLocations.includes(c.join(',')));
-  }
-
   static calculateDistance(originCoords: Coords, targetCoords: Coords) {
     const origin = Town.offsetToCube(originCoords);
     const target = Town.offsetToCube(targetCoords);

@@ -385,6 +385,7 @@ export class AllianceSocket {
       alliance.invitations = alliance.invitations.filter((id) => id !== player.id);
 
       io.sockets.in(`alliance.${alliance.id}`).emit('alliance:event', { event, data: member });
+      mapManager.setTownAlliance({ id: alliance.id, name: alliance.name }, socket.userData.townIds);
       socket.emit('alliance:acceptInviteSuccess', alliance);
       socket.userData = {
         ...socket.userData,
@@ -577,19 +578,7 @@ export class AllianceSocket {
 
       await trx.commit();
 
-      const room = `alliance.${allianceId}`;
-      io.sockets.in(room).emit('alliance:destroyed');
-      Object.keys(io.sockets.adapter.rooms[room].sockets).forEach((socketId: string) => {
-        const client = io.sockets.connected[socketId] as UserSocket;
-        client.userData = {
-          ...client.userData,
-          allianceId: null,
-          allianceName: null,
-          allianceRoleId: null,
-          alliancePermissions: null,
-        };
-        client.leave(room);
-      });
+      this.destroyAllianceNotify(`alliance.${allianceId}`);
     } catch (err) {
       await trx.rollback();
       socket.handleError(err, 'destroyAlliance', 'alliance:destroyFail');
@@ -991,7 +980,8 @@ export class AllianceSocket {
         name: socket.userData.playerName,
       };
       socket.userData = this.cleanSocketAlliance(socket.userData);
-      this.leaveAllianceRoom(socket, allianceId);
+      this.leaveAllianceRoom(socket, allianceId);mapManager.setTownAlliance({ id: alliance.id, name: alliance.name }, socket.userData.townIds);
+      
       socket.emit('alliance:leaveAllianceSuccess');
       io.sockets.in(`alliance.${allianceId}`).emit('alliance:event', { event, data: socket.userData.playerId });
     } catch (err) {
@@ -1039,6 +1029,7 @@ export class AllianceSocket {
     Object.keys(room).forEach((socketId: string) => {
       const client = io.sockets.connected[socketId] as UserSocket;
       client.userData = this.cleanSocketAlliance(client.userData);
+      mapManager.setTownAlliance(null, client.userData.townIds);
       clientAction(client);
     });
   }

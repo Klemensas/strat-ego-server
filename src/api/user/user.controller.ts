@@ -34,7 +34,7 @@ export async function index(req, res) {
 export async function create(req, res) {
   const newUser = req.body;
   newUser.provider = 'local';
-  newUser.role = 'user';
+  newUser.role = 'member';
   try {
     const user = await User.query(knexDb.main).insert(newUser);
     return res.json({ token: signToken(user) });
