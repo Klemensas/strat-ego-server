@@ -88,12 +88,17 @@ export class MapManager {
     const townList = Object.entries(this.mapData);
     townIds.forEach((id) => {
       const target = townList.find(([key, data]) => data.id === id);
-      this.mapData[target[0]].alliance = alliance;
+      if (target) {
+        this.mapData[target[0]].alliance = alliance;
+      }
     });
    }
 
   public setTownScore(score: number, coords: Coords) {
-    this.mapData[coords.join(',')].score = score;
+    const target = this.mapData[coords.join(',')];
+    if (target) {
+      target.score = score;
+    }
   }
 
   public getRingCoords(size: number, ring: number) {
