@@ -16,13 +16,12 @@ export class MapManager {
   public lastExpansion: number;
   public expansionRate: number;
   public expansionGrowth: number;
-  public isExpanded = Promise.resolve();
-  public availableCoords: Coords[];
+  public isExpanded: Promise<any> = Promise.resolve();
+  public availableCoords: Coords[] = [];
 
   constructor(private worldData: WorldData) {}
 
-  public async initialize(world: string) {
-    this.world = world;
+  public async initialize() {
     this.lastExpansion = +this.worldData.world.lastExpansion;
     this.expansionRate = +this.worldData.world.expansionRate;
     this.expansionGrowth = +this.worldData.world.expansionGrowth;
@@ -30,6 +29,7 @@ export class MapManager {
 
     const towns = await Town
       .query(knexDb.world)
+      .select('id', 'name', 'location', 'score')
       .eager('[player, player.alliance]')
       .pick(Player, ['id', 'name'])
       .pick(Alliance, ['id', 'name']);
@@ -160,7 +160,7 @@ export class MapManager {
       await this.expandRing(trx);
       return this.chooseLocation(trx);
     }
-    const coord = this.availableCoords.splice(Math.floor(Math.random() * (this.availableCoords.length)));
+    const coord = this.availableCoords.splice(Math.floor(Math.random() * this.availableCoords.length), 1);
     return coord[0];
   }
 
@@ -181,6 +181,7 @@ export class MapManager {
     setTimeout(() => {
       this.isExpanded = this.scheduleExpansion();
     }, timeLeft);
+
     const coords = await this.getAvailableCoords(this.getCoordsInRange(
       this.worldData.world.generationArea,
       this.worldData.world.currentRing,
