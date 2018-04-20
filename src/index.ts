@@ -38,9 +38,13 @@ routing(app);
 worldData.readWorld(worldName)
   .then(() => scoreTracker.readScores())
   .then(() => townQueue.loadQueues())
-  .then(() => mapManager.initialize(worldName))
+  .then(() => mapManager.initialize())
   .then(() => initializeSocket(io))
-  .then(() => logger.info('server ready!'));
+  .then(() => logger.info('server ready!'))
+  .catch((err) => {
+    logger.error(err, 'server dead');
+    process.exit(1);
+  });
 
 if (env === 'development' || env === 'test') {
   app.use(errorHandler({ log: errorNotification }));

@@ -51,8 +51,7 @@ export class WorldData {
         .patch({
           currentRing: this.world.currentRing + 1,
           lastExpansion: +this.world.lastExpansion + +this.world.expansionRate,
-        })
-        .where({ name });
+        });
 
       logger.info('increased current ring');
     } catch (err) {
