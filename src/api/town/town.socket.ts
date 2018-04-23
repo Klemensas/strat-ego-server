@@ -94,6 +94,7 @@ export class TownSocket {
 
       const time = Date.now();
       const town = await this.tryMoving(payload.town, time, payload);
+      // TOOD: add movement for target, duhhh
       this.emitToTownRoom(payload.town, town, 'town:moveTroopsSuccess');
     } catch (err) {
       socket.handleError(err, 'movement', 'town:moveTroopsFail', payload);
@@ -161,7 +162,7 @@ export class TownSocket {
       for (const unit of units) {
         const targetUnit = unitData[unit.type];
         if (!town.units.hasOwnProperty(unit.type) || +unit.amount <= 0) { throw new ErrorMessage('Wrong unit'); }
-        if (!town.doesMeetRequirements(targetUnit.requirements, 'units')) { throw new ErrorMessage('Requirements not met'); }
+        if (!town.doesMeetRequirements(targetUnit.requirements, 'buildings')) { throw new ErrorMessage('Requirements not met'); }
         usedPop += unit.amount;
 
         town.resources.wood -= targetUnit.costs.wood * unit.amount;

@@ -115,6 +115,7 @@ export class PlayerSocket {
       await trxMain.commit();
       await trxWorld.commit();
 
+      mapManager.addPlayerTowns(player);
       socket.userData = {
         ...socket.userData,
         townIds: player.towns.map(({ id }) => id),
