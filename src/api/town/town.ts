@@ -13,6 +13,7 @@ import { Movement } from './movement';
 import { mapManager } from '../map/mapManager';
 import { MovementResolver } from './movement.resolver';
 import { scoreTracker } from '../player/playerScore';
+import { TownSupport } from './townSupport';
 
 export interface ProcessingResult {
   town: Town;
@@ -39,6 +40,8 @@ export class Town extends BaseModel {
   unitQueues?: Array<Partial<UnitQueue>>;
   originMovements?: Array<Partial<Movement>>;
   targetMovements?: Array<Partial<Movement>>;
+  originSupport?: Array<Partial<TownSupport>>;
+  targetSupport?: Array<Partial<TownSupport>>;
 
   static tableName = 'Town';
 
@@ -97,6 +100,22 @@ export class Town extends BaseModel {
       join: {
         from: 'Town.id',
         to: 'Report.targetTownId',
+      },
+    },
+    originSupport: {
+      relation: BaseModel.HasManyRelation,
+      modelClass: 'townSupport',
+      join: {
+        from: 'Town.id',
+        to: 'TownSupport.originTownId',
+      },
+    },
+    targetSupport: {
+      relation: BaseModel.HasManyRelation,
+      modelClass: 'townSupport',
+      join: {
+        from: 'Town.id',
+        to: 'TownSupport.targetTownId',
       },
     },
   };
