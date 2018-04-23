@@ -1,7 +1,7 @@
 import { User } from '../../src/api/user/user';
 import { World } from '../../src/api/world/world';
 
-export const seed = (knex, speed = 1, demoUserCount = 100) => Promise.all([
+export const seed = (knex, speed = 1, demoUserCount = 100, expansionRate = 172800000, expansionGrowth = 1.1) => Promise.all([
   User.query(knex).del().then(() => {
     const demoUsers = [];
     for (let i = 0; i < demoUserCount; i++) {
@@ -50,8 +50,8 @@ export const seed = (knex, speed = 1, demoUserCount = 100) => Promise.all([
     initialLoyalty: 30,
     loyaltyRegeneration: 1,
     loyaltyReductionRange: [100, 105],
-    expansionRate: 5000,
-    expansionGrowth: 1.1,
+    expansionRate,
+    expansionGrowth,
     lastExpansion: Date.now(),
     createdAt: Date.now(),
     updatedAt: Date.now(),

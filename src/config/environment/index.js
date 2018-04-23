@@ -33,7 +33,9 @@ module.exports = {
   seed: {
     queueRate: +(process.env.QUEUE_RATE || 0.5),
     queueCount: +(process.env.QUEUE_COUNT || 100),
-    queueSpread: +(process.env.QUEUE_SPREAD || 86400000),
+    queueSpread: +(process.env.QUEUE_SPREAD || 600000 /* 86400000 */),
+    expansionRate: +(process.env.EXPANSION_RATE || 172800000),
+    expansionGrowth: +(process.env.EXPANSION_GROWTH || 1.1),
     speed: +(process.env.WORLD_SPEED || 1),
     demoUserCount: +(process.env.DEMO_USERS || 100),
     baseProduction: +(process.env.BASE_PRODUCTION || 5000),
