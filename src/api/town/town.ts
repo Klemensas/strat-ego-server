@@ -1,6 +1,6 @@
 import * as Knex from 'knex';
 import { transaction } from 'objection';
-import { Resources, TownUnits, TownBuildings, Coords, Requirements, QueueType } from 'strat-ego-common';
+import { Resources, TownBuildings, Coords, Requirements, QueueType, MovementType, TownUnit, Dict } from 'strat-ego-common';
 
 import { BaseModel } from '../../sqldb/baseModel';
 import { knexDb } from '../../sqldb';
@@ -29,7 +29,7 @@ export class Town extends BaseModel {
   location?: Coords;
   production?: Resources;
   resources?: Resources;
-  units?: TownUnits;
+  units?: Dict<TownUnit>;
   buildings?: TownBuildings;
   score?: number;
 
