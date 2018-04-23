@@ -222,7 +222,6 @@ export class TownSocket {
 
         units[unit[0]] = unit[1];
         town.units[unit[0]].inside -= unit[1];
-        town.units[unit[0]].outside += unit[1];
         slowest = Math.max(unitData[unit[0]].speed, slowest);
       }
       const movementTime = slowest * distance;

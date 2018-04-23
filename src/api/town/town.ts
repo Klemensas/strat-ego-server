@@ -225,7 +225,6 @@ export class Town extends BaseModel {
         [item.name]: {
           inside: this.units[item.name].inside + item.amount,
           queued: this.units[item.name].queued - item.amount,
-          outside: this.units[item.name].outside,
         },
       },
       resources: this.getResources(item.endsAt),
@@ -252,11 +251,14 @@ export class Town extends BaseModel {
   }
 
   getAvailablePopulation(): number {
-    const used = worldData.units.reduce((t, unit) => {
-      return t + Object.values(this.units[unit.name]).reduce((a, b) => a + b);
-    }, 0);
+    const supportPop = this.originSupport.reduce((result, { units }) => result + Object.values(units).reduce((a, b) => a + b, 0), 0);
+    const attackPop = this.originMovements.reduce((result, { units }) => result + Object.values(units).reduce((a, b) => a + b, 0), 0);
+    const returnPop = this.targetMovements.reduce((result, { units, type }) =>
+      result + type === MovementType.return ? Object.values(units).reduce((a, b) => a + b, 0) : 0, 0);
+
+    const townPop = worldData.units.reduce((result, unit) => result + Object.values(this.units[unit.name]).reduce((a, b) => a + b), 0);
     const total = worldData.buildingMap.farm.data[this.buildings.farm.level].population;
-    return total - used;
+    return total - townPop - supportPop - attackPop - returnPop;
   }
 
   getWallBonus(): number {
@@ -296,9 +298,9 @@ export class Town extends BaseModel {
     };
   }
 
-  static getInitialUnits(): TownUnits {
+  static getInitialUnits(): Dict<TownUnit> {
     return worldData.units.reduce((result, item) => {
-      result[item.name] = { inside: 0, outside: 0, queued: 0 };
+      result[item.name] = { inside: 0, queued: 0 };
       return result;
     }, {});
   }
@@ -374,7 +376,6 @@ export class Town extends BaseModel {
               type: 'object',
               properties: {
                 inside: { type: 'integer' },
-                outside: { type: 'integer' },
                 queued: { type: 'integer' },
               },
             };
@@ -383,7 +384,6 @@ export class Town extends BaseModel {
           default: worldData.units.reduce((result, item) => {
             result[item.name] = {
               inside: 0,
-              outside: 0,
               queued: 0,
             };
             return result;

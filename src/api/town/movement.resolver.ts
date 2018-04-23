@@ -13,7 +13,6 @@ const defaultStrength: CombatStrength = { general: 0, cavalry: 0, archer: 0 };
 const combatTypes = ['general', 'cavalry', 'archer'];
 
 export interface OriginOutcome {
-  town?: Partial<Town>;
   movement?: Partial<Movement>;
 }
 
@@ -182,7 +181,6 @@ export class MovementResolver {
 
     const { resources, haul } = MovementResolver.getHaul(targetResources, attackResult.maxHaul);
     const originOutcome: OriginOutcome = {
-      town: null,
       movement: {
         haul,
         units: attackResult.survivors,
@@ -213,19 +211,8 @@ export class MovementResolver {
       attackResult.unitChange = true;
     }
 
-    if (attackResult.unitChange) {
-      const units = Object.entries(attackResult.losses).reduce((result, [key, val]) => {
-        result[key].outside -= val;
-        return result;
-      }, { ...originTown.units });
-      if (isConquered) {
-        units.noble.outside -= 1;
-        originOutcome.movement.units.noble -= 1;
-      }
-
-      originOutcome.town = {
-        units,
-      };
+    if (attackResult.unitChange && isConquered) {
+      originOutcome.movement.units.noble -= 1;
     }
 
     return MovementResolver.saveCombatOutcome(movement, targetTown, originTown, {
@@ -273,7 +260,6 @@ export class MovementResolver {
     });
 
     const attackResult = unitArrays.attack.reduce((result, [key, val]) => {
-      result.units[key].outside -= val;
       result.combatUnits[key] = val;
       return result;
     }, { units: { ...originTown.units }, combatUnits: {} });
@@ -340,13 +326,6 @@ export class MovementResolver {
           });
       }
 
-      if (attackOutcome.origin.town) {
-        await originTown.$query(trx)
-          .patch({
-            ...attackOutcome.origin.town,
-            updatedAt: +movement.endsAt,
-          });
-      }
       await trx.commit();
       return { originTown, targetTown, report, movement: newMovement };
     } catch (err) {
