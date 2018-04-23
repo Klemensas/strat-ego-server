@@ -327,6 +327,8 @@ export class Town extends BaseModel {
     this.unitQueues = [];
     this.originMovements = [];
     this.targetMovements = [];
+    this.originSupport = [];
+    this.targetSupport = [];
   }
 
   $beforeValidate(jsonSchema, json, opt) {
@@ -432,16 +434,25 @@ export class Town extends BaseModel {
     },
   };
 
-  static townRelations = '[buildingQueues, unitQueues, originMovements, targetMovements, originReports, targetReports]';
+  static townRelations = '[buildingQueues, unitQueues, originMovements, targetMovements, originSupport, targetSupport]';
   static townRelationsFiltered = `[
     buildingQueues(orderByEnd),
     unitQueues(orderByEnd),
-    originMovements(orderByEnd),
-    targetMovements(orderByEnd),
+    originMovements(orderByEnd).[targetTown(selectTownProfile)],
+    targetMovements(orderByEnd).[originTown(selectTownProfile)],
+    originSupport(orderByCreated).[targetTown(selectTownProfile)],
+    targetSupport(orderByCreated).[originTown(selectTownProfile)],
   ]`;
   static townRelationFilters = {
     orderByEnd: (builder) => builder.orderBy('endsAt', 'asc'),
+    orderByCreated: (builder) => builder.orderBy('createdAt', 'desc'),
   };
+
+  static get namedFilters() {
+    return {
+      selectTownProfile: (builder) => builder.select('id', 'name', 'location'),
+    };
+  }
 
   static getTown(where: Partial<Town>, trx: Knex.Transaction | Knex = knexDb.world) {
     return Town
