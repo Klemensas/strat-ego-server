@@ -1,4 +1,4 @@
-import { MovementUnit, TownUnits, TownUnit, CombatStrength, Resources, MovementType, CombatOutcome, Haul, Dict } from 'strat-ego-common';
+import { MovementUnit, TownUnit, CombatStrength, Resources, MovementType, CombatOutcome, Haul, Dict } from 'strat-ego-common';
 import { transaction } from 'objection';
 
 import { knexDb } from '../../sqldb';
@@ -8,6 +8,7 @@ import { Movement } from './movement';
 import { Report } from './report';
 import { townQueue } from '../townQueue';
 import { TownSocket } from './town.socket';
+import { TownSupport } from './townSupport';
 
 const defaultStrength: CombatStrength = { general: 0, cavalry: 0, archer: 0 };
 const combatTypes = ['general', 'cavalry', 'archer'];
@@ -20,7 +21,7 @@ export interface TargetOutcome {
   playerId?: number;
   resources: Resources;
   loyalty: number;
-  units?: TownUnits;
+  units?: Dict<TownUnit>;
 }
 
 export interface AttackOutcome {
@@ -36,6 +37,10 @@ export interface ResolvedAttack {
   movement?: Movement;
 }
 
+export interface SupportChange {
+  id: number;
+  units: Dict<number>;
+}
 export type MovementUnitArray = [string, number];
 export interface CombatantList {
   attack: MovementUnitArray[];
@@ -49,13 +54,18 @@ export class MovementResolver {
     return MovementResolver.movementTypeResolver[movement.type](movement, initTown);
   }
 
+  static async updateMissingTown(townId: number, time: number) {
+    const { town, processed } = await Town.processTownQueues(townId, time);
+    townQueue.removeFromQueue(...processed);
+    return town;
+  }
+
+  // Note: emitting to socket here might result to multiple updates if the town has multiple unprocessed queues
   static async fetchTownAndResolveAttack(movement: Movement, town: Town) {
     const isOrigin = movement.originTownId === town.id;
     const missingTown = isOrigin ? movement.targetTownId : movement.originTownId;
 
-    const processingResult = await Town.processTownQueues(missingTown, movement.endsAt - 1);
-    townQueue.removeFromQueue(...processingResult.processed);
-    const otherTown: Town = processingResult.town;
+    const otherTown = await MovementResolver.updateMissingTown(missingTown, +movement.endsAt - 1);
 
     let result: ResolvedAttack;
     if (isOrigin) {
@@ -84,10 +94,19 @@ export class MovementResolver {
     const attackStrength = MovementResolver.calculateAttackStrength(unitArrays.attack);
 
     const defenseStrength = MovementResolver.calculateDefenseStrength(unitArrays.defense);
+    const supportStrength = MovementResolver.calculateSupportStrength(targetTown.targetSupport);
+    const totalDefenseStrength: CombatStrength = {
+      general: defenseStrength.general + supportStrength.general,
+      cavalry: defenseStrength.cavalry + supportStrength.cavalry,
+      archer: defenseStrength.archer + supportStrength.archer,
+      total: defenseStrength.total + supportStrength.total,
+    };
+
+    supportStrength.total = supportStrength.general + supportStrength.cavalry + supportStrength.archer;
     attackStrength.total = attackStrength.general + attackStrength.cavalry + attackStrength.archer;
     defenseStrength.total = defenseStrength.general + defenseStrength.cavalry + defenseStrength.archer;
 
-    if (defenseStrength.total === 0) {
+    if (totalDefenseStrength.total === 0) {
       return MovementResolver.handleAttackWin(unitArrays, 1, movement, targetTown, originTown);
     }
 
@@ -100,35 +119,34 @@ export class MovementResolver {
     const wallBonus = targetTown.getWallBonus();
     const [winner, losser] = combatTypes.reduce((sides, type) => {
       sides[0].strength += attackStrength[type] * attackTypePercentages[type];
-      sides[1].strength += defenseStrength[type] * attackTypePercentages[type] * wallBonus;
+      sides[1].strength += totalDefenseStrength[type] * attackTypePercentages[type] * wallBonus;
       return sides;
-    }, [{ side: 'attack', strength: 0 }, { side: 'defense', strength: 0 }]).sort((a, b) => b.strength - a.strength);
+    }, [{ side: CombatOutcome.attack, strength: 0 }, { side: CombatOutcome.defense, strength: 0 }]).sort((a, b) => b.strength - a.strength);
 
     const winnerSurvival = MovementResolver.calculateSurvivalPercent(winner.strength, losser.strength);
 
-    const outcomeHandler = winner.side === 'attack' ?
-      MovementResolver.handleAttackWin :
-      MovementResolver.handleDefenseWin;
+    const outcomeHandler = winner.side === CombatOutcome.attack ? MovementResolver.handleAttackWin : MovementResolver.handleDefenseWin;
     return outcomeHandler(unitArrays, winnerSurvival, movement, targetTown, originTown);
   }
 
-  static async resolveReturn(movement: Movement, targetTown: Town) {
+  static async resolveReturn(movement: Movement, town: Town) {
     const units = Object.entries(movement.units).reduce((result, [key, value]) => {
-      result[key].outside -= value;
       result[key].inside += value;
       return result;
-    }, { ...targetTown.units });
+    }, { ...town.units });
 
-    const resources = targetTown.getResources(movement.endsAt);
-    const maxRes = targetTown.getMaxRes();
-    resources.wood = Math.min(maxRes, resources.wood + movement.haul.wood);
-    resources.clay = Math.min(maxRes, resources.clay + movement.haul.clay);
-    resources.iron = Math.min(maxRes, resources.iron + movement.haul.iron);
+    const resources = town.getResources(movement.endsAt);
+    const maxRes = town.getMaxRes();
+    if (!!movement.haul) {
+      resources.wood = Math.min(maxRes, resources.wood + movement.haul.wood);
+      resources.clay = Math.min(maxRes, resources.clay + movement.haul.clay);
+      resources.iron = Math.min(maxRes, resources.iron + movement.haul.iron);
+    }
 
     const trx = await transaction.start(knexDb.world);
     try {
       await movement.$query(trx).delete();
-      await targetTown.$query(trx)
+      await town.$query(trx)
         .patch({
           units,
           resources,
@@ -139,17 +157,51 @@ export class MovementResolver {
         });
       await trx.commit();
 
-      targetTown.targetMovements = targetTown.targetMovements.filter(({ id }) => id !== movement.id);
-      return targetTown;
+      town.targetMovements = town.targetMovements.filter(({ id }) => id !== movement.id);
+      return town;
     } catch (err) {
       await trx.rollback();
       throw err;
     }
   }
 
-  static async resolveSupport(movement: Movement, targetTown: Town) {
-    // Stub
-    return targetTown;
+  // Note: emitting to socket here might result to multiple updates if the town has multiple unprocessed queues
+  static async resolveSupport(movement: Movement, town: Town) {
+    const trx = await transaction.start(knexDb.world);
+    try {
+      const isOrigin = movement.originTownId === town.id;
+      const missingTown = isOrigin ? movement.targetTownId : movement.originTownId;
+      const otherTown = await MovementResolver.updateMissingTown(missingTown, +movement.endsAt - 1);
+
+      await movement.$query(trx).delete();
+      const townSupport = await TownSupport.query(trx).insert({
+        units: movement.units,
+        originTownId: movement.originTownId,
+        originTown: movement.originTown,
+        targetTownId: movement.targetTownId,
+        targetTown: movement.targetTown,
+      });
+
+      await trx.commit();
+
+      if (isOrigin) {
+        otherTown.targetSupport.push(townSupport);
+        otherTown.targetMovements = otherTown.targetMovements.filter(({ id }) => id !== movement.id);
+        town.originMovements = town.originMovements.filter(({ id }) => id !== movement.id);
+        town.originSupport.push(townSupport);
+      } else {
+        otherTown.originSupport.push(townSupport);
+        otherTown.originMovements = otherTown.originMovements.filter(({ id }) => id !== movement.id);
+        town.targetMovements = town.targetMovements.filter(({ id }) => id !== movement.id);
+        town.targetSupport.push(townSupport);
+      }
+
+      TownSocket.emitToTownRoom(otherTown.id, otherTown, 'town:update');
+      return town;
+    } catch (err) {
+      await trx.rollback();
+      throw err;
+    }
   }
 
   static handleAttackWin(unitArrays: CombatantList, winnerSurvival: number, movement: Movement, targetTown: Town, originTown: Town) {
@@ -253,11 +305,28 @@ export class MovementResolver {
       losses: {},
       hasLosses: false,
     } as {
-      survivors: TownUnits;
+      survivors: Dict<TownUnit>;
       defendingUnits: Dict<number>;
       losses: Dict<number>;
       hasLosses: boolean;
     });
+    const supportChanges: SupportChange[] = targetTown.targetSupport.reduce((result, item) => {
+      const { alive, units, changed } = Object.entries(item.units).reduce((r, [key, val]) => {
+        const count = Math.round(val * winnerSurvival);
+        r.alive = r.alive || !!count;
+        r.changed =  r.changed || count !== val;
+        r.units[key] = count;
+        return r;
+      }, { alive: false, units: {}, changed: false });
+      if (changed) {
+        result.push({
+          changed,
+          id: item.id,
+          units: !alive ? null : units,
+        });
+      }
+      return result;
+    }, []);
 
     const attackResult = unitArrays.attack.reduce((result, [key, val]) => {
       result.combatUnits[key] = val;
@@ -270,26 +339,36 @@ export class MovementResolver {
       loyalty: targetTown.getLoyalty(movement.endsAt, targetTown.updatedAt),
     } : null;
 
-    return MovementResolver.saveCombatOutcome(movement, targetTown, originTown, {
-      origin: {
-        town: { units: attackResult.units },
-      },
-      target: targetOutcome,
-      report: {
-        outcome: CombatOutcome.defense,
-        origin: {
-          units: attackResult.combatUnits,
-          losses: attackResult.combatUnits,
+    return MovementResolver.saveCombatOutcome(
+      movement,
+      targetTown,
+      originTown,
+      {
+        origin: {},
+        target: targetOutcome,
+        report: {
+          outcome: CombatOutcome.defense,
+          origin: {
+            units: attackResult.combatUnits,
+            losses: attackResult.combatUnits,
+          },
+          target: {
+            units: defenseResult.defendingUnits,
+            losses: defenseResult.losses,
+          },
         },
-        target: {
-          units: defenseResult.defendingUnits,
-          losses: defenseResult.losses,
-        },
       },
-    });
+      supportChanges,
+    );
   }
 
-  static async saveCombatOutcome(movement: Movement, targetTown: Town, originTown: Town, attackOutcome: AttackOutcome): Promise<ResolvedAttack> {
+  static async saveCombatOutcome(
+    movement: Movement,
+    targetTown: Town,
+    originTown: Town,
+    attackOutcome: AttackOutcome,
+    support: SupportChange[] = [],
+  ): Promise<ResolvedAttack> {
     const endsAt = +movement.endsAt + (+movement.endsAt - +movement.createdAt);
     const trx = await transaction.start(knexDb.world);
     let newMovement: Movement = null;
@@ -304,6 +383,7 @@ export class MovementResolver {
         targetPlayerId: targetTown.playerId,
       });
 
+      // Victorious return movement
       if (attackOutcome.origin.movement) {
         newMovement = await Movement.query(trx).insert({
           ...attackOutcome.origin.movement,
@@ -314,7 +394,16 @@ export class MovementResolver {
         });
       }
 
+      // Target losses
       if (attackOutcome.target) {
+        // Remove all support if target lost
+        if (report.outcome === CombatOutcome.attack) {
+          await targetTown.$relatedQuery('targetSupport', trx).del();
+        }
+        await Promise.all(support.map((item) => item.units ?
+          targetTown.$relatedQuery<TownSupport>('targetSupport', trx).where('id', item.id).patch({ units: item.units }) :
+          targetTown.$relatedQuery('targetSupport', trx).where('id', item.id).del(),
+        ));
         await targetTown.$query(trx)
           .patch({
             ...attackOutcome.target,
@@ -355,8 +444,8 @@ export class MovementResolver {
     }, { ...defaultStrength });
   }
 
-  static calculateDefenseStrength(units: Array<[string, TownUnit]>): CombatStrength {
-    return units.reduce((result, [key, val]) => {
+  static calculateDefenseStrength(townUnits: Array<[string, TownUnit]>): CombatStrength {
+    return townUnits.reduce((result, [key, val]) => {
       const unit = worldData.unitMap[key];
       result.general += unit.combat.defense.general * val.inside;
       result.cavalry += unit.combat.defense.cavalry * val.inside;
@@ -364,6 +453,18 @@ export class MovementResolver {
 
       return result;
     }, { ...defaultStrength });
+  }
+
+  static calculateSupportStrength(support: Array<Partial<TownSupport>>): CombatStrength {
+    return support.reduce((result, { units }) => {
+      Object.entries(units).forEach(([key, val]) => {
+        const unit = worldData.unitMap[key];
+        result.general += unit.combat.defense.general * val;
+        result.cavalry += unit.combat.defense.cavalry * val;
+        result.archer += unit.combat.defense.archer * val;
+      });
+      return result;
+    }, { general: 0, archer: 0, cavalry: 0 });
   }
 
   static calculateSurvivalPercent(winner: number, loser: number): number {
