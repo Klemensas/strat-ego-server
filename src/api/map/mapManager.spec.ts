@@ -57,7 +57,6 @@ describe('initialize', () => {
   });
 
   test('initialize should set variables and load towns', async () => {
-
     await mapManager.initialize();
     expect(mapManager.lastExpansion).toEqual(lastExpansion);
     expect(mapManager.expansionRate).toEqual(expansionRate);

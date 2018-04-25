@@ -6,7 +6,8 @@ services:
 - docker
 
 node_js:
-- "node"
+- "lts/*"
+
 before_install:
 - docker-compose up -d
 - docker-compose ps
