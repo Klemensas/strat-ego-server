@@ -32,6 +32,8 @@ export class TownSocket {
     socket.on('town:build', (payload: BuildPayload) => this.build(socket, payload));
     socket.on('town:recruit', (payload: RecruitPayload) => this.recruit(socket, payload));
     socket.on('town:moveTroops', (payload: TroopMovementPayload) => this.moveTroops(socket, payload));
+    socket.on('town:recallSupport', (payload: number) => this.cancelSupport(socket, payload, 'origin'));
+    socket.on('town:sendBackSupport', (payload: number) => this.cancelSupport(socket, payload, 'target'));
     // socket.on('town:update', (payload: SocketPayload) => this.update(socket, payload));
   }
 
@@ -101,6 +103,48 @@ export class TownSocket {
       this.emitToTownRoom(movement.targetTownId, movement, 'town:incomingMovement');
     } catch (err) {
       socket.handleError(err, 'movement', 'town:moveTroopsFail', payload);
+    }
+  }
+
+  private static async cancelSupport(socket: UserSocket, payload: number, caller: string) {
+    const trx = await transaction.start(knexDb.world);
+    const action = caller === 'origin' ? 'recallSupport' : 'sendBackSupport';
+    try {
+      const time = Date.now();
+      const target = `${caller}TownId`;
+      const support = await TownSupport
+        .query(trx)
+        .eager('[originTown(selectTownProfile), targetTown(selectTownProfile)]')
+        .findById(payload);
+      if (!support || !socket.userData.townIds.includes(support[target])) { throw new ErrorMessage('Invalid support item'); }
+
+      const distance = Town.calculateDistance(support.originTown.location, support.targetTown.location);
+      const slowest = Object.entries(support.units).reduce((result, [key, value]) => Math.max(result, worldData.unitMap[key].speed), 0);
+      const movementTime = slowest * distance;
+
+      const movement = await Movement.query(trx).insert({
+        units: support.units,
+        originTownId: support.targetTownId,
+        originTown: support.targetTown,
+        targetTownId: support.originTownId,
+        targetTown: support.originTown,
+        type: MovementType.return,
+        endsAt: time + movementTime,
+      });
+      await support.$query(trx).del();
+
+      await trx.commit();
+      townQueue.addToQueue(movement);
+      if (caller === 'origin') {
+        this.emitToTownRoom(support.originTownId, { support: payload, movement }, `town:recallSupportSuccess`);
+        this.emitToTownRoom(support.targetTownId, { support: payload, town: support.targetTownId }, `town:supportRecalled`);
+      } else {
+        this.emitToTownRoom(support.targetTownId, payload, `town:sendBackSupportSuccess`);
+        this.emitToTownRoom(support.originTownId, { support: payload, movement }, `town:supportSentBack`);
+      }
+    } catch (err) {
+      await trx.rollback();
+      socket.handleError(err, 'support', `town:${action}Fail`, payload);
     }
   }
 
