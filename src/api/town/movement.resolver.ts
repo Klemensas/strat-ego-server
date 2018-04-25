@@ -1,4 +1,4 @@
-import { MovementUnit, TownUnit, CombatStrength, Resources, MovementType, CombatOutcome, Haul, Dict } from 'strat-ego-common';
+import { TownUnit, CombatStrength, Resources, MovementType, CombatOutcome, Haul, Dict, Profile } from 'strat-ego-common';
 import { transaction } from 'objection';
 
 import { knexDb } from '../../sqldb';
@@ -70,16 +70,13 @@ export class MovementResolver {
     let result: ResolvedAttack;
     if (isOrigin) {
       result = await MovementResolver.resolveAttack(movement, otherTown, town);
-      result.originTown.originMovements = result.originTown.originMovements.filter(({ id }) => id !== movement.id);
       if (result.movement) {
-        result.originTown.targetMovements.push(result.movement);
         townQueue.addToQueue(result.movement);
       }
       TownSocket.emitToTownRoom(result.targetTown.id, result.targetTown, 'town:update');
       return result.originTown;
     } else {
       result = await MovementResolver.resolveAttack(movement, town, otherTown);
-      result.targetTown.targetMovements = result.targetTown.targetMovements.filter(({ id }) => id !== movement.id);
       TownSocket.emitToTownRoom(result.originTown.id, result.originTown, 'town:update');
       return result.targetTown;
     }
@@ -172,14 +169,18 @@ export class MovementResolver {
       const isOrigin = movement.originTownId === town.id;
       const missingTown = isOrigin ? movement.targetTownId : movement.originTownId;
       const otherTown = await MovementResolver.updateMissingTown(missingTown, +movement.endsAt - 1);
+      const originProfile = movement.originTown ||
+        isOrigin ? { id: town.id, name: town.name, location: town.location } : { id: otherTown.id, name: otherTown.name, location: otherTown.location };
+      const targetProfile = movement.targetTown ||
+        !isOrigin ? { id: town.id, name: town.name, location: town.location } : { id: otherTown.id, name: otherTown.name, location: otherTown.location };
 
       await movement.$query(trx).delete();
       const townSupport = await TownSupport.query(trx).insert({
         units: movement.units,
         originTownId: movement.originTownId,
-        originTown: movement.originTown,
+        originTown: originProfile,
         targetTownId: movement.targetTownId,
-        targetTown: movement.targetTown,
+        targetTown: targetProfile,
       });
 
       await trx.commit();
@@ -392,6 +393,7 @@ export class MovementResolver {
           originTownId: targetTown.id,
           targetTownId: originTown.id,
         });
+        originTown.targetMovements.push(newMovement);
       }
 
       // Target losses
@@ -416,6 +418,10 @@ export class MovementResolver {
       }
 
       await trx.commit();
+
+      originTown.originMovements = originTown.originMovements.filter(({ id }) => id !== movement.id);
+      targetTown.targetMovements = targetTown.targetMovements.filter(({ id }) => id !== movement.id);
+
       return { originTown, targetTown, report, movement: newMovement };
     } catch (err) {
       await trx.rollback();
@@ -434,7 +440,7 @@ export class MovementResolver {
     }, { resources: {}, haul: {} } as { resources: Resources, haul: Resources  });
   }
 
-  static calculateAttackStrength(units: MovementUnit[]): CombatStrength {
+  static calculateAttackStrength(units: Array<[string, number]>): CombatStrength {
     return units.reduce((result, [key, val]) => {
       const unit = worldData.unitMap[key];
       const unitAttack = unit.combat.attack * val;
