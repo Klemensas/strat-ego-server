@@ -69,7 +69,7 @@ export class TownEventQueue {
 
   public async processItem() {
     this.inProgress = true;
-    const targetTown = !(this.earliestItem instanceof Movement) ? (this.earliestItem as UnitQueue | BuildingQueue).townId : this.earliestItem.originTownId;
+    const targetTown = !(this.earliestItem instanceof Movement) ? (this.earliestItem as UnitQueue | BuildingQueue).townId : this.earliestItem.targetTownId;
     try {
       const { town, processed } = await Town.processTownQueues(targetTown, +this.earliestItem.endsAt);
       TownSocket.emitToTownRoom(town.id, town, 'town:update');

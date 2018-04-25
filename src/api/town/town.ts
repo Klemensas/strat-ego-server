@@ -1,5 +1,5 @@
 import * as Knex from 'knex';
-import { transaction } from 'objection';
+import { transaction, QueryBuilder } from 'objection';
 import { Resources, TownBuildings, Coords, Requirements, QueueType, MovementType, TownUnit, Dict } from 'strat-ego-common';
 
 import { BaseModel } from '../../sqldb/baseModel';
@@ -434,11 +434,13 @@ export class Town extends BaseModel {
     },
   };
 
+  // TODO: targetMovements shouldn't show units for players but should have units for processing
+  // TODO: These relations are fairly complex, consider a different appracoh
   static townRelations = '[buildingQueues, unitQueues, originMovements, targetMovements, originSupport, targetSupport]';
   static townRelationsFiltered = `[
     buildingQueues(orderByEnd),
     unitQueues(orderByEnd),
-    originMovements(orderByEnd).[targetTown(selectTownProfile)],
+    originMovements(selectNonReturn, orderByEnd).[targetTown(selectTownProfile)],
     targetMovements(orderByEnd).[originTown(selectTownProfile)],
     originSupport(orderByCreated).[targetTown(selectTownProfile)],
     targetSupport(orderByCreated).[originTown(selectTownProfile)],
@@ -446,6 +448,7 @@ export class Town extends BaseModel {
   static townRelationFilters = {
     orderByEnd: (builder) => builder.orderBy('endsAt', 'asc'),
     orderByCreated: (builder) => builder.orderBy('createdAt', 'desc'),
+    selectNonReturn: (builder) => builder.where('type', '!=', MovementType.return),
   };
 
   static get namedFilters() {
@@ -479,7 +482,7 @@ export class Town extends BaseModel {
 
       return await town.processQueues(queues, processed);
     } catch (err) {
-      logger.error(err);
+      logger.error(err, 'errored while processing retrying');
       if (err && err.processed) {
         const townId = typeof item === 'number' ? item : item.id;
         return this.processTownQueues(townId, time, [...processed, ...err.processed]);
