@@ -93,9 +93,11 @@ export class TownSocket {
       if (!socket.userData.townIds.includes(payload.town)) { throw new ErrorMessage('No town found'); }
 
       const time = Date.now();
-      const town = await this.tryMoving(payload.town, time, payload);
+      const { town, movement } = await this.tryMoving(payload.town, time, payload);
       // TOOD: add movement for target, duhhh
       this.emitToTownRoom(payload.town, town, 'town:moveTroopsSuccess');
+      delete movement.units;
+      this.emitToTownRoom(movement.targetTownId, movement, 'town:incomingMovement');
     } catch (err) {
       socket.handleError(err, 'movement', 'town:moveTroopsFail', payload);
     }
@@ -239,7 +241,7 @@ export class TownSocket {
       await trx.commit();
 
       townQueue.addToQueue(movement);
-      return town;
+      return { town, movement };
     } catch (err) {
       await trx.rollback();
       throw err;
