@@ -78,7 +78,7 @@ test('scores should return ranking value populated with playerScores in order', 
   expect(scoreTracker.scores).toEqual([]);
 });
 
-describe('readScores should set all player scores', () => {
+describe('readScores', () => {
   let storedPlayers: Player[];
   beforeEach(async () => {
     scoreTracker = new ScoreTracker();
