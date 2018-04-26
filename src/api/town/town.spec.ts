@@ -1,7 +1,6 @@
 import { knexDb } from '../../sqldb';
 import { worldData } from '../world/worldData';
 import { Town } from './town';
-import { Building } from '../building/building';
 import { World } from '../world/world';
 
 const buildings = [{
@@ -15,19 +14,22 @@ const buildings = [{
     { score: 1, buildTime: 1, costs: { wood: 1, clay: 1, iron: 1 } },
     { score: 2, buildTime: 2, costs: { wood: 2, clay: 2, iron: 2 } },
     { score: 3, buildTime: 3, costs: { wood: 3, clay: 3, iron: 3 } },
+    { score: 4, buildTime: 4, costs: { wood: 4, clay: 4, iron: 4 } },
   ],
 }, {
   id: 2,
-  name: 'building #2',
+  name: 'farm',
   levels: {
     max: 1,
-    min: 0,
+    min: 1,
   },
   data: [
-    { score: 5, buildTime: 1, costs: { wood: 1, clay: 1, iron: 1 } },
+    { score: 5, buildTime: 1, costs: { wood: 1, clay: 1, iron: 1 }, population: 0 },
+    { score: 6, buildTime: 60, costs: { wood: 60, clay: 60, iron: 60 }, population: 100 },
   ],
 }];
-worldData.buildings = buildings as Building[];
+worldData.buildings = buildings as any;
+worldData.buildingMap = buildings.reduce((result, item) => ({ ...result, [item.name]: item }), {});
 worldData.world = { baseProduction: 10 } as World;
 
 const testTownData = {
@@ -42,6 +44,10 @@ const testTownData = {
     return result;
   }, {}),
   score: 0,
+  originSupport: [],
+  targetSupport: [],
+  originMovements: [],
+  targetMovements: [],
   updatedAt: Date.now(),
   createdAt: Date.now(),
 };
@@ -57,28 +63,6 @@ afterAll(() => {
 beforeEach(() => {
   testTown  = Town.fromJson(testTownData, { skipValidation: true });
 });
-
-// test.only('dumb', async () => {
-//   await Town.query(knexDb.world).delete();
-//   const town = await Town
-//     .query(knexDb.world)
-//     .insert({ name: 'test', location: [401, 402] })
-//     .pick(['name', 'id']);
-//   const spy = jest.spyOn(town, '$beforeUpdate');
-
-//   await town
-//     .$query(knexDb.world)
-//     .patch({
-//       name: 'test',
-//     })
-//     .context({
-//       resourcesUpdated: true,
-//       loyaltyUpdated: true,
-//     });
-//   // const spyResult =
-//   console.log('spy', spy.mock.calls)
-//   expect(spy).toBe(null);
-// })
 
 describe('$beforeUpdate', () => {
   let getResourcesSpy;
@@ -146,13 +130,21 @@ describe('$beforeUpdate', () => {
 });
 
 test('calculateScore should return total town score', () => {
-  const score = buildings.reduce((result, item) => result + item.levels.min * item.data[0].score, 0);
+  const score = buildings.reduce((result, item) => result + item.levels.min * item.data[1].score, 0);
   expect(Town.calculateScore(testTown.buildings)).toBe(score);
 
-  const maxScore = buildings.reduce((result, item) => result + item.data[item.data.length - 1].score, 0);
+  const maxScore = buildings.reduce((result, item) => {
+    return result + item.data[item.data.length - 1].score;
+  }, 0);
   testTown.buildings = buildings.reduce((result, item) => {
     result[item.name] = { level: item.levels.max, queued: 0 };
     return result;
   }, {});
   expect(Town.calculateScore(testTown.buildings)).toBe(maxScore);
+});
+
+describe('getAvailablePopulation', () => {
+  test('should have full population without any items', () => {
+    testTown.getAvailablePopulation();
+  });
 });
