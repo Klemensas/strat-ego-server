@@ -8,7 +8,7 @@
     "start": "npm run build && node ./build/",
     "start:watch": "nodemon -e ts --exec npm run start",
     "build": "tsc",
-    "test": "export NODE_ENV=test|| set NODE_ENV=test&& jest",
+    "test": "export NODE_ENV=test|| set NODE_ENV=test&& jest --runInBand",
     "test:ci": "export NODE_ENV=test|| set NODE_ENV=test&& npm run migrate && jest --coverage --forceExit",
     "dev": "nodemon -e ts --exec ts-node --project ./tsconfig.json ./src",
     "lint": "tslint ./src/**/*.ts",
