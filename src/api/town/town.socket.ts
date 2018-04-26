@@ -46,7 +46,7 @@ export class TownSocket {
     io.sockets.in(roomName).emit(topic, payload);
   }
 
-  private static async rename(socket: UserSocket, payload: NamePayload) {
+  static async rename(socket: UserSocket, payload: NamePayload) {
     try {
       if (!payload.name || !payload.town) { throw new ErrorMessage('Missing required data'); }
       if (!socket.userData.townIds.includes(payload.town)) { throw new ErrorMessage('No town found'); }
@@ -64,7 +64,7 @@ export class TownSocket {
     }
   }
 
-  private static async build(socket: UserSocket, payload: BuildPayload) {
+  static async build(socket: UserSocket, payload: BuildPayload) {
     try {
       if (!payload.building || !payload.town) { throw new ErrorMessage('Missing required data'); }
       if (!socket.userData.townIds.includes(payload.town)) { throw new ErrorMessage('No town found'); }
@@ -77,7 +77,7 @@ export class TownSocket {
     }
   }
 
-  private static async recruit(socket: UserSocket, payload: RecruitPayload) {
+  static async recruit(socket: UserSocket, payload: RecruitPayload) {
     if (!payload.units || !payload.town) { throw new ErrorMessage('Missing required data'); }
     if (!socket.userData.townIds.includes(payload.town)) { throw new ErrorMessage('No town found'); }
 
@@ -90,7 +90,7 @@ export class TownSocket {
     }
   }
 
-  private static async moveTroops(socket: UserSocket, payload: TroopMovementPayload) {
+  static async moveTroops(socket: UserSocket, payload: TroopMovementPayload) {
     try {
       if (!payload.town || !payload.target || isNaN(payload.type)) { throw new ErrorMessage('Missing required data'); }
       if (!socket.userData.townIds.includes(payload.town)) { throw new ErrorMessage('No town found'); }
@@ -106,7 +106,7 @@ export class TownSocket {
     }
   }
 
-  private static async cancelSupport(socket: UserSocket, payload: number, caller: string) {
+  static async cancelSupport(socket: UserSocket, payload: number, caller: string) {
     const trx = await transaction.start(knexDb.world);
     const action = caller === 'origin' ? 'recallSupport' : 'sendBackSupport';
     try {
@@ -148,7 +148,7 @@ export class TownSocket {
     }
   }
 
-  private static async tryBuilding(id: number, time: number, building: string) {
+  static async tryBuilding(id: number, time: number, building: string) {
     const trx = await transaction.start(knexDb.world);
     try {
       const targetBuilding = worldData.buildingMap[building];
@@ -195,7 +195,7 @@ export class TownSocket {
     }
   }
 
-  private static async tryRecruiting(id: number, time: number, units: PayloadUnit[]) {
+  static async tryRecruiting(id: number, time: number, units: PayloadUnit[]) {
     const trx = await transaction.start(knexDb.world);
     try {
       const town = await Town.query(trx).findById(id).eager(Town.townRelationsFiltered, Town.townRelationFilters);
@@ -251,7 +251,7 @@ export class TownSocket {
       }
   }
 
-  private static async tryMoving(id: number, time: number, payload: TroopMovementPayload): Promise<{ town: Town, movement: Movement }> {
+  static async tryMoving(id: number, time: number, payload: TroopMovementPayload): Promise<{ town: Town, movement: Movement }> {
     const trx = await transaction.start(knexDb.world);
     try {
       const town = await Town.query(trx).findById(id).eager(Town.townRelationsFiltered, Town.townRelationFilters);
@@ -291,7 +291,7 @@ export class TownSocket {
     }
   }
 
-  // private static async update(socket: UserSocket, payload: SocketPayload) {
+  // static async update(socket: UserSocket, payload: SocketPayload) {
   //   const trx = await transaction.start(knexDb.world);
   //   try {
   //     if (!payload.town) { throw new ErrorMessage('No town specified'); }
