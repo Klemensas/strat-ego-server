@@ -7,7 +7,6 @@ import { Town } from '../../src/api/town/town';
 import { Movement } from '../../src/api/town/movement';
 import { BuildingQueue } from '../../src/api/building/buildingQueue';
 import { UnitQueue } from '../../src/api/unit/unitQueue';
-import { QueueItem } from '../../src/api/townQueue';
 import { worldData } from '../../src/api/world/worldData';
 
 const maxUnits = 100;
@@ -81,11 +80,10 @@ export const seed = async (knex, seedString: string, towns: Town[], queueRate: n
         const distance = Town.calculateDistance(town.location, targetTown.location);
         const movementTime = target.speed * distance;
 
-        townUnit.outside += amount;
         town.originMovements.push({
           targetTownId: targetTown.id,
           units: { [target.name]: amount },
-          type: MovementType.attack,
+          type: Math.floor(rng.quick() * (Object.keys(MovementType).length / 2)),
           endsAt: queueTime + movementTime,
         });
 

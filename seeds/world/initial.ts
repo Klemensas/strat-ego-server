@@ -663,15 +663,14 @@ export const seed = (
 
     const availableTowns = towns.map(({ id }) => id);
     const players = demoUsers.map((user, index) => {
-      const assignedTowns = [];
-      for (let i = 0; i < maxTowns && availableTowns.length > i; i++) {
-        const shouldAssign = Math.random() <= townRate;
-        if (shouldAssign) {
-          assignedTowns.push({ id: availableTowns[i] });
-          // Remove towns to avoid queue generation for admin user
-          if ( i === 0) {
-            towns.splice(towns.findIndex(({ id }) => id === availableTowns[i]), 1);
-          }
+      let assignedTowns = [];
+      // Alays assign owns to special users
+      if (index < 2) {
+        assignedTowns = availableTowns.slice(0, 2).map((id) => ({ id }));
+      } else {
+        for (let i = 0; i < maxTowns && availableTowns.length > i; i++) {
+          const shouldAssign = Math.random() <= townRate;
+          if (shouldAssign) { assignedTowns.push({ id: availableTowns[i] }); }
         }
       }
       availableTowns.splice(0, assignedTowns.length);

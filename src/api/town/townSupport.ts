@@ -3,26 +3,23 @@ import { Requirements, Resources, AttackType, Combat, MovementType, Dict } from 
 import { BaseModel } from '../../sqldb/baseModel';
 import { Town } from './town';
 
-export class Movement extends BaseModel {
+export class TownSupport extends BaseModel {
   readonly id: number;
   units: Dict<number>;
-  haul: Resources;
-  type: MovementType;
-  endsAt: number;
 
   // Associations
   originTownId?: number;
   originTown: Partial<Town>;
   targetTownId?: number;
   targetTown: Partial<Town>;
-  static tableName = 'Movement';
 
+  static tableName = 'TownSupport';
   static relationMappings = {
     originTown: {
       relation: BaseModel.BelongsToOneRelation,
       modelClass: 'town',
       join: {
-        from: 'Movement.originTownId',
+        from: 'TownSupport.originTownId',
         to: 'Town.id',
       },
     },
@@ -30,7 +27,7 @@ export class Movement extends BaseModel {
       relation: BaseModel.BelongsToOneRelation,
       modelClass: 'town',
       join: {
-        from: 'Movement.targetTownId',
+        from: 'TownSupport.targetTownId',
         to: 'Town.id',
       },
     },
@@ -38,7 +35,7 @@ export class Movement extends BaseModel {
 
   static jsonSchema = {
     type: 'object',
-    required: ['units', 'type', 'endsAt'],
+    required: ['units'],
 
     properties: {
       units: {
@@ -47,16 +44,6 @@ export class Movement extends BaseModel {
           '.*': { type: 'integer' },
         },
       },
-      haul: {
-        type: ['object', 'null'],
-        properties: {
-          wood: { type: 'number' },
-          clay: { type: 'number' },
-          iron: { type: 'number' },
-        },
-      },
-      type: { type: 'integer' },
-      endsAt: { type: 'integer' },
     },
   };
 }

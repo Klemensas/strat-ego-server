@@ -2,6 +2,8 @@ import { ScoreTracker } from './playerScore';
 import { logger } from '../../logger';
 import { Player } from './player';
 import { knexDb } from '../../sqldb';
+import { worldData, WorldData } from '../world/worldData';
+import { World } from '../world/world';
 
 const examplePlayers = {
   1: {
@@ -20,7 +22,37 @@ const examplePlayers = {
     score: 66,
   },
 };
+const players = [{
+  name: 'test #1',
+  userId: 1,
+  towns: [{
+    location: [1, 1],
+    score: 5,
+  }, {
+    location: [1, 2],
+    score: 2,
+  }],
+}, {
+  name: 'test #2',
+  userId: 2,
+  towns: [{
+    location: [1, 3],
+    score: 44,
+  }, {
+    location: [1, 4],
+    score: 2,
+  }],
+}, {
+  name: 'test #3',
+  userId: 3,
+}] as Player[];
+
 const exampleRankings = Object.values(examplePlayers).map((player) => player.id);
+beforeAll(() => {
+  worldData.world = {
+    baseProduction: 0,
+  } as World;
+});
 
 let scoreTracker: ScoreTracker;
 beforeEach(() => {
@@ -47,31 +79,69 @@ test('scores should return ranking value populated with playerScores in order', 
 });
 
 describe('readScores', () => {
-  test('on error should log and rethrow', async () => {
-    const knexSpy = jest.spyOn(knexDb, 'world');
-    knexSpy.mockImplementation(() => null);
-    const loggerSpy = jest.spyOn(logger, 'error');
-    loggerSpy.mockImplementation(() => null);
+  let storedPlayers: Player[];
+  beforeEach(async () => {
+    scoreTracker = new ScoreTracker();
+    storedPlayers = await Player.query(knexDb.world).insertGraph(players);
+  });
+  afterEach(async () => {
+    return await Player.query(knexDb.world).del();
+  });
+  test('should set all player scores', async () => {
+    const sortSpy = jest.spyOn(scoreTracker, 'sortRankings');
+    await scoreTracker.readScores();
+    const expectedPlayers = storedPlayers.reduce((result, item) => ({
+      ...result,
+      [item.id]: {
+        id: item.id,
+        name: item.name,
+        score: item.towns && item.towns.length ? item.towns.reduce((s, t) => s + t.score, 0) : 0,
+      },
+    }), {});
+    expect(scoreTracker.sortRankings).toHaveBeenCalledTimes(1);
+    expect(scoreTracker.rankings).toHaveLength(players.length);
+    expect(scoreTracker.playerScores).toEqual(expectedPlayers);
+  });
+});
 
-    let error;
-    try {
-      await scoreTracker.readScores();
-    } catch (err) {
-      error = err;
-    }
-    expect(error).toBeTruthy();
-    expect(loggerSpy).toHaveBeenCalled();
-    knexSpy.mockRestore();
+test('readScores on error should log and rethrow', async () => {
+  const knexSpy = jest.spyOn(knexDb, 'world');
+  knexSpy.mockImplementation(() => null);
+  const loggerSpy = jest.spyOn(logger, 'error');
+  loggerSpy.mockImplementation(() => null);
+
+  let error;
+  try {
+    await scoreTracker.readScores();
+  } catch (err) {
+    error = err;
+  }
+  expect(error).toBeTruthy();
+  expect(loggerSpy).toHaveBeenCalled();
+  knexSpy.mockRestore();
+});
+
+describe('setScore', () => {
+  test('should set target player score', () => {
+    let targetPlayer = examplePlayers[exampleRankings[0]];
+    let expectedScore = 555;
+
+    scoreTracker.setScore(expectedScore, targetPlayer.id);
+    expect(scoreTracker.playerScores[targetPlayer.id].score).toEqual(expectedScore);
+
+    targetPlayer = examplePlayers[exampleRankings[1]];
+    expectedScore = 1;
+
+    scoreTracker.setScore(expectedScore, targetPlayer.id);
+    expect(scoreTracker.playerScores[targetPlayer.id].score).toEqual(expectedScore);
   });
 
-  // TODO: database related testing
-  // test('should set all player scores', async () => {
-  //   await scoreTracker.readScores();
+  test('should sortRankings on set', () => {
+    const sortSpy = jest.spyOn(scoreTracker, 'sortRankings');
 
-  //   const playerArray = Object.values(scoreTracker.playerScores);
-  //   expect(playerArray.some(({ score, name, id }) => !score || !name || !id )).toBeFalsy();
-  //   expect(scoreTracker.rankings.length).toBeGreaterThan(0);
-  // });
+    scoreTracker.setScore(1, scoreTracker.rankings[0]);
+    expect(sortSpy).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('updateScore', () => {

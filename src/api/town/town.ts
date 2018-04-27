@@ -1,6 +1,6 @@
 import * as Knex from 'knex';
-import { transaction } from 'objection';
-import { Resources, TownUnits, TownBuildings, Coords, Requirements, QueueType } from 'strat-ego-common';
+import { transaction, QueryBuilder } from 'objection';
+import { Resources, TownBuildings, Coords, Requirements, QueueType, MovementType, TownUnit, Dict } from 'strat-ego-common';
 
 import { BaseModel } from '../../sqldb/baseModel';
 import { knexDb } from '../../sqldb';
@@ -13,6 +13,7 @@ import { Movement } from './movement';
 import { mapManager } from '../map/mapManager';
 import { MovementResolver } from './movement.resolver';
 import { scoreTracker } from '../player/playerScore';
+import { TownSupport } from './townSupport';
 
 export interface ProcessingResult {
   town: Town;
@@ -28,7 +29,7 @@ export class Town extends BaseModel {
   location?: Coords;
   production?: Resources;
   resources?: Resources;
-  units?: TownUnits;
+  units?: Dict<TownUnit>;
   buildings?: TownBuildings;
   score?: number;
 
@@ -39,6 +40,8 @@ export class Town extends BaseModel {
   unitQueues?: Array<Partial<UnitQueue>>;
   originMovements?: Array<Partial<Movement>>;
   targetMovements?: Array<Partial<Movement>>;
+  originSupport?: Array<Partial<TownSupport>>;
+  targetSupport?: Array<Partial<TownSupport>>;
 
   static tableName = 'Town';
 
@@ -97,6 +100,22 @@ export class Town extends BaseModel {
       join: {
         from: 'Town.id',
         to: 'Report.targetTownId',
+      },
+    },
+    originSupport: {
+      relation: BaseModel.HasManyRelation,
+      modelClass: 'townSupport',
+      join: {
+        from: 'Town.id',
+        to: 'TownSupport.originTownId',
+      },
+    },
+    targetSupport: {
+      relation: BaseModel.HasManyRelation,
+      modelClass: 'townSupport',
+      join: {
+        from: 'Town.id',
+        to: 'TownSupport.targetTownId',
       },
     },
   };
@@ -206,7 +225,6 @@ export class Town extends BaseModel {
         [item.name]: {
           inside: this.units[item.name].inside + item.amount,
           queued: this.units[item.name].queued - item.amount,
-          outside: this.units[item.name].outside,
         },
       },
       resources: this.getResources(item.endsAt),
@@ -233,11 +251,14 @@ export class Town extends BaseModel {
   }
 
   getAvailablePopulation(): number {
-    const used = worldData.units.reduce((t, unit) => {
-      return t + Object.values(this.units[unit.name]).reduce((a, b) => a + b);
-    }, 0);
+    const supportPop = this.originSupport.reduce((result, { units }) => result + Object.values(units).reduce((a, b) => a + b, 0), 0);
+    const attackPop = this.originMovements.reduce((result, { units }) => result + Object.values(units).reduce((a, b) => a + b, 0), 0);
+    const returnPop = this.targetMovements.reduce((result, { units, type }) =>
+      result + type === MovementType.return ? Object.values(units).reduce((a, b) => a + b, 0) : 0, 0);
+
+    const townPop = worldData.units.reduce((result, unit) => result + Object.values(this.units[unit.name]).reduce((a, b) => a + b), 0);
     const total = worldData.buildingMap.farm.data[this.buildings.farm.level].population;
-    return total - used;
+    return total - townPop - supportPop - attackPop - returnPop;
   }
 
   getWallBonus(): number {
@@ -250,7 +271,7 @@ export class Town extends BaseModel {
 
   static calculateScore(buildings): number {
     return worldData.buildings.reduce((result, building) => {
-      const target = building.data[buildings[building.name].level - 1];
+      const target = building.data[buildings[building.name].level];
       const score = target ? target.score : 0;
       return result + score;
     }, 0);
@@ -277,9 +298,9 @@ export class Town extends BaseModel {
     };
   }
 
-  static getInitialUnits(): TownUnits {
+  static getInitialUnits(): Dict<TownUnit> {
     return worldData.units.reduce((result, item) => {
-      result[item.name] = { inside: 0, outside: 0, queued: 0 };
+      result[item.name] = { inside: 0, queued: 0 };
       return result;
     }, {});
   }
@@ -308,6 +329,8 @@ export class Town extends BaseModel {
     this.unitQueues = [];
     this.originMovements = [];
     this.targetMovements = [];
+    this.originSupport = [];
+    this.targetSupport = [];
   }
 
   $beforeValidate(jsonSchema, json, opt) {
@@ -353,7 +376,6 @@ export class Town extends BaseModel {
               type: 'object',
               properties: {
                 inside: { type: 'integer' },
-                outside: { type: 'integer' },
                 queued: { type: 'integer' },
               },
             };
@@ -362,7 +384,6 @@ export class Town extends BaseModel {
           default: worldData.units.reduce((result, item) => {
             result[item.name] = {
               inside: 0,
-              outside: 0,
               queued: 0,
             };
             return result;
@@ -413,16 +434,28 @@ export class Town extends BaseModel {
     },
   };
 
-  static townRelations = '[buildingQueues, unitQueues, originMovements, targetMovements, originReports, targetReports]';
+  // TODO: targetMovements shouldn't show units for players but should have units for processing
+  // TODO: These relations are fairly complex, consider a different appracoh
+  static townRelations = '[buildingQueues, unitQueues, originMovements, targetMovements, originSupport, targetSupport]';
   static townRelationsFiltered = `[
     buildingQueues(orderByEnd),
     unitQueues(orderByEnd),
-    originMovements(orderByEnd),
-    targetMovements(orderByEnd),
+    originMovements(selectNonReturn, orderByEnd).[targetTown(selectTownProfile)],
+    targetMovements(orderByEnd).[originTown(selectTownProfile)],
+    originSupport(orderByCreated).[targetTown(selectTownProfile)],
+    targetSupport(orderByCreated).[originTown(selectTownProfile)],
   ]`;
   static townRelationFilters = {
     orderByEnd: (builder) => builder.orderBy('endsAt', 'asc'),
+    orderByCreated: (builder) => builder.orderBy('createdAt', 'desc'),
+    selectNonReturn: (builder) => builder.where('type', '!=', MovementType.return),
   };
+
+  static get namedFilters() {
+    return {
+      selectTownProfile: (builder) => builder.select('id', 'name', 'location'),
+    };
+  }
 
   static getTown(where: Partial<Town>, trx: Knex.Transaction | Knex = knexDb.world) {
     return Town
@@ -449,7 +482,7 @@ export class Town extends BaseModel {
 
       return await town.processQueues(queues, processed);
     } catch (err) {
-      logger.error(err);
+      logger.error(err, 'errored while processing retrying');
       if (err && err.processed) {
         const townId = typeof item === 'number' ? item : item.id;
         return this.processTownQueues(townId, time, [...processed, ...err.processed]);

@@ -2,8 +2,8 @@ import { transaction } from 'objection';
 
 import * as config from '../src/config/environment';
 import { knexDb } from '../src/sqldb';
-import { seed as seedMain } from './main/example';
-import { seed as seedWorld } from './world/example';
+import { seed as seedMain } from './main/initial';
+import { seed as seedWorld } from './world/initial';
 import { seed as seedQueues } from './world/queues';
 
 const speed = config.seed.speed;
@@ -15,15 +15,17 @@ const queueSpread = config.seed.queueSpread;
 const townPercent = config.seed.townPercent;
 const townArea = config.seed.townArea;
 const townDistance = config.seed.townDistance;
+const expansionRate = config.seed.expansionRate;
+const expansionGrowth = config.seed.expansionGrowth;
 const maxDemoTowns = 5;
 const demoTownRate = 0.4;
 const seedString = 'megapolis';
 
 (async () => {
-  console.log('Seeding in progress, this might take a while, please wait', demoUserCount, queueCount);
+  console.log('Seeding in progress, this might take a while, please wait');
   console.time('seed');
   try {
-    const mainData = await seedMain(knexDb.main, speed, demoUserCount);
+    const mainData = await seedMain(knexDb.main, speed, demoUserCount, expansionRate, expansionGrowth);
     const users = mainData[0];
     const world = mainData[1][0];
 

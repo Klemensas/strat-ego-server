@@ -12,12 +12,13 @@
             "cwd": "${workspaceRoot}"
         },
         {
-            "name": "Current TS File",
+            "name": "Run TS",
             "type": "node",
             "request": "launch",
             "args": ["src/index.ts"],
             "runtimeArgs": ["--nolazy", "-r", "ts-node/register"],
             "sourceMaps": true,
+            "outputCapture": "std",
             "cwd": "${workspaceRoot}",
             "protocol": "inspector"
         }

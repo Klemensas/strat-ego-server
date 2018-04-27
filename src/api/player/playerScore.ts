@@ -43,6 +43,12 @@ export class ScoreTracker {
     this.sortRankings();
   }
 
+  public setScore(score: number, playerId: number) {
+    if (!playerId || !this.playerScores[playerId]) { return; }
+    this.playerScores[playerId].score = score;
+    this.sortRankings();
+  }
+
   public sortRankings() {
     this.rankings.sort((a, b) => +this.playerScores[b].score - +this.playerScores[a].score || this.playerScores[a].id - this.playerScores[b].id);
     this.lastUpdate = Date.now();

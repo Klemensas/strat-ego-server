@@ -1,4 +1,4 @@
-import { Coords, TownError, MovementType, MovementUnit } from 'strat-ego-common';
+import { Coords, TownError, MovementType, Dict, TownUnit } from 'strat-ego-common';
 import { transaction } from 'objection';
 
 import { knexDb } from '../../sqldb';
@@ -9,6 +9,7 @@ import { BuildingQueue } from '../building/buildingQueue';
 import { UnitQueue } from '../unit/unitQueue';
 import { Movement } from './movement';
 import { townQueue } from '../townQueue';
+import { TownSupport } from './townSupport';
 
 export interface SocketPayload { town: number; }
 export interface NamePayload extends SocketPayload { name: string; }
@@ -18,7 +19,7 @@ export interface RecruitPayload extends SocketPayload {
   units: PayloadUnit[];
 }
 export interface TroopMovementPayload extends SocketPayload {
-  units: MovementUnit[];
+  units: Dict<number>;
   type: MovementType;
   target: Coords;
 }
@@ -31,6 +32,8 @@ export class TownSocket {
     socket.on('town:build', (payload: BuildPayload) => this.build(socket, payload));
     socket.on('town:recruit', (payload: RecruitPayload) => this.recruit(socket, payload));
     socket.on('town:moveTroops', (payload: TroopMovementPayload) => this.moveTroops(socket, payload));
+    socket.on('town:recallSupport', (payload: number) => this.cancelSupport(socket, payload, 'origin'));
+    socket.on('town:sendBackSupport', (payload: number) => this.cancelSupport(socket, payload, 'target'));
     // socket.on('town:update', (payload: SocketPayload) => this.update(socket, payload));
   }
 
@@ -43,7 +46,7 @@ export class TownSocket {
     io.sockets.in(roomName).emit(topic, payload);
   }
 
-  private static async rename(socket: UserSocket, payload: NamePayload) {
+  static async rename(socket: UserSocket, payload: NamePayload) {
     try {
       if (!payload.name || !payload.town) { throw new ErrorMessage('Missing required data'); }
       if (!socket.userData.townIds.includes(payload.town)) { throw new ErrorMessage('No town found'); }
@@ -61,7 +64,7 @@ export class TownSocket {
     }
   }
 
-  private static async build(socket: UserSocket, payload: BuildPayload) {
+  static async build(socket: UserSocket, payload: BuildPayload) {
     try {
       if (!payload.building || !payload.town) { throw new ErrorMessage('Missing required data'); }
       if (!socket.userData.townIds.includes(payload.town)) { throw new ErrorMessage('No town found'); }
@@ -74,7 +77,7 @@ export class TownSocket {
     }
   }
 
-  private static async recruit(socket: UserSocket, payload: RecruitPayload) {
+  static async recruit(socket: UserSocket, payload: RecruitPayload) {
     if (!payload.units || !payload.town) { throw new ErrorMessage('Missing required data'); }
     if (!socket.userData.townIds.includes(payload.town)) { throw new ErrorMessage('No town found'); }
 
@@ -87,20 +90,66 @@ export class TownSocket {
     }
   }
 
-  private static async moveTroops(socket: UserSocket, payload: TroopMovementPayload) {
+  static async moveTroops(socket: UserSocket, payload: TroopMovementPayload) {
     try {
       if (!payload.town || !payload.target || isNaN(payload.type)) { throw new ErrorMessage('Missing required data'); }
       if (!socket.userData.townIds.includes(payload.town)) { throw new ErrorMessage('No town found'); }
 
       const time = Date.now();
-      const town = await this.tryMoving(payload.town, time, payload);
+      const { town, movement } = await this.tryMoving(payload.town, time, payload);
+      // TOOD: add movement for target, duhhh
       this.emitToTownRoom(payload.town, town, 'town:moveTroopsSuccess');
+      delete movement.units;
+      this.emitToTownRoom(movement.targetTownId, movement, 'town:incomingMovement');
     } catch (err) {
       socket.handleError(err, 'movement', 'town:moveTroopsFail', payload);
     }
   }
 
-  private static async tryBuilding(id: number, time: number, building: string) {
+  static async cancelSupport(socket: UserSocket, payload: number, caller: string) {
+    const trx = await transaction.start(knexDb.world);
+    const action = caller === 'origin' ? 'recallSupport' : 'sendBackSupport';
+    try {
+      const time = Date.now();
+      const target = `${caller}TownId`;
+      const support = await TownSupport
+        .query(trx)
+        .eager('[originTown(selectTownProfile), targetTown(selectTownProfile)]')
+        .findById(payload);
+      if (!support || !socket.userData.townIds.includes(support[target])) { throw new ErrorMessage('Invalid support item'); }
+
+      const distance = Town.calculateDistance(support.originTown.location, support.targetTown.location);
+      const slowest = Object.entries(support.units).reduce((result, [key, value]) => Math.max(result, worldData.unitMap[key].speed), 0);
+      const movementTime = slowest * distance;
+
+      const movement = await Movement.query(trx).insert({
+        units: support.units,
+        originTownId: support.targetTownId,
+        originTown: support.targetTown,
+        targetTownId: support.originTownId,
+        targetTown: support.originTown,
+        type: MovementType.return,
+        endsAt: time + movementTime,
+        haul: null,
+      });
+      await support.$query(trx).del();
+
+      await trx.commit();
+      townQueue.addToQueue(movement);
+      if (caller === 'origin') {
+        this.emitToTownRoom(support.originTownId, { support: payload, movement }, `town:recallSupportSuccess`);
+        this.emitToTownRoom(support.targetTownId, { support: payload, town: support.targetTownId }, `town:supportRecalled`);
+      } else {
+        this.emitToTownRoom(support.targetTownId, payload, `town:sendBackSupportSuccess`);
+        this.emitToTownRoom(support.originTownId, { support: payload, movement }, `town:supportSentBack`);
+      }
+    } catch (err) {
+      await trx.rollback();
+      socket.handleError(err, 'support', `town:${action}Fail`, payload);
+    }
+  }
+
+  static async tryBuilding(id: number, time: number, building: string) {
     const trx = await transaction.start(knexDb.world);
     try {
       const targetBuilding = worldData.buildingMap[building];
@@ -147,7 +196,7 @@ export class TownSocket {
     }
   }
 
-  private static async tryRecruiting(id: number, time: number, units: PayloadUnit[]) {
+  static async tryRecruiting(id: number, time: number, units: PayloadUnit[]) {
     const trx = await transaction.start(knexDb.world);
     try {
       const town = await Town.query(trx).findById(id).eager(Town.townRelationsFiltered, Town.townRelationFilters);
@@ -161,7 +210,7 @@ export class TownSocket {
       for (const unit of units) {
         const targetUnit = unitData[unit.type];
         if (!town.units.hasOwnProperty(unit.type) || +unit.amount <= 0) { throw new ErrorMessage('Wrong unit'); }
-        if (!town.doesMeetRequirements(targetUnit.requirements, 'units')) { throw new ErrorMessage('Requirements not met'); }
+        if (!town.doesMeetRequirements(targetUnit.requirements, 'buildings')) { throw new ErrorMessage('Requirements not met'); }
         usedPop += unit.amount;
 
         town.resources.wood -= targetUnit.costs.wood * unit.amount;
@@ -203,33 +252,30 @@ export class TownSocket {
       }
   }
 
-  private static async tryMoving(id: number, time: number, payload: TroopMovementPayload) {
+  static async tryMoving(id: number, time: number, payload: TroopMovementPayload): Promise<{ town: Town, movement: Movement }> {
     const trx = await transaction.start(knexDb.world);
     try {
-      const unitData = worldData.unitMap;
-      let slowest = 0;
-
       const town = await Town.query(trx).findById(id).eager(Town.townRelationsFiltered, Town.townRelationFilters);
       if (payload.target === town.location) { throw new ErrorMessage('A town can\'t attack itself'); }
 
       const targetTown = await Town.query(trx).findOne({ location: payload.target }).eager(Town.townRelationsFiltered, Town.townRelationFilters);
       if (!targetTown) { throw new ErrorMessage('Invalid target'); }
 
+      let slowest = 0;
       const distance = Town.calculateDistance(town.location, targetTown.location);
-      const units = {};
-      for (const unit of payload.units) {
-        if (!town.units.hasOwnProperty(unit[0])) { throw new ErrorMessage('No such unit'); }
+      Object.entries(payload.units).forEach(([key, value]) => {
+        if (!town.units[key] || town.units[key].inside < value) { throw new ErrorMessage('Invalid unit'); }
 
-        units[unit[0]] = unit[1];
-        town.units[unit[0]].inside -= unit[1];
-        town.units[unit[0]].outside += unit[1];
-        slowest = Math.max(unitData[unit[0]].speed, slowest);
-      }
+        town.units[key].inside -= value;
+        slowest = Math.max(slowest, worldData.unitMap[key].speed);
+      });
       const movementTime = slowest * distance;
       const movement = await town.$relatedQuery<Movement>('originMovements', trx).insert({
-        units,
+        units: payload.units,
         type: payload.type,
+        originTown: { id: town.id, name: town.name, location: town.location },
         targetTownId: targetTown.id,
+        targetTown: { id: targetTown.id, name: targetTown.name, location: targetTown.location },
         endsAt: time + movementTime,
       });
       await town.$query(trx)
@@ -239,14 +285,14 @@ export class TownSocket {
       await trx.commit();
 
       townQueue.addToQueue(movement);
-      return town;
+      return { town, movement };
     } catch (err) {
       await trx.rollback();
       throw err;
     }
   }
 
-  // private static async update(socket: UserSocket, payload: SocketPayload) {
+  // static async update(socket: UserSocket, payload: SocketPayload) {
   //   const trx = await transaction.start(knexDb.world);
   //   try {
   //     if (!payload.town) { throw new ErrorMessage('No town specified'); }

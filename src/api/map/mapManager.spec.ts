@@ -1,4 +1,5 @@
 import { MapTown, Coords, Dict } from 'strat-ego-common';
+import * as lolex from 'lolex';
 
 import { MapManager } from './mapManager';
 import { worldData } from '../world/worldData';
@@ -28,11 +29,13 @@ const plainTowns = [{
   player: null,
 }] as Town[];
 
-beforeAll(() => {
-  jest.useFakeTimers();
-});
+let clock: lolex.Clock;
 beforeEach(() => {
+  clock = lolex.install();
   mapManager = new MapManager(worldData);
+});
+afterEach(() => {
+  clock.uninstall();
 });
 
 describe('initialize', () => {
@@ -57,7 +60,6 @@ describe('initialize', () => {
   });
 
   test('initialize should set variables and load towns', async () => {
-
     await mapManager.initialize();
     expect(mapManager.lastExpansion).toEqual(lastExpansion);
     expect(mapManager.expansionRate).toEqual(expansionRate);
@@ -270,7 +272,7 @@ describe('map expansion', () => {
       expect(mapManager.scheduleExpansion).toHaveBeenCalledTimes(1);
       expect(mapManager.availableCoords).toEqual(coords);
 
-      jest.runOnlyPendingTimers();
+      clock.tick(1);
       expect(mapManager.expandRing).toHaveBeenCalledTimes(1);
       expect(mapManager.scheduleExpansion).toHaveBeenCalledTimes(2);
     });

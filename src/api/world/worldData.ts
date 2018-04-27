@@ -1,5 +1,5 @@
 import * as Knex from 'knex';
-import { WorldData as WorldDataModel } from 'strat-ego-common';
+import { WorldData as WorldDataModel, Dict } from 'strat-ego-common';
 
 import { Building } from '../building/building';
 import { Unit } from '../unit/unit';
@@ -10,9 +10,9 @@ import { logger } from '../../logger';
 export class WorldData {
   public world: World;
   public units: Unit[] = [];
-  public unitMap: { [name: string]: Unit } = {};
+  public unitMap: Dict<Unit> = {};
   public buildings: Building[] = [];
-  public buildingMap: { [name: string]: Building } = {};
+  public buildingMap: Dict<Building> = {};
 
   get fullWorld() {
     return {
