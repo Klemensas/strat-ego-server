@@ -130,6 +130,7 @@ export class TownSocket {
         targetTown: support.originTown,
         type: MovementType.return,
         endsAt: time + movementTime,
+        haul: null,
       });
       await support.$query(trx).del();
 

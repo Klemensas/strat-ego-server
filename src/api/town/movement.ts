@@ -48,7 +48,7 @@ export class Movement extends BaseModel {
         },
       },
       haul: {
-        type: 'object',
+        type: ['object', 'null'],
         properties: {
           wood: { type: 'number' },
           clay: { type: 'number' },
