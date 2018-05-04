@@ -1,8 +1,11 @@
 import { EventEmitter } from 'events';
+import { transaction } from 'objection';
 
-import { UserSocket } from '../../config/socket';
+import { UserSocket, ErrorMessage, io } from '../../config/socket';
 import { AllianceSocket } from './allianceSocket';
 import { PlayerRolePayload, RoleUpdatePayload, WarDeclarationPayload, DiplomacyType, MessagePayload } from 'strat-ego-common';
+import * as allianceQueries from './allianceQueries';
+import { mapManager } from '../map/mapManager';
 
 let socket: UserSocket;
 beforeEach(() => {
@@ -10,6 +13,7 @@ beforeEach(() => {
   socket.handleError = jest.fn().mockImplementation(() => null);
   socket.join = jest.fn().mockImplementation(() => null);
   socket.userData = {};
+  jest.spyOn(socket, 'emit');
 });
 
 describe('onConnect', () => {
@@ -298,4 +302,83 @@ describe('joinAlliancRoom', () => {
   it('should not call join if user isn\'t in an alliance', () => {
     expect(socket.join).not.toHaveBeenCalled();
   });
+});
+
+describe('leavAlliance', () => {
+  let getAllianceSpy;
+  let leaveAllianceSpy;
+  const transactionRollbackSpy = jest.fn();
+  const transactionCommitSpy = jest.fn();
+  const transactionMock = { rollback: transactionRollbackSpy, commit: transactionCommitSpy };
+
+  beforeEach(() => {
+    getAllianceSpy = jest.spyOn(allianceQueries, 'getAllianceWithMembersRoles');
+    leaveAllianceSpy = jest.spyOn(allianceQueries, 'leaveAlliance');
+    jest.spyOn(transaction, 'start').mockImplementationOnce(() => (transactionMock));
+  });
+
+  it('should rollback transaction and call socket error handler', async () => {
+    const error = 'dead';
+    getAllianceSpy.mockImplementationOnce(() => { throw error; });
+
+    await AllianceSocket.leaveAlliance(socket);
+    expect(transactionRollbackSpy).toHaveBeenCalled();
+    expect(socket.handleError).toHaveBeenCalledWith(error, 'leaveAlliance', `alliance:leaveAllianceFail`);
+  });
+
+  it('should throw on missing alliance', async () => {
+    getAllianceSpy.mockImplementationOnce(() => Promise.resolve(undefined));
+    await AllianceSocket.leaveAlliance(socket);
+    expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Wrong alliance'), 'leaveAlliance', `alliance:leaveAllianceFail`);
+  });
+
+  it('should throw on masterRole match', async () => {
+    const masterRoleId = 12;
+    socket.userData.allianceRoleId = masterRoleId;
+    getAllianceSpy.mockImplementationOnce(() => Promise.resolve({ masterRoleId }));
+    await AllianceSocket.leaveAlliance(socket);
+    expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Owner can\'t leave alliance'), 'leaveAlliance', `alliance:leaveAllianceFail`);
+  });
+
+  describe('working', () => {
+    const playerId = 1;
+    const allianceId = 4;
+    beforeEach(() => {
+      socket.userData.playerId = playerId;
+      socket.userData.allianceRoleId = 12;
+      getAllianceSpy.mockImplementationOnce(() => Promise.resolve({
+        id: allianceId,
+        masterRoleId: 13,
+      }));
+      jest.spyOn(AllianceSocket, 'leaveAllianceRoom').mockImplementationOnce(() => null);
+      jest.spyOn(mapManager, 'setTownAlliance').mockImplementationOnce(() => null);
+
+      leaveAllianceSpy.mockImplementationOnce(() => Promise.resolve({}));
+    });
+
+    it('should call related functions query', async () => {
+      await AllianceSocket.leaveAlliance(socket);
+      expect(leaveAllianceSpy).toHaveBeenCalledWith(playerId, allianceId, transactionMock);
+      expect(AllianceSocket.leaveAllianceRoom).toHaveBeenCalled();
+      expect(mapManager.setTownAlliance).toHaveBeenCalled();
+    });
+
+    it('should emit to socket', async () => {
+      const emitSpy = jest.fn();
+      io = {
+        sockets: {
+          in: jest.fn().mockImplementationOnce(() => ({ emit: emitSpy })),
+        },
+      } as any;
+      await AllianceSocket.leaveAlliance(socket);
+      expect(socket.emit).toHaveBeenCalledWith('alliance:leaveAllianceSuccess');
+      expect(emitSpy).toHaveBeenCalledWith('alliance:event', {
+        event: {
+          originPlayer: { id: socket.userData.playerId, name: socket.userData.playerName },
+        },
+        data: socket.userData.playerId,
+      });
+    });
+  });
+
 });

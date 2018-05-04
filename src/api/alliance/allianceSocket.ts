@@ -23,7 +23,7 @@ import { Player } from '../player/player';
 import { mapManager } from '../map/mapManager';
 import { AllianceDiplomacy } from './allianceDiplomacy';
 import { AllianceMessage } from './allianceMessage';
-import * as allianceQueries from './alllianceQueries';
+import * as allianceQueries from './allianceQueries';
 import { getPlayer, getPlayerWithInvites, getPlayerByName } from '../player/playerQueries';
 
 // TODO: rework events
@@ -743,7 +743,7 @@ export class AllianceSocket {
       };
       socket.userData = this.cleanSocketAlliance(socket.userData);
       this.leaveAllianceRoom(socket, allianceId);
-      mapManager.setTownAlliance({ id: alliance.id, name: alliance.name }, socket.userData.townIds);
+      mapManager.setTownAlliance(null, socket.userData.townIds);
 
       socket.emit('alliance:leaveAllianceSuccess');
       io.sockets.in(`alliance.${allianceId}`).emit('alliance:event', { event, data: socket.userData.playerId });

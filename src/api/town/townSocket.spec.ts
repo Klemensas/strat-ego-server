@@ -160,7 +160,7 @@ describe('cancelSupport', () => {
     };
   });
 
-  it('should rollback transaction and call socket handler', async () => {
+  it('should rollback transaction and call socket error handler', async () => {
     const type = 'origin';
     const payload = 1;
     const transactionSpy = jest.fn();
