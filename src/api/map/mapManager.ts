@@ -9,6 +9,7 @@ import { logger } from '../../logger';
 import { Alliance } from '../alliance/alliance';
 import { worldData as worldDataInstance, WorldData } from '../world/worldData';
 import { knexDb } from '../../sqldb';
+import { getTownLocationsByCoords, getTownsMapProfile } from '../town/townQueries';
 
 export class MapManager {
   public mapData: Dict<MapTown> = {};
@@ -27,12 +28,7 @@ export class MapManager {
     this.expansionGrowth = +this.worldData.world.expansionGrowth;
     await this.scheduleExpansion();
 
-    const towns = await Town
-      .query(knexDb.world)
-      .select('id', 'name', 'location', 'score')
-      .eager('[player, player.alliance]')
-      .pick(Player, ['id', 'name'])
-      .pick(Alliance, ['id', 'name']);
+    const towns = await getTownsMapProfile();
     this.addTown(...towns);
   }
 
@@ -202,11 +198,7 @@ export class MapManager {
 
   public async getAvailableCoords(coords: Coords[]) {
     // knex requires wrapping in an array http://knexjs.org/#Raw-Bindings
-    const wrappedCoords: any = coords.map((item) => ([item]));
-    const towns = await Town
-      .query(knexDb.world)
-      .select('location')
-      .whereIn('location', wrappedCoords);
+    const towns = await getTownLocationsByCoords(coords);
     const usedLocations = towns.map(({ location }) => location.join(','));
     return coords.filter((c) => !usedLocations.includes(c.join(',')));
   }

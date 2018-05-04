@@ -88,25 +88,6 @@ export class Player extends BaseModel {
     },
   };
 
-  static getPlayer(where: Partial<Player>, trx: Knex.Transaction | Knex = knexDb.world) {
-    return Player
-      .query(trx)
-      .findOne(where)
-      .eager(`[
-        alliance(fullAlliance),
-        allianceRole,
-        originReports.[originTown, targetTown],
-        targetReports.[originTown, targetTown],
-        towns.${Town.townRelationsFiltered},
-        invitations(selectAllianceProfile)
-      ]`, Town.townRelationFilters)
-      .modifyEager(`[
-        originReports.[originTown,targetTown],
-        targetReports.[originTown, targetTown]
-      ]`, (builder) => builder.select('id', 'name', 'location'));
-      // .debug();
-  }
-
   static get namedFilters() {
     return {
       selectProfile: (builder) => builder.select('id', 'name'),

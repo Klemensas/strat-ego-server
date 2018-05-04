@@ -1,9 +1,7 @@
 import { RankProfile } from 'strat-ego-common';
 
 import { logger } from '../../logger';
-import { knexDb } from '../../sqldb';
-import { Player } from './player';
-import { Town } from '../town/town';
+import { getPlayerRankings } from './playerQueries';
 
 // TODO: consider using better data structure and better sorting
 export class ScoreTracker {
@@ -17,14 +15,7 @@ export class ScoreTracker {
 
   public async readScores() {
     try {
-      const players: RankProfile[] = await Player.query(knexDb.world)
-        .select(
-          'id',
-          'name',
-          Player.relatedQuery('towns')
-            .sum('score')
-            .as('score'),
-        ).orderBy('score', 'desc');
+      const players: RankProfile[] = await getPlayerRankings();
       players.forEach((player) => {
         player.score = +(player.score || 0);
         this.playerScores[player.id] = player;

@@ -1,14 +1,14 @@
 import { transaction } from 'objection';
 
-import { TownSocket } from './town.socket';
+import { TownSocket } from './townSocket';
 import { TownSupport } from './townSupport';
-import { knexDb } from '../../sqldb';
 import { Town } from './town';
 import { World } from '../world/world';
 import { worldData } from '../world/worldData';
 import { UserSocket, ErrorMessage } from '../../config/socket';
 import { townQueue } from '../townQueue';
 import { Movement } from './movement';
+import * as townQueries from './townQueries';
 
 beforeAll(() => {
   worldData.unitMap = {
@@ -27,34 +27,35 @@ describe('cancelSupport', () => {
     archer: 2,
     horse: 12,
   };
-  let support: TownSupport;
+  const support = {
+    id: 12,
+    units,
+    originTownId: 1,
+    originTown: {
+      id: 1,
+      name: 'origin town',
+      location: [1, 1],
+    },
+    targetTownId: 2,
+    targetTown: {
+      id: 2,
+      name: 'target town',
+      location: [2, 2],
+    },
+  };
   let socket: UserSocket;
+  const getSupportSpy = jest.spyOn(townQueries, 'getTownSupport');
+  const deleteSupportSpy = jest.spyOn(townQueries, 'deleteSupport');
   let emitSpy;
-  beforeEach(async () => {
-    support = await TownSupport.query(knexDb.world).insertGraph({
-      units,
-      originTown: {
-        name: 'origin town',
-        location: [1, 1],
-      },
-      targetTown: {
-        name: 'target town',
-        location: [2, 2],
-      },
-    });
+  beforeEach(() => {
     socket = {
-      handleError: jest.fn().mockImplementation(() => null),
+      handleError: jest.fn().mockImplementationOnce(() => null),
       userData: {
         townIds: [support.originTown.id, support.targetTown.id],
       },
     } as any;
-    emitSpy = jest.spyOn(TownSocket, 'emitToTownRoom').mockImplementation(() => null);
+    emitSpy = jest.spyOn(TownSocket, 'emitToTownRoom').mockImplementationOnce(() => null);
     emitSpy.mockReset();
-    return;
-  });
-
-  afterEach(async () => {
-    return await Town.query(knexDb.world).del();
   });
 
   test('should rollback transaction and call socket handler', async () => {
@@ -63,7 +64,7 @@ describe('cancelSupport', () => {
     const transactionSpy = jest.fn();
     const error = 'dead';
     jest.spyOn(transaction, 'start').mockImplementationOnce(() => ({ rollback: transactionSpy }));
-    jest.spyOn(TownSupport, 'query').mockImplementationOnce(() => { throw error; });
+    getSupportSpy.mockImplementationOnce(() => { throw error; });
 
     await TownSocket.cancelSupport(socket, payload, type);
     expect(transactionSpy).toHaveBeenCalled();
@@ -71,29 +72,30 @@ describe('cancelSupport', () => {
   });
 
   test('should throw on missing support', async () => {
+    getSupportSpy.mockImplementationOnce(() => Promise.resolve(null));
+
     await TownSocket.cancelSupport(socket, support.id + 1, 'origin');
     expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Invalid support item'), 'support', `town:recallSupportFail`, support.id + 1);
   });
 
   test('should throw on missing socket town', async () => {
+    getSupportSpy.mockImplementationOnce(() => Promise.resolve({}));
     socket.userData.townIds = [];
     await TownSocket.cancelSupport(socket, support.id, 'origin');
     expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Invalid support item'), 'support', `town:recallSupportFail`, support.id);
   });
 
   test('should handle origin canceling support', async () => {
+    const movement = {
+      originTown: { id: support.targetTown.id, name: support.targetTown.name, location: support.targetTown.location } as Partial<Town>,
+      targetTown: { id: support.originTown.id, name: support.originTown.name, location: support.originTown.location } as Partial<Town>,
+    };
     const queueSpy = jest.spyOn(townQueue, 'addToQueue').mockImplementationOnce(() => null);
     jest.spyOn(Town, 'calculateDistance').mockImplementationOnce(() => 1);
+    getSupportSpy.mockImplementationOnce(() => Promise.resolve(support));
+    deleteSupportSpy.mockImplementationOnce(() => Promise.resolve(movement));
     const payload = support.id;
     await TownSocket.cancelSupport(socket, payload, 'origin');
-
-    // Fetch and populate movement data to match emit data
-    const movement = await Movement.query(knexDb.world).findOne({ targetTownId: support.originTown.id });
-    movement.originTown = { id: support.targetTown.id, name: support.targetTown.name, location: support.targetTown.location };
-    movement.targetTown = { id: support.originTown.id, name: support.originTown.name, location: support.originTown.location };
-    movement.endsAt = +movement.endsAt;
-    movement.createdAt = +movement.createdAt;
-    movement.updatedAt = +movement.updatedAt;
 
     expect(socket.handleError).not.toHaveBeenCalled();
     expect(queueSpy).toHaveBeenCalled();
@@ -104,18 +106,16 @@ describe('cancelSupport', () => {
   });
 
   test('should handle target canceling support', async () => {
+    const movement = {
+      originTown: { id: support.targetTown.id, name: support.targetTown.name, location: support.targetTown.location } as Partial<Town>,
+      targetTown: { id: support.originTown.id, name: support.originTown.name, location: support.originTown.location } as Partial<Town>,
+    };
     const queueSpy = jest.spyOn(townQueue, 'addToQueue').mockImplementationOnce(() => null);
     jest.spyOn(Town, 'calculateDistance').mockImplementationOnce(() => 1);
+    getSupportSpy.mockImplementationOnce(() => Promise.resolve(support));
+    deleteSupportSpy.mockImplementationOnce(() => Promise.resolve(movement));
     const payload = support.id;
     await TownSocket.cancelSupport(socket, payload, 'target');
-
-    // Fetch and populate movement data to match emit data
-    const movement = await Movement.query(knexDb.world).findOne({ targetTownId: support.originTown.id });
-    movement.originTown = { id: support.targetTown.id, name: support.targetTown.name, location: support.targetTown.location };
-    movement.targetTown = { id: support.originTown.id, name: support.originTown.name, location: support.originTown.location };
-    movement.endsAt = +movement.endsAt;
-    movement.createdAt = +movement.createdAt;
-    movement.updatedAt = +movement.updatedAt;
 
     expect(socket.handleError).not.toHaveBeenCalled();
     expect(queueSpy).toHaveBeenCalled();

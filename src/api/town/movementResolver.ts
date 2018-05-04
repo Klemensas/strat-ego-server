@@ -7,8 +7,18 @@ import { Town } from './town';
 import { Movement } from './movement';
 import { Report } from './report';
 import { townQueue } from '../townQueue';
-import { TownSocket } from './town.socket';
+import { TownSocket } from './townSocket';
 import { TownSupport } from './townSupport';
+import {
+  deleteMovement,
+  updateTown,
+  createSupport,
+  createMovement,
+  deleteAllTownSupport,
+  deleteTownSupport,
+  updateTownSupport,
+  createReport,
+} from './townQueries';
 
 const defaultStrength: CombatStrength = { general: 0, cavalry: 0, archer: 0 };
 const combatTypes = ['general', 'cavalry', 'archer'];
@@ -142,16 +152,19 @@ export class MovementResolver {
 
     const trx = await transaction.start(knexDb.world);
     try {
-      await movement.$query(trx).delete();
-      await town.$query(trx)
-        .patch({
+      await deleteMovement(movement, trx);
+      await updateTown(
+        town,
+        {
           units,
           resources,
           updatedAt: +movement.endsAt,
-        })
-        .context({
+        },
+        {
           resourcesUpdated: true,
-        });
+        },
+        trx,
+      );
       await trx.commit();
 
       town.targetMovements = town.targetMovements.filter(({ id }) => id !== movement.id);
@@ -174,14 +187,14 @@ export class MovementResolver {
       const targetProfile = movement.targetTown ||
         !isOrigin ? { id: town.id, name: town.name, location: town.location } : { id: otherTown.id, name: otherTown.name, location: otherTown.location };
 
-      await movement.$query(trx).delete();
-      const townSupport = await TownSupport.query(trx).insert({
+      await deleteMovement(movement, trx);
+      const townSupport = await createSupport({
         units: movement.units,
         originTownId: movement.originTownId,
         originTown: originProfile,
         targetTownId: movement.targetTownId,
         targetTown: targetProfile,
-      });
+      }, trx);
 
       await trx.commit();
 
@@ -374,25 +387,29 @@ export class MovementResolver {
     const trx = await transaction.start(knexDb.world);
     let newMovement: Movement = null;
     try {
-      await movement.$query(trx).delete();
+      await deleteMovement(movement, trx);
 
-      const report = await Report.query(trx).insert({
+      const report = await createReport({
         ...attackOutcome.report,
         originTownId: originTown.id,
         originPlayerId: originTown.playerId,
         targetTownId: targetTown.id,
         targetPlayerId: targetTown.playerId,
-      });
+      }, trx);
 
       // Victorious return movement
       if (attackOutcome.origin.movement) {
-        newMovement = await Movement.query(trx).insert({
-          ...attackOutcome.origin.movement,
-          endsAt,
-          type: MovementType.return,
-          originTownId: targetTown.id,
-          targetTownId: originTown.id,
-        });
+        const query = await createMovement(
+          originTown,
+          targetTown,
+          {
+            ...attackOutcome.origin.movement,
+            endsAt,
+            type: MovementType.return,
+          },
+          trx,
+        );
+        newMovement = query.movement;
         originTown.targetMovements.push(newMovement);
       }
 
@@ -400,21 +417,24 @@ export class MovementResolver {
       if (attackOutcome.target) {
         // Remove all support if target lost
         if (report.outcome === CombatOutcome.attack) {
-          await targetTown.$relatedQuery('targetSupport', trx).del();
+          await deleteAllTownSupport(targetTown, trx);
         }
         await Promise.all(support.map((item) => item.units ?
-          targetTown.$relatedQuery<TownSupport>('targetSupport', trx).where('id', item.id).patch({ units: item.units }) :
-          targetTown.$relatedQuery('targetSupport', trx).where('id', item.id).del(),
+          updateTownSupport(targetTown, item.id, { units: item.units }, trx) :
+          deleteTownSupport(targetTown, item.id, trx),
         ));
-        await targetTown.$query(trx)
-          .patch({
+        await updateTown(
+          targetTown,
+          {
             ...attackOutcome.target,
             updatedAt: +movement.endsAt,
-          })
-          .context({
+          },
+          {
             resourcesUpdated: true,
             loyaltyUpdated: true,
-          });
+          },
+          trx,
+        );
       }
 
       await trx.commit();

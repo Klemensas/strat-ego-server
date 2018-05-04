@@ -3,10 +3,9 @@ import * as lolex from 'lolex';
 
 import { MapManager } from './mapManager';
 import { worldData } from '../world/worldData';
-import { QueryBuilder } from 'objection';
 import { Town } from '../town/town';
-import { knexDb } from '../../sqldb';
 import { World } from '../world/world';
+import * as townQueries from '../town/townQueries';
 
 let mapManager: MapManager;
 const plainTowns = [{
@@ -45,18 +44,15 @@ describe('initialize', () => {
   let addSpy;
   let expandSpy;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     worldData.world = {
       lastExpansion,
       expansionRate,
       expansionGrowth,
     } as World;
     addSpy = jest.spyOn(mapManager, 'addTown');
-    expandSpy = jest.spyOn(mapManager, 'scheduleExpansion').mockImplementation(() => Promise.resolve());
-    await Town.query(knexDb.world).insertGraph(plainTowns);
-  });
-  afterEach(async () => {
-    return await Town.query(knexDb.world).del();
+    expandSpy = jest.spyOn(mapManager, 'scheduleExpansion').mockImplementationOnce(() => Promise.resolve());
+    jest.spyOn(townQueries, 'getTownsMapProfile').mockImplementation(() => Promise.resolve(plainTowns));
   });
 
   test('initialize should set variables and load towns', async () => {
@@ -350,18 +346,16 @@ describe('map expansion', () => {
       [499, 499],
       [499, 501],
     ];
-    beforeEach(async () => {
-      return await Town.query(knexDb.world).insertGraph(usedCoords.map((location: Coords) => ({ location })));
+    beforeEach( () => {
+      jest.spyOn(townQueries, 'getTownLocationsByCoords').mockImplementationOnce(() => Promise.resolve(usedCoords.map((location: Coords) => ({ location }))));
     });
+
     test('should return only available coords ', async () => {
       const checkedCoords = testCoords.slice(2);
       const omitted = testCoords.slice(0, 2);
       const result = await mapManager.getAvailableCoords(checkedCoords);
       expect(result).toEqual(checkedCoords.filter((coord) => !usedCoords.some((used) => used.join(',') === coord.join(','))));
       expect(result.some((coord) => omitted.some((missing) => missing.join(',') === coord.join(',')))).toBeFalsy();
-    });
-    afterEach(async () => {
-      return await Town.query(knexDb.world).del();
     });
   });
 });

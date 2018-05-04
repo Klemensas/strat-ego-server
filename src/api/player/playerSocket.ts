@@ -5,10 +5,11 @@ import { knexDb } from '../../sqldb';
 import { Player } from './player';
 import { Town } from '../town/town';
 import { UserWorld } from '../user/userWorld';
-import { TownSocket } from '../town/town.socket';
+import { TownSocket } from '../town/townSocket';
 import { UserSocket } from '../../config/socket';
 import { mapManager } from '../map/mapManager';
 import { scoreTracker } from './playerScore';
+import { getFullPlayer, createPlayer, createPlayerTown } from './playerQueries';
 
 export class PlayerSocket {
   static async onConnect(socket: UserSocket) {
@@ -31,7 +32,7 @@ export class PlayerSocket {
   }
 
   private static async getOrCreatePlayer(socket) {
-    const player = await Player.getPlayer({ userId: socket.userData.userId });
+    const player = await getFullPlayer({ userId: socket.userData.userId });
     if (player) { return player; }
 
     try {
@@ -40,7 +41,7 @@ export class PlayerSocket {
         socket.userData.userId,
         socket.userData.worldName,
       );
-      const createdPlayer = await Player.getPlayer({ userId: socket.userData.userId });
+      const createdPlayer = await getFullPlayer({ userId: socket.userData.userId });
       mapManager.addPlayerTowns(createdPlayer);
       scoreTracker.addPlayer({
         id: createdPlayer.id,
@@ -62,19 +63,7 @@ export class PlayerSocket {
       trxWorld = await transaction.start(knexDb.world);
 
       const location = await mapManager.chooseLocation(trxMain);
-      const player: any = await Player.query(trxWorld).insertGraph({
-        name,
-        userId,
-        towns: [{
-          name: `${name}s Town`,
-          location,
-        }],
-      } as any);
-      await UserWorld.query(trxMain).insert({
-        userId,
-        worldName,
-        playerId: player.id,
-      });
+      const player: any = await createPlayer(name, location, userId, worldName, trxWorld, trxMain);
       await trxMain.commit();
       await trxWorld.commit();
 
@@ -106,11 +95,8 @@ export class PlayerSocket {
       trxWorld = await transaction.start(knexDb.world);
 
       const location = await mapManager.chooseLocation(trxMain);
-      const player = await Player.getPlayer({ userId: socket.userData.playerId });
-      await player.$relatedQuery<Town>('towns', trxWorld).insert({
-        location,
-        name: `${socket.userData.playerName}s Town`,
-      });
+      const player = await getFullPlayer({ userId: socket.userData.playerId }, trxWorld);
+      await createPlayerTown(player, location, trxWorld);
 
       await trxMain.commit();
       await trxWorld.commit();

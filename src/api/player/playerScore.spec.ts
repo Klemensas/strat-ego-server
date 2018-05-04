@@ -1,9 +1,9 @@
 import { ScoreTracker } from './playerScore';
 import { logger } from '../../logger';
 import { Player } from './player';
-import { knexDb } from '../../sqldb';
 import { worldData, WorldData } from '../world/worldData';
 import { World } from '../world/world';
+import * as playerQueries from './playerQueries';
 
 const examplePlayers = {
   1: {
@@ -79,23 +79,24 @@ test('scores should return ranking value populated with playerScores in order', 
 });
 
 describe('readScores', () => {
-  let storedPlayers: Player[];
-  beforeEach(async () => {
+  const dbPlayers = players.map((player) => ({
+    id: player.id,
+    name: player.name,
+    score: player.towns && player.towns.length ? player.towns.reduce((s, t) => s + t.score, 0) : null,
+  }));
+  beforeEach(() => {
     scoreTracker = new ScoreTracker();
-    storedPlayers = await Player.query(knexDb.world).insertGraph(players);
+    jest.spyOn(playerQueries, 'getPlayerRankings').mockImplementation(() => Promise.resolve(dbPlayers));
   });
-  afterEach(async () => {
-    return await Player.query(knexDb.world).del();
-  });
+
   test('should set all player scores', async () => {
     const sortSpy = jest.spyOn(scoreTracker, 'sortRankings');
     await scoreTracker.readScores();
-    const expectedPlayers = storedPlayers.reduce((result, item) => ({
+    const expectedPlayers = dbPlayers.reduce((result, item) => ({
       ...result,
       [item.id]: {
-        id: item.id,
-        name: item.name,
-        score: item.towns && item.towns.length ? item.towns.reduce((s, t) => s + t.score, 0) : 0,
+        ...item,
+        score: item.score || 0,
       },
     }), {});
     expect(scoreTracker.sortRankings).toHaveBeenCalledTimes(1);
@@ -105,8 +106,8 @@ describe('readScores', () => {
 });
 
 test('readScores on error should log and rethrow', async () => {
-  const knexSpy = jest.spyOn(knexDb, 'world');
-  knexSpy.mockImplementation(() => null);
+  const expectedError = 'error';
+  const knexSpy = jest.spyOn(playerQueries, 'getPlayerRankings').mockImplementationOnce(() => Promise.reject(expectedError));
   const loggerSpy = jest.spyOn(logger, 'error');
   loggerSpy.mockImplementation(() => null);
 
@@ -116,9 +117,8 @@ test('readScores on error should log and rethrow', async () => {
   } catch (err) {
     error = err;
   }
-  expect(error).toBeTruthy();
+  expect(error).toEqual(expectedError);
   expect(loggerSpy).toHaveBeenCalled();
-  knexSpy.mockRestore();
 });
 
 describe('setScore', () => {

@@ -1,15 +1,15 @@
 import { Combat, CombatStrength, Dict, TownUnit, MovementType } from 'strat-ego-common';
 import { transaction } from 'objection';
 
-import { MovementResolver } from './movement.resolver';
+import { MovementResolver } from './movementResolver';
 import { worldData } from '../world/worldData';
 import { TownSupport } from './townSupport';
 import { Town } from './town';
 import { townQueue } from '../townQueue';
 import { Movement } from './movement';
-import { knexDb } from '../../sqldb';
 import { World } from '../world/world';
-import { TownSocket } from './town.socket';
+import { TownSocket } from './townSocket';
+import * as townQueries from './townQueries';
 
 beforeAll(() => {
   worldData.unitMap = {
@@ -46,29 +46,41 @@ test('updateMissingTown should process queues and remove processed', async () =>
 });
 
 describe('resolveSupport', () => {
+  const units = {
+    archer: 3,
+    sword: 4,
+  };
   let movement;
-  beforeEach(async (done) => {
-    movement = await Movement.query(knexDb.world).insertGraph({
+  beforeEach(() => {
+    movement = {
+      id: 13,
       type: MovementType.support,
-      units: {
-        archer: 3,
-        sword: 4,
-      },
+      units,
+      originTownId: 1,
       originTown: {
+        id: 1,
+        originMovements: [{ id: 13 }],
+        targetMovements: [],
         location: [1, 1],
       },
+      targetTownId: 2,
       targetTown: {
+        id: 2,
+        originMovements: [],
+        targetMovements: [{ id: 13 }],
         location: [2, 2],
       },
+      haul: null,
       endsAt: Date.now(),
+    } as any;
+    const support = TownSupport.fromJson({
+      id: 453,
+      originTownId: movement.originTownId,
+      targetTownId: movement.targetTownId,
+      units,
     });
-    movement.originTown.originMovements = [{ id: movement.id }];
-    movement.targetTown.targetMovements = [{ id: movement.id }];
-    done();
-  });
-  afterEach(async (done) => {
-    await Town.query(knexDb.world).del();
-    done();
+    jest.spyOn(townQueries, 'deleteMovement').mockImplementationOnce(() => Promise.resolve());
+    jest.spyOn(townQueries, 'createSupport').mockImplementationOnce(() => Promise.resolve(support));
   });
 
   test('should rollback transaction and rethrow error', async () => {
@@ -102,7 +114,6 @@ describe('resolveSupport', () => {
     const socketSpy = jest.spyOn(TownSocket, 'emitToTownRoom').mockImplementationOnce(() => null);
 
     const resultTown = await MovementResolver.resolveSupport(movement, { ...target, originSupport: [] });
-    const movements = await Movement.query(knexDb.world).select();
     expect(resultTown.originSupport).toHaveLength(1);
     expect(resultTown.originSupport[0] instanceof TownSupport).toBeTruthy();
     expect(resultTown).toEqual({
@@ -112,10 +123,10 @@ describe('resolveSupport', () => {
     });
     expect(TownSocket.emitToTownRoom).toHaveBeenCalledWith(missingTown.id, {
       ...missingTown,
+      originSupport: [],
       targetMovements: [],
       targetSupport: resultTown.originSupport,
     }, 'town:update');
-    expect(movements).toHaveLength(0);
   });
 
   test('should correctly resolve support for target towns', async () => {
@@ -131,7 +142,6 @@ describe('resolveSupport', () => {
     const socketSpy = jest.spyOn(TownSocket, 'emitToTownRoom').mockImplementationOnce(() => null);
 
     const resultTown = await MovementResolver.resolveSupport(movement, { ...target, targetSupport: [] });
-    const movements = await Movement.query(knexDb.world).select();
     expect(resultTown.targetSupport).toHaveLength(1);
     expect(resultTown.targetSupport[0] instanceof TownSupport).toBeTruthy();
     expect(resultTown).toEqual({
@@ -143,8 +153,8 @@ describe('resolveSupport', () => {
       ...missingTown,
       originMovements: [],
       originSupport: resultTown.targetSupport,
+      targetSupport: [],
     }, 'town:update');
-    expect(movements).toHaveLength(0);
   });
 
 });

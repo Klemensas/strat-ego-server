@@ -2,12 +2,11 @@ import * as passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
 
 import { logger } from '../../logger';
-import { knexDb } from '../../sqldb';
-import { User } from '../../api/user/user';
+import { getUserByEmail } from '../../api/user/userQueries';
 
 async function localAuthenticate(email, password, done) {
   try {
-    const user = await User.query(knexDb.main).findOne('email', email.toLowerCase());
+    const user = await getUserByEmail(email);
     if (!user) {
       return done(null, false, {
         message: 'This email is not registered.',
