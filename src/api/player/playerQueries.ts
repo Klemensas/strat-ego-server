@@ -37,7 +37,7 @@ export function getFullPlayer(where: Partial<Player>, connection: Transaction | 
 
 export function getPlayerWithInvites(where: Partial<Player>, connection: Transaction | Knex = knexDb.world) {
   return getPlayer(where, connection)
-    .eager('ivnitations(selectAllianceProfile)');
+    .eager('invitations(selectAllianceProfile)');
 }
 
 export function getPlayerRankings(connection: Transaction | Knex = knexDb.world) {
