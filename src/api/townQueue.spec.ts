@@ -72,7 +72,7 @@ beforeEach(async () => {
   jest.spyOn(townQueries, 'getSortedMovements').mockImplementation(() => Promise.resolve(unitQueues));
 });
 
-test('loadQueues should add all items to queue and call set earliest', async () => {
+it('loadQueues should add all items to queue and call set earliest', async () => {
   townQueue.inProgress = true;
   await townQueue.loadQueues();
   expect(townQueue.queue.length).toBeGreaterThan(0);

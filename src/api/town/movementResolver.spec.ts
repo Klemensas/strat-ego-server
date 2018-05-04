@@ -22,7 +22,7 @@ beforeAll(() => {
   } as World;
 });
 
-test('calculateSurvivalPercent should return a percent multiplier number', () => {
+it('calculateSurvivalPercent should return a percent multiplier number', () => {
   const cases = [
     [[100, 10], 0.9683772233983162],
     [[10, 20], -1.8284271247461903],
@@ -31,7 +31,7 @@ test('calculateSurvivalPercent should return a percent multiplier number', () =>
   cases.forEach(([item, expected]) => expect(MovementResolver.calculateSurvivalPercent(item[0], item[1])).toBe(expected));
 });
 
-test('updateMissingTown should process queues and remove processed', async () => {
+it('updateMissingTown should process queues and remove processed', async () => {
   const processed = ['mock', 2];
   const town = { id: 1, name: 'test town' };
   const testId = 12;
@@ -83,7 +83,7 @@ describe('resolveSupport', () => {
     jest.spyOn(townQueries, 'createSupport').mockImplementationOnce(() => Promise.resolve(support));
   });
 
-  test('should rollback transaction and rethrow error', async () => {
+  it('should rollback transaction and rethrow error', async () => {
     const error = 'test';
     const transactionSpy = jest.fn();
     jest.spyOn(transaction, 'start').mockImplementationOnce(() => ({ rollback: transactionSpy }));
@@ -101,7 +101,7 @@ describe('resolveSupport', () => {
     expect(transactionSpy).toHaveBeenCalled();
   });
 
-  test('should correctly resolve support for origin towns', async () => {
+  it('should correctly resolve support for origin towns', async () => {
     const target = movement.originTown;
     const missingTown = movement.targetTown;
     delete movement.targetTown;
@@ -129,7 +129,7 @@ describe('resolveSupport', () => {
     }, 'town:update');
   });
 
-  test('should correctly resolve support for target towns', async () => {
+  it('should correctly resolve support for target towns', async () => {
     const target = movement.targetTown;
     const missingTown = movement.originTown;
     delete movement.originTown;
@@ -179,11 +179,11 @@ describe('combat strength', () => {
     { general: 20, cavalry: 600, archer: 8 },
   ];
 
-  test('calculateSupportStrength', () => {
+  it('calculateSupportStrength', () => {
     cases.forEach((item, i) => expect(MovementResolver.calculateSupportStrength(item.map((units) => ({ units })))).toEqual(expected[i]));
   });
 
-  test('calculateDefenseStrength', () => {
+  it('calculateDefenseStrength', () => {
     cases.forEach((item, i) => {
       const unitList = item
         .reduce((result, units) => {
@@ -195,7 +195,7 @@ describe('combat strength', () => {
     });
   });
 
-  test('calculateAttackStrength', () => {
+  it('calculateAttackStrength', () => {
     cases.forEach((item, i) => {
       const unitList = item
         .reduce((result, units) => {

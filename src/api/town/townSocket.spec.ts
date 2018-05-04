@@ -41,7 +41,7 @@ describe('onConnect', () => {
     'town:sendBackSupport',
   ];
 
-  test('should register events', () => {
+  it('should register events', () => {
     jest.spyOn(TownSocket, 'joinTownRoom').mockImplementationOnce(() => null);
     expect(socket.eventNames()).toHaveLength(0);
     TownSocket.onConnect(socket);
@@ -55,7 +55,7 @@ describe('onConnect', () => {
       TownSocket.onConnect(socket);
     });
 
-    test('should call rename on rename emit', () => {
+    it('should call rename on rename emit', () => {
       jest.spyOn(TownSocket, 'rename').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(TownSocket.rename).not.toHaveBeenCalled();
@@ -65,7 +65,7 @@ describe('onConnect', () => {
       expect(TownSocket.rename).toHaveBeenCalledWith(socket, payload);
     });
 
-    test('should call build on build emit', () => {
+    it('should call build on build emit', () => {
       jest.spyOn(TownSocket, 'build').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(TownSocket.build).not.toHaveBeenCalled();
@@ -75,7 +75,7 @@ describe('onConnect', () => {
       expect(TownSocket.build).toHaveBeenCalledWith(socket, payload);
     });
 
-    test('should call recruit on recruit emit', () => {
+    it('should call recruit on recruit emit', () => {
       jest.spyOn(TownSocket, 'recruit').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(TownSocket.recruit).not.toHaveBeenCalled();
@@ -85,7 +85,7 @@ describe('onConnect', () => {
       expect(TownSocket.recruit).toHaveBeenCalledWith(socket, payload);
     });
 
-    test('should call moveTroops on moveTroops emit', () => {
+    it('should call moveTroops on moveTroops emit', () => {
       jest.spyOn(TownSocket, 'moveTroops').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(TownSocket.moveTroops).not.toHaveBeenCalled();
@@ -95,7 +95,7 @@ describe('onConnect', () => {
       expect(TownSocket.moveTroops).toHaveBeenCalledWith(socket, payload);
     });
 
-    test('should call cancelSupport on recallSupport emit', () => {
+    it('should call cancelSupport on recallSupport emit', () => {
       jest.spyOn(TownSocket, 'cancelSupport').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(TownSocket.cancelSupport).not.toHaveBeenCalled();
@@ -105,7 +105,7 @@ describe('onConnect', () => {
       expect(TownSocket.cancelSupport).toHaveBeenCalledWith(socket, payload, 'origin');
     });
 
-    test('should call cancelSupport on sendBackSupport emit', () => {
+    it('should call cancelSupport on sendBackSupport emit', () => {
       jest.spyOn(TownSocket, 'cancelSupport').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(TownSocket.cancelSupport).not.toHaveBeenCalled();
@@ -117,7 +117,7 @@ describe('onConnect', () => {
   });
 });
 
-test('joinTownRoom should call join for every user town', () => {
+it('joinTownRoom should call join for every user town', () => {
   socket.userData.townIds = [];
   TownSocket.joinTownRoom(socket);
   expect(socket.join).not.toHaveBeenCalled();
@@ -160,7 +160,7 @@ describe('cancelSupport', () => {
     };
   });
 
-  test('should rollback transaction and call socket handler', async () => {
+  it('should rollback transaction and call socket handler', async () => {
     const type = 'origin';
     const payload = 1;
     const transactionSpy = jest.fn();
@@ -173,21 +173,21 @@ describe('cancelSupport', () => {
     expect(socket.handleError).toHaveBeenCalledWith(error, 'support', `town:recallSupportFail`, payload);
   });
 
-  test('should throw on missing support', async () => {
+  it('should throw on missing support', async () => {
     getSupportSpy.mockImplementationOnce(() => Promise.resolve(null));
 
     await TownSocket.cancelSupport(socket, support.id + 1, 'origin');
     expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Invalid support item'), 'support', `town:recallSupportFail`, support.id + 1);
   });
 
-  test('should throw on missing socket town', async () => {
+  it('should throw on missing socket town', async () => {
     getSupportSpy.mockImplementationOnce(() => Promise.resolve({}));
     socket.userData.townIds = [];
     await TownSocket.cancelSupport(socket, support.id, 'origin');
     expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Invalid support item'), 'support', `town:recallSupportFail`, support.id);
   });
 
-  test('should handle origin canceling support', async () => {
+  it('should handle origin canceling support', async () => {
     const movement = {
       originTown: { id: support.targetTown.id, name: support.targetTown.name, location: support.targetTown.location } as Partial<Town>,
       targetTown: { id: support.originTown.id, name: support.originTown.name, location: support.originTown.location } as Partial<Town>,
@@ -207,7 +207,7 @@ describe('cancelSupport', () => {
     expect(emitSpy.mock.calls[1]).toEqual([support.targetTown.id, { support: payload, town: support.targetTown.id }, 'town:supportRecalled']);
   });
 
-  test('should handle target canceling support', async () => {
+  it('should handle target canceling support', async () => {
     const movement = {
       originTown: { id: support.targetTown.id, name: support.targetTown.name, location: support.targetTown.location } as Partial<Town>,
       targetTown: { id: support.originTown.id, name: support.originTown.name, location: support.originTown.location } as Partial<Town>,

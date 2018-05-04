@@ -55,7 +55,7 @@ describe('initialize', () => {
     jest.spyOn(townQueries, 'getTownsMapProfile').mockImplementation(() => Promise.resolve(plainTowns));
   });
 
-  test('initialize should set variables and load towns', async () => {
+  it('initialize should set variables and load towns', async () => {
     await mapManager.initialize();
     expect(mapManager.lastExpansion).toEqual(lastExpansion);
     expect(mapManager.expansionRate).toEqual(expansionRate);
@@ -65,7 +65,7 @@ describe('initialize', () => {
   });
 });
 
-test('getAllData should return mapData', () => {
+it('getAllData should return mapData', () => {
   const mapTown: MapTown = {
     id: 1,
     name: 'name',
@@ -110,7 +110,7 @@ describe('town editing', () => {
     mapManager.mapData = { ...mapData };
   });
 
-  test('addPlayerTowns should add all player towns', () => {
+  it('addPlayerTowns should add all player towns', () => {
     mapManager.addPlayerTowns(testPlayer);
     expect(mapManager.mapData).toEqual(mapData);
 
@@ -121,7 +121,7 @@ describe('town editing', () => {
     const expected: Dict<MapTown> = { ...mapData, ...mapTowns };
     expect(mapManager.mapData).toEqual(expected);
   });
-  test('addTown should add all player towns', () => {
+  it('addTown should add all player towns', () => {
     mapManager.addTown();
     expect(mapManager.mapData).toEqual(mapData);
 
@@ -130,12 +130,12 @@ describe('town editing', () => {
     expect(mapManager.mapData).toEqual(expected);
   });
   describe('setTownAlliance', () => {
-    test('should ignore missing towns', () => {
+    it('should ignore missing towns', () => {
       mapManager.setTownAlliance({ id: 123, name: 'notused' }, [-2, 324567]);
       expect(mapManager.mapData).toEqual(mapData);
     });
 
-    test('should unset all provided town alliance', () => {
+    it('should unset all provided town alliance', () => {
       mapManager.mapData = { ...mapTowns };
       const nonAlliedTowns = townsToAdd.slice(0, townsToAdd.length - 1).map(({ id }) => id);
       const expected = Object.values(mapTowns).reduce((result, town) => ({
@@ -150,7 +150,7 @@ describe('town editing', () => {
       expect(mapManager.mapData).toEqual(expected);
     });
 
-    test('should set all provided town alliance', () => {
+    it('should set all provided town alliance', () => {
       const alliedTowns = Object.values(mapData).map(({ id }) => id).slice(1);
       const expected = Object.values(mapData).reduce((result, town) => ({
         ...result,
@@ -165,13 +165,13 @@ describe('town editing', () => {
   });
 
   describe('setTownScore', () => {
-    test('should ignore missing towns', () => {
+    it('should ignore missing towns', () => {
       const target: Coords = [-123, -123];
       expect(mapManager.mapData).toEqual(mapData);
       mapManager.setTownScore(-1, target);
       expect(mapManager.mapData).toEqual(mapData);
     });
-    test('should update target town score', () => {
+    it('should update target town score', () => {
       const target = Object.values(mapData)[0].location;
       const expected = 12343;
       expect(mapManager.mapData[target.join(',')].score).not.toEqual(expected);
@@ -207,7 +207,7 @@ describe('map expansion', () => {
       [1, 3],
     ];
 
-    test('should pick a random coordinate from available ones', async () => {
+    it('should pick a random coordinate from available ones', async () => {
       mapManager.availableCoords = [...availableCoords];
       expect(mapManager.availableCoords).toEqual(availableCoords);
 
@@ -217,7 +217,7 @@ describe('map expansion', () => {
       const expectedCoords = availableCoords.filter((c) => c.join(',') !== coord.join(','));
       expect(mapManager.availableCoords).toEqual(expectedCoords);
     });
-    test('should expand the ring if no coordinates are available', async () => {
+    it('should expand the ring if no coordinates are available', async () => {
       const chooseSpy = jest.spyOn(mapManager, 'chooseLocation');
       const expandSpy = jest.spyOn(mapManager, 'expandRing').mockImplementation(() => {
         mapManager.availableCoords = [...availableCoords];
@@ -250,7 +250,7 @@ describe('map expansion', () => {
       });
     });
 
-    test('should call expandRing and reschedule if time is up', async () => {
+    it('should call expandRing and reschedule if time is up', async () => {
       mapManager.expansionRate = 0;
       mapManager.lastExpansion = Date.now();
 
@@ -259,7 +259,7 @@ describe('map expansion', () => {
       expect(mapManager.scheduleExpansion).toHaveBeenCalledTimes(2);
     });
 
-    test('should update coords and schedule the next expansion', async () => {
+    it('should update coords and schedule the next expansion', async () => {
       mapManager.expansionRate = 1;
       mapManager.lastExpansion = Date.now();
 
@@ -273,7 +273,7 @@ describe('map expansion', () => {
       expect(mapManager.scheduleExpansion).toHaveBeenCalledTimes(2);
     });
 
-  //   test('should update isExpanded when scheduling', async () => {
+  //   it('should update isExpanded when scheduling', async () => {
   //     expandSpy.mockImplementation(() => new Promise((resolve) => setTimeout(() => {
   //       mapManager.lastExpansion = Date.now() + 1000;
   //       resolve();
@@ -298,7 +298,7 @@ describe('map expansion', () => {
   //   });
   });
 
-  test('getRingCoords should return accurate ring coords', () => {
+  it('getRingCoords should return accurate ring coords', () => {
     let coords = mapManager.getRingCoords(3, 2);
     let expected = { ...minCoords };
     expect(coords).toEqual(expected);
@@ -313,7 +313,7 @@ describe('map expansion', () => {
     expect(coords).toEqual(expected);
   });
 
-  test('getCoordsInRange should return accurate ring coords', () => {
+  it('getCoordsInRange should return accurate ring coords', () => {
     const expectedRange = [
       [2, 1], [3, 1], [4, 1],
       [1, 2], [2, 2], [3, 2], [4, 2],
@@ -324,7 +324,7 @@ describe('map expansion', () => {
     expect(mapManager.getCoordsInRange(2, 2, 3)).toEqual(expectedRange);
   });
 
-  test('expandRing should call increase ring and update expansion date', async () => {
+  it('expandRing should call increase ring and update expansion date', async () => {
     const prevExpansion = Date.now() - 1;
     mapManager.lastExpansion = prevExpansion;
     await mapManager.expandRing();
@@ -350,7 +350,7 @@ describe('map expansion', () => {
       jest.spyOn(townQueries, 'getTownLocationsByCoords').mockImplementationOnce(() => Promise.resolve(usedCoords.map((location: Coords) => ({ location }))));
     });
 
-    test('should return only available coords ', async () => {
+    it('should return only available coords ', async () => {
       const checkedCoords = testCoords.slice(2);
       const omitted = testCoords.slice(0, 2);
       const result = await mapManager.getAvailableCoords(checkedCoords);

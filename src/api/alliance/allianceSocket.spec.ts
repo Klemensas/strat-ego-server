@@ -40,7 +40,7 @@ describe('onConnect', () => {
     'chat:postMessage',
   ];
 
-  test('should register events', () => {
+  it('should register events', () => {
     jest.spyOn(AllianceSocket, 'joinAllianceRoom').mockImplementationOnce(() => null);
     expect(socket.eventNames()).toHaveLength(0);
     AllianceSocket.onConnect(socket);
@@ -54,7 +54,7 @@ describe('onConnect', () => {
       AllianceSocket.onConnect(socket);
     });
 
-    test('should call creatAlliance on create emit', () => {
+    it('should call creatAlliance on create emit', () => {
       jest.spyOn(AllianceSocket, 'createAlliance').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.createAlliance).not.toHaveBeenCalled();
@@ -64,7 +64,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.createAlliance).toHaveBeenCalledWith(socket, payload);
     });
 
-    test('should call createInvite on createInvite emit', () => {
+    it('should call createInvite on createInvite emit', () => {
       jest.spyOn(AllianceSocket, 'createInvite').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.createInvite).not.toHaveBeenCalled();
@@ -74,7 +74,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.createInvite).toHaveBeenCalledWith(socket, payload);
     });
 
-    test('should call cancelInvite on cancelInvite emit', () => {
+    it('should call cancelInvite on cancelInvite emit', () => {
       jest.spyOn(AllianceSocket, 'cancelInvite').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.cancelInvite).not.toHaveBeenCalled();
@@ -84,7 +84,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.cancelInvite).toHaveBeenCalledWith(socket, payload);
     });
 
-    test('should call acceptInvite on acceptInvite emit', () => {
+    it('should call acceptInvite on acceptInvite emit', () => {
       jest.spyOn(AllianceSocket, 'acceptInvite').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.acceptInvite).not.toHaveBeenCalled();
@@ -94,7 +94,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.acceptInvite).toHaveBeenCalledWith(socket, payload);
     });
 
-    test('should call rejectInvite on rejectInvite emit', () => {
+    it('should call rejectInvite on rejectInvite emit', () => {
       jest.spyOn(AllianceSocket, 'rejectInvite').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.rejectInvite).not.toHaveBeenCalled();
@@ -104,7 +104,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.rejectInvite).toHaveBeenCalledWith(socket, payload);
     });
 
-    test('should call updatePlayerRole on updateMemberRole emit', () => {
+    it('should call updatePlayerRole on updateMemberRole emit', () => {
       jest.spyOn(AllianceSocket, 'updatePlayerRole').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.updatePlayerRole).not.toHaveBeenCalled();
@@ -114,7 +114,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.updatePlayerRole).toHaveBeenCalledWith(socket, payload);
     });
 
-    test('should call updateRoles on updateRoles emit', () => {
+    it('should call updateRoles on updateRoles emit', () => {
       jest.spyOn(AllianceSocket, 'updateRoles').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.updateRoles).not.toHaveBeenCalled();
@@ -127,7 +127,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.updateRoles).toHaveBeenCalledWith(socket, payload);
     });
 
-    test('should call removeRole on removeRole emit', () => {
+    it('should call removeRole on removeRole emit', () => {
       jest.spyOn(AllianceSocket, 'removeRole').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.removeRole).not.toHaveBeenCalled();
@@ -137,7 +137,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.removeRole).toHaveBeenCalledWith(socket, payload);
     });
 
-    test('should call removeMember on removeMember emit', () => {
+    it('should call removeMember on removeMember emit', () => {
       jest.spyOn(AllianceSocket, 'removeMember').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.removeMember).not.toHaveBeenCalled();
@@ -147,7 +147,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.removeMember).toHaveBeenCalledWith(socket, payload);
     });
 
-    test('should call leaveAlliance on leave emit', () => {
+    it('should call leaveAlliance on leave emit', () => {
       jest.spyOn(AllianceSocket, 'leaveAlliance').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.leaveAlliance).not.toHaveBeenCalled();
@@ -156,7 +156,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.leaveAlliance).toHaveBeenCalledWith(socket);
     });
 
-    test('should call destroyAlliance on destroy emit', () => {
+    it('should call destroyAlliance on destroy emit', () => {
       jest.spyOn(AllianceSocket, 'destroyAlliance').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.destroyAlliance).not.toHaveBeenCalled();
@@ -165,7 +165,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.destroyAlliance).toHaveBeenCalledWith(socket);
     });
 
-    test('should call startWar on declareWar emit', () => {
+    it('should call startWar on declareWar emit', () => {
       jest.spyOn(AllianceSocket, 'startWar').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.startWar).not.toHaveBeenCalled();
@@ -175,7 +175,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.startWar).toHaveBeenCalledWith(socket, payload);
     });
 
-    test('should call proposeDiplo on proposeAlliance emit', () => {
+    it('should call proposeDiplo on proposeAlliance emit', () => {
       jest.spyOn(AllianceSocket, 'proposeDiplo').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.proposeDiplo).not.toHaveBeenCalled();
@@ -185,7 +185,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.proposeDiplo).toHaveBeenCalledWith(socket, payload, DiplomacyType.alliance);
     });
 
-    test('should call proposeDiplo on proposeNap emit', () => {
+    it('should call proposeDiplo on proposeNap emit', () => {
       jest.spyOn(AllianceSocket, 'proposeDiplo').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.proposeDiplo).not.toHaveBeenCalled();
@@ -195,7 +195,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.proposeDiplo).toHaveBeenCalledWith(socket, payload, DiplomacyType.nap);
     });
 
-    test('should call cancelDiplo on cancelAlliance emit', () => {
+    it('should call cancelDiplo on cancelAlliance emit', () => {
       jest.spyOn(AllianceSocket, 'cancelDiplo').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.cancelDiplo).not.toHaveBeenCalled();
@@ -205,7 +205,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.cancelDiplo).toHaveBeenCalledWith(socket, payload, DiplomacyType.alliance);
     });
 
-    test('should call cancelDiplo on cancelNap emit', () => {
+    it('should call cancelDiplo on cancelNap emit', () => {
       jest.spyOn(AllianceSocket, 'cancelDiplo').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.cancelDiplo).not.toHaveBeenCalled();
@@ -215,7 +215,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.cancelDiplo).toHaveBeenCalledWith(socket, payload, DiplomacyType.nap);
     });
 
-    test('should call rejectDiplo on rejectAlliance emit', () => {
+    it('should call rejectDiplo on rejectAlliance emit', () => {
       jest.spyOn(AllianceSocket, 'rejectDiplo').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.rejectDiplo).not.toHaveBeenCalled();
@@ -225,7 +225,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.rejectDiplo).toHaveBeenCalledWith(socket, payload, DiplomacyType.alliance);
     });
 
-    test('should call rejectDiplo on rejectNap emit', () => {
+    it('should call rejectDiplo on rejectNap emit', () => {
       jest.spyOn(AllianceSocket, 'rejectDiplo').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.rejectDiplo).not.toHaveBeenCalled();
@@ -235,7 +235,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.rejectDiplo).toHaveBeenCalledWith(socket, payload, DiplomacyType.nap);
     });
 
-    test('should call acceptDiplo on acceptAlliance emit', () => {
+    it('should call acceptDiplo on acceptAlliance emit', () => {
       jest.spyOn(AllianceSocket, 'acceptDiplo').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.acceptDiplo).not.toHaveBeenCalled();
@@ -245,7 +245,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.acceptDiplo).toHaveBeenCalledWith(socket, payload, DiplomacyType.alliance);
     });
 
-    test('should call acceptDiplo on acceptNap emit', () => {
+    it('should call acceptDiplo on acceptNap emit', () => {
       jest.spyOn(AllianceSocket, 'acceptDiplo').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.acceptDiplo).not.toHaveBeenCalled();
@@ -255,7 +255,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.acceptDiplo).toHaveBeenCalledWith(socket, payload, DiplomacyType.nap);
     });
 
-    test('should call endDiplo on endAlliance emit', () => {
+    it('should call endDiplo on endAlliance emit', () => {
       jest.spyOn(AllianceSocket, 'endDiplo').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.endDiplo).not.toHaveBeenCalled();
@@ -265,7 +265,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.endDiplo).toHaveBeenCalledWith(socket, payload, DiplomacyType.alliance);
     });
 
-    test('should call endDiplo on endNap emit', () => {
+    it('should call endDiplo on endNap emit', () => {
       jest.spyOn(AllianceSocket, 'endDiplo').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.endDiplo).not.toHaveBeenCalled();
@@ -275,7 +275,7 @@ describe('onConnect', () => {
       expect(AllianceSocket.endDiplo).toHaveBeenCalledWith(socket, payload, DiplomacyType.nap);
     });
 
-    test('should call postMessage on postMessage emit', () => {
+    it('should call postMessage on postMessage emit', () => {
       jest.spyOn(AllianceSocket, 'postMessage').mockImplementationOnce(() => null);
       socket.emit('anything');
       expect(AllianceSocket.postMessage).not.toHaveBeenCalled();
@@ -289,13 +289,13 @@ describe('onConnect', () => {
 });
 
 describe('joinAlliancRoom', () => {
-  test('should call join if user is in an alliance', () => {
+  it('should call join if user is in an alliance', () => {
     const userAlliance = 12;
     socket.userData.allianceId = userAlliance;
     AllianceSocket.joinAllianceRoom(socket);
     expect(socket.join).toHaveBeenCalledWith(`alliance.${userAlliance}`);
   });
-  test('should not call join if user isn\'t in an alliance', () => {
+  it('should not call join if user isn\'t in an alliance', () => {
     expect(socket.join).not.toHaveBeenCalled();
   });
 });
