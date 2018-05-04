@@ -54,14 +54,9 @@ const testTownData = {
 
 let testTown: Town;
 let calculateScoreSpy;
-beforeAll(() => {
-  calculateScoreSpy = jest.spyOn(Town, 'calculateScore');
-});
-afterAll(() => {
-  calculateScoreSpy.mockRestore();
-});
 beforeEach(() => {
   testTown  = Town.fromJson(testTownData, { skipValidation: true });
+  calculateScoreSpy = jest.spyOn(Town, 'calculateScore');
 });
 
 describe('$beforeUpdate', () => {
