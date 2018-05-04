@@ -22,7 +22,7 @@ export function getAllianceWithTarget(where: Partial<Alliance>, target: string, 
     .query(connection)
     .where(where)
     .orWhere('name', 'ilike', target)
-    .eager('[diplomacyOrigin, diplomacyTarget');
+    .eager('[diplomacyOrigin, diplomacyTarget]');
 }
 
 export function getFullAlliance(where: Partial<Alliance>, connection: Transaction | Knex = knexDb.world) {
