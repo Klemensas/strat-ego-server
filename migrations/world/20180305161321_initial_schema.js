@@ -106,8 +106,8 @@ exports.up = function(knex, Promise) {
       table.integer('masterRoleId').unsigned().references('id').inTable('AllianceRole').onDelete('CASCADE');
     })
     .table('Player', table => {
-      table.integer('allianceRoleId').unsigned().references('id').inTable('AllianceRole');
-      table.integer('allianceId').unsigned().references('id').inTable('Alliance');
+      table.integer('allianceRoleId').unsigned().references('id').inTable('AllianceRole').onDelete('SET NULL');
+      table.integer('allianceId').unsigned().references('id').inTable('Alliance').onDelete('SET NULL');
     })
     .createTable('AllianceMessage', table => {
       table.increments('id').primary();
