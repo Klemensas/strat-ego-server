@@ -6,7 +6,7 @@ export class RankingsSocket {
     socket.on('rankings:load', (lastUpdate?: number) => this.load(socket, lastUpdate));
   }
 
-  private static load(socket: UserSocket, lastUpdate?: number) {
+  static load(socket: UserSocket, lastUpdate?: number) {
     if (lastUpdate && scoreTracker.lastUpdate <= lastUpdate) {
       return socket.emit('rankings:loadStagnated');
     }

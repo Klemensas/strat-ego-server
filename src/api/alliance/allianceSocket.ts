@@ -10,6 +10,7 @@ import {
   diplomacyTypeToEventStatus,
   diplomacyTypeName,
   MessagePayload,
+  RoleUpdatePayload,
 } from 'strat-ego-common';
 
 import { knexDb } from '../../sqldb';
@@ -22,11 +23,8 @@ import { Player } from '../player/player';
 import { mapManager } from '../map/mapManager';
 import { AllianceDiplomacy } from './allianceDiplomacy';
 import { AllianceMessage } from './allianceMessage';
-
-export interface RoleUpdatePayload {
-  roles: Array<Partial<AllianceRole>>;
-  newRoles: Array<Partial<AllianceRole>>;
-}
+import * as allianceQueries from './allianceQueries';
+import { getPlayer, getPlayerWithInvites, getPlayerByName } from '../player/playerQueries';
 
 // TODO: rework events
 // TODO: better permissions, cnsider moving permissions to database
@@ -45,8 +43,8 @@ export class AllianceSocket {
     socket.on('alliance:rejectInvite', (allianceId: number) => this.rejectInvite(socket, allianceId));
     socket.on('alliance:updateMemberRole', (payload: PlayerRolePayload) => this.updatePlayerRole(socket, payload));
     socket.on('alliance:updateRoles', (payload: RoleUpdatePayload) => this.updateRoles(socket, payload));
-    socket.on('alliance:removeRole', (roleId) => this.removeRole(socket, roleId));
-    socket.on('alliance:removeMember', (playerId) => this.removeMember(socket, playerId));
+    socket.on('alliance:removeRole', (roleId: number) => this.removeRole(socket, roleId));
+    socket.on('alliance:removeMember', (playerId: number) => this.removeMember(socket, playerId));
     socket.on('alliance:leave', () => this.leaveAlliance(socket));
     socket.on('alliance:destroy', () => this.destroyAlliance(socket));
 
@@ -116,68 +114,13 @@ export class AllianceSocket {
     if (!!socket.rooms[room]) { socket.leave(room); }
   }
 
-  static handleTownError(socket: UserSocket, err: any, type: string, target: string, payload?: any) {
-    let error;
-    let data;
-    if (err.constructor.name === 'ErrorMessage') {
-      error = err;
-      data = payload || err;
-    } else {
-      error = 'CRITICAL FAILURE';
-      data = { err, payload };
-    }
-
-    socket.log(data);
-    return socket.emit(target, data);
-  }
-
-  private static async createAlliance(socket: UserSocket, name: string) {
+  static async createAlliance(socket: UserSocket, name: string) {
     const trx = await transaction.start(knexDb.world);
     try {
       // TODO: decide whether this check can be trusted
       if (socket.userData.allianceId !== null) { throw new ErrorMessage('Can\'t create alliance.'); }
-      const alliance = await Alliance.query(trx).insertGraph({
-        '#id': 'ally',
-        name,
-        roles: [{
-          name: 'Member',
-          permissions: setAlliancePermissions(),
-        }, {
-          name: 'Owner',
-          permissions: setAlliancePermissions({
-            viewInvites: true,
-            editInvites: true,
-            manageForum: true,
-            editProfile: true,
-            viewManagement: true,
-            manageRoles: true,
-            manageAlliance: true,
-          }),
-        }],
-        eventOrigin: [{
-          originAllianceId: '#ref{ally.id}' as any,
-          type: EventType.management,
-          status: EventStatus.create,
-          originPlayerId: socket.userData.playerId,
-        }],
-        eventTarget: [],
-        diplomacyTarget: [],
-        diplomacyOrigin: [],
-        invitations: [],
-        messages: [],
-      });
-      await alliance.$query(trx).patch({
-        defaultRoleId: alliance.roles[0].id,
-        defaultRole: alliance.roles[0],
-        masterRoleId: alliance.roles[1].id,
-        masterRole: alliance.roles[1],
-      });
-      await Player.query(trx)
-        .patch({
-          allianceId: alliance.id,
-          allianceRoleId: alliance.masterRole.id,
-        })
-        .where({ id: socket.userData.playerId });
+      const alliance = await allianceQueries.createAlliance(socket.userData.playerId, name, trx);
+
       alliance.members = [{
         id: socket.userData.playerId,
         name: socket.userData.playerName,
@@ -204,18 +147,16 @@ export class AllianceSocket {
     }
   }
 
-  private static async createInvite(socket: UserSocket, targetName: string) {
+  static async createInvite(socket: UserSocket, targetName: string) {
     const trx = await transaction.start(knexDb.world);
     try {
       if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.editInvites) { throw new ErrorMessage('Not permitted to edit invites'); }
 
-      const alliance = await Alliance.query(trx)
-        .findById(socket.userData.allianceId)
-        .eager('[members(selectProfile), invitations(selectPlayerProfile)]');
+      const alliance = await allianceQueries.getAllianceWithMembersInvites({ id: socket.userData.allianceId }, trx);
 
       if (!alliance || !this.hasItemByProp(alliance.members, socket.userData.playerId)) { throw new ErrorMessage('Can\'t invite player'); }
 
-      const player = await Player.query(trx).findOne('name', 'ilike', targetName);
+      const player = await getPlayerByName(targetName, trx);
       if (!player) { throw new ErrorMessage('No such player'); }
       if (this.hasItemByProp(alliance.invitations, player.id)) { throw new ErrorMessage('Player already invited'); }
 
@@ -224,14 +165,7 @@ export class AllianceSocket {
         name: player.name,
       };
 
-      const event = await AllianceEvent.query(trx).insert({
-        type: EventType.invitation,
-        status: EventStatus.create,
-        originAllianceId: alliance.id,
-        originPlayerId: socket.userData.playerId,
-        targetPlayerId: player.id,
-      });
-      await player.$relatedQuery('invitations', trx).relate(alliance.id);
+      const event = await allianceQueries.createInvite(player, socket.userData.playerId, alliance.id, trx);
 
       await trx.commit();
 
@@ -257,30 +191,20 @@ export class AllianceSocket {
     }
   }
 
-  private static async cancelInvite(socket: UserSocket, playerId: number) {
+  static async cancelInvite(socket: UserSocket, playerId: number) {
     const trx = await transaction.start(knexDb.world);
     try {
       if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.editInvites) { throw new ErrorMessage('Not permitted to edit invites'); }
 
-      const alliance = await Alliance.query(trx)
-        .findById(socket.userData.allianceId)
-        .eager('[members(selectProfile), invitations(selectPlayerProfile)]');
+      const alliance = await allianceQueries.getAllianceWithMembersInvites({ id: socket.userData.allianceId }, trx);
 
       if (!alliance || !this.hasItemByProp(alliance.members, socket.userData.playerId)) { throw new ErrorMessage('Can\'t invite player'); }
       const invitation = alliance.invitations.find(({ id }) => id === playerId);
       if (!invitation) { throw new ErrorMessage('Invitation doesn\'t exist'); }
 
-      await alliance.$relatedQuery('invitations', trx)
-        .unrelate()
-        .where('playerId', playerId);
+      const event = await allianceQueries.cancelInvite(alliance, socket.userData.playerId, playerId, trx);
 
-      const event = await AllianceEvent.query(trx).insert({
-        type: EventType.invitation,
-        status: EventStatus.cancel,
-        originAllianceId: alliance.id,
-        originPlayerId: socket.userData.playerId,
-        targetPlayerId: playerId,
-      });
+      await trx.commit();
 
       event.originAlliance = {
           id: alliance.id,
@@ -295,8 +219,6 @@ export class AllianceSocket {
         name: invitation.name,
       };
 
-      await trx.commit();
-
       socket.to(`alliance.${alliance.id}`).emit('alliance:event', { event, data: playerId });
       socket.emit(`alliance:cancelInviteSuccess`, { event, data: playerId });
 
@@ -310,26 +232,15 @@ export class AllianceSocket {
     }
   }
 
-  private static async rejectInvite(socket: UserSocket, allianceId: number) {
+  static async rejectInvite(socket: UserSocket, allianceId: number) {
     const trx = await transaction.start(knexDb.world);
     try {
 
-      const player = await Player.query(trx)
-        .findById(socket.userData.playerId)
-        .eager('invitations(selectAllianceProfile)');
+      const player = await getPlayerWithInvites({ id: socket.userData.playerId }, trx);
 
       if (!player || !this.hasItemByProp(player.invitations, allianceId)) { throw new ErrorMessage('Can\'t reject invitation'); }
 
-      await player.$relatedQuery('invitations', trx)
-        .unrelate()
-        .where('Alliance.id', allianceId);
-
-      const event = await AllianceEvent.query(trx).insert({
-        type: EventType.invitation,
-        status: EventStatus.reject,
-        originPlayerId: socket.userData.playerId,
-        originAllianceId: allianceId,
-      });
+      const event = await allianceQueries.rejectInvite(player, allianceId, socket.userData.playerId, trx);
 
       await trx.commit();
 
@@ -345,32 +256,17 @@ export class AllianceSocket {
     }
   }
 
-  private static async acceptInvite(socket: UserSocket, allianceId: number) {
+  static async acceptInvite(socket: UserSocket, allianceId: number) {
     const trx = await transaction.start(knexDb.world);
     try {
-
-      const player = await Player.query(trx)
-        .findById(socket.userData.playerId)
-        .eager('invitations(selectAllianceProfile)');
-
+      const player = await getPlayerWithInvites({ id: socket.userData.playerId }, trx);
       if (!player || !this.hasItemByProp(player.invitations, allianceId)) { throw new ErrorMessage('Can\'t reject invitation'); }
 
-      const alliance = await Alliance.getAlliance({ id: allianceId }, trx);
+      const alliance = await allianceQueries.getFullAlliance({ id: allianceId }, trx);
 
-      await player.$relatedQuery('invitations', trx)
-        .unrelate()
-        .where('Alliance.id', allianceId);
-      await player.$query(trx).patch({
-        allianceId,
-        allianceRoleId: alliance.defaultRoleId,
-      });
+      if (!alliance) { throw new ErrorMessage('Wrong alliance'); }
 
-      const event = await AllianceEvent.query(trx).insert({
-        type: EventType.membership,
-        status: EventStatus.join,
-        originPlayerId: player.id,
-        originAllianceId: allianceId,
-      });
+      const event = await allianceQueries.acceptInvite(player, alliance.id, alliance.defaultRoleId, trx);
 
       event.originPlayer = {
         id: socket.userData.playerId,
@@ -401,7 +297,7 @@ export class AllianceSocket {
     }
   }
 
-  private static async updateRoles(socket: UserSocket, payload: RoleUpdatePayload) {
+  static async updateRoles(socket: UserSocket, payload: RoleUpdatePayload) {
     const trx = await transaction.start(knexDb.world);
     try {
       if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.manageRoles) { throw new ErrorMessage('Not permitted to manage roles'); }
@@ -409,9 +305,7 @@ export class AllianceSocket {
         throw new ErrorMessage('Invalid payload');
       }
 
-      const alliance = await Alliance.query(trx)
-        .findById(socket.userData.allianceId)
-        .eager('roles');
+      const alliance = await allianceQueries.getAllianceWithRoles({ id: socket.userData.allianceId }, trx);
 
       if (!alliance) { throw new ErrorMessage('Wrong alliance'); }
 
@@ -419,20 +313,7 @@ export class AllianceSocket {
         id === alliance.masterRoleId && this.permissionsChanged(alliance.roles.find((role) => role.id === alliance.masterRoleId).permissions, permissions));
       if (masterRolePermissionChanged) { throw new ErrorMessage('Can\'t change permissions'); }
 
-      const updatedAlliance = await Alliance.query(trx).upsertGraph({
-        id: alliance.id,
-        roles: [
-          ...payload.roles,
-          ...payload.newRoles,
-        ],
-        eventOrigin: [{
-          type: EventType.roles,
-          status: EventStatus.update,
-          originPlayerId: socket.userData.playerId,
-        }],
-      }, {
-        noDelete: true,
-      });
+      const updatedAlliance = await allianceQueries.updateRoles(alliance.id, [...payload.roles, ...payload.newRoles], socket.userData.playerId, trx);
       await trx.commit();
 
       const data = updatedAlliance.roles.reduce((result, role) => {
@@ -458,14 +339,12 @@ export class AllianceSocket {
     }
   }
 
-  private static async removeRole(socket: UserSocket, roleId: number) {
+  static async removeRole(socket: UserSocket, roleId: number) {
     const trx = await transaction.start(knexDb.world);
     try {
       if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.manageRoles) { throw new ErrorMessage('Not permitted to manage roles'); }
 
-      const alliance = await Alliance.query(trx)
-        .findById(socket.userData.allianceId)
-        .eager('[members, roles]');
+      const alliance = await allianceQueries.getAllianceWithMembersRoles({ id: socket.userData.allianceId }, trx);
 
       if (!alliance) { throw new ErrorMessage('Wrong alliance'); }
 
@@ -473,18 +352,7 @@ export class AllianceSocket {
       const canRemoveRole = role.id !== alliance.defaultRoleId && role.id !== alliance.masterRoleId;
       if (!canRemoveRole) { throw new ErrorMessage('Wrong role'); }
 
-      const updatedPlayers = await Player.query(trx)
-        .patch({
-          allianceRoleId: alliance.defaultRoleId,
-        })
-        .where({ allianceId: alliance.id, allianceRoleId: roleId });
-      await AllianceRole.query(trx).deleteById(roleId);
-      const event = await AllianceEvent.query(trx).insert({
-        type: EventType.roles,
-        status: EventStatus.update,
-        originPlayerId: socket.userData.playerId,
-        originAllianceId: alliance.id,
-      });
+      const event = await allianceQueries.removeRole(roleId, alliance, socket.userData.playerId, trx);
 
       await trx.commit();
 
@@ -504,31 +372,23 @@ export class AllianceSocket {
     }
   }
 
-  private static async removeMember(socket: UserSocket, playerId: number) {
+  static async removeMember(socket: UserSocket, playerId: number) {
     const trx = await transaction.start(knexDb.world);
     try {
       if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.manageRoles) { throw new ErrorMessage('Not permitted to manage roles'); }
 
-      const alliance = await Alliance.query(trx)
-        .findById(socket.userData.allianceId)
-        .eager('[members]');
+      const alliance = await allianceQueries.getAllianceWithMembers({ id: socket.userData.allianceId }, trx);
 
       if (!alliance) { throw new ErrorMessage('Wrong alliance'); }
-      if (!this.hasItemByProp(alliance.members, playerId)) { throw new ErrorMessage('Target player doesn\'t belong to alliance'); }
+      const targetMember = alliance.members.find(({ id }) => id === playerId);
 
-      const player = await Player.query(trx)
-        .patchAndFetchById(playerId, {
-          allianceRoleId: null,
-          allianceId: null,
-        });
+      if (!targetMember) { throw new ErrorMessage('Target player doesn\'t belong to alliance'); }
+      if (playerId === socket.userData.playerId) { throw new ErrorMessage('Can\'t remove self, leave or destroy alliance instead'); }
+      if (targetMember.allianceRoleId === alliance.masterRoleId) { throw new ErrorMessage('Can\'t remove members with master role'); }
 
-      const event = await AllianceEvent.query(trx).insert({
-        type: EventType.membership,
-        status: EventStatus.remove,
-        originPlayerId: socket.userData.playerId,
-        originAllianceId: alliance.id,
-        targetPlayerId: playerId,
-      });
+      const query = await allianceQueries.removeMember(playerId, socket.userData.playerId, alliance.id, trx);
+      const player = query.player;
+      const event = query.event;
 
       await trx.commit();
 
@@ -551,30 +411,14 @@ export class AllianceSocket {
   }
 
   // !TODO: need to add success/fail corresponding events to frontend
-  private static async destroyAlliance(socket: UserSocket) {
+  static async destroyAlliance(socket: UserSocket) {
     const trx = await transaction.start(knexDb.world);
     try {
       if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.manageAlliance) { throw new ErrorMessage('Not permitted to do that'); }
 
       const allianceId = socket.userData.allianceId;
 
-      await Alliance.query(trx).upsertGraph({
-        id: allianceId,
-        eventOrigin: [],
-        invitations: [],
-        diplomacyOrigin: [],
-        diplomacyTarget: [],
-        messages: [],
-      });
-      await Player.query(trx)
-        .patch({
-          allianceId: null,
-          allianceRoleId: null,
-        })
-        .where({
-          allianceId,
-        });
-      await Alliance.query(trx).deleteById(allianceId);
+      await allianceQueries.destroyAlliance(allianceId, trx);
 
       await trx.commit();
 
@@ -585,15 +429,12 @@ export class AllianceSocket {
     }
   }
 
-  private static async startWar(socket: UserSocket, payload: WarDeclarationPayload) {
+  static async startWar(socket: UserSocket, payload: WarDeclarationPayload) {
     const trx = await transaction.start(knexDb.world);
     try {
       if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.manageAlliance) { throw new ErrorMessage('Not permitted to do that'); }
 
-      const alliances = await Alliance.query(trx)
-        .where('id', socket.userData.allianceId)
-        .orWhere('name', 'ilike', payload.targetName)
-        .eager('[diplomacyOrigin, diplomacyTarget]');
+      const alliances = await allianceQueries.getAllianceWithTarget({ id: socket.userData.allianceId }, payload.targetName, trx);
 
       if (!alliances || alliances.length !== 2) { throw new ErrorMessage('Wrong alliance'); }
       const target = alliances.findIndex(({ id }) => id !== socket.userData.allianceId);
@@ -605,31 +446,9 @@ export class AllianceSocket {
         alliance.diplomacyTarget.some(({ originAllianceId }) => originAllianceId === targetAlliance.id);
       if (hasDiplo) { throw new ErrorMessage('Already involved in diplomacy with target alliance.'); }
 
-      const war = await AllianceDiplomacy.query(trx).insert({
-        originPlayerId: socket.userData.playerId,
-        originAllianceId: socket.userData.allianceId,
-        targetAllianceId: alliance.id,
-        status: DiplomacyStatus.ongoing,
-        type: DiplomacyType.war,
-        data: { reason: payload.reason },
-      });
-
-      const event = await AllianceEvent.query(trx).insert({
-        type: EventType.diplomacy,
-        status: EventStatus.startWar,
-        originAllianceId: socket.userData.allianceId,
-        originPlayerId: socket.userData.playerId,
-        targetAllianceId: targetAlliance.id,
-      });
-
-      const diplomacy = await AllianceDiplomacy.query(trx).insert({
-        status: DiplomacyStatus.ongoing,
-        type: DiplomacyType.war,
-        data: { reason: payload.reason },
-        originPlayerId: socket.userData.playerId,
-        originAllianceId: socket.userData.allianceId,
-        targetAllianceId: targetAlliance.id,
-      });
+      const query = await allianceQueries.startWar(socket.userData.playerId, socket.userData.allianceId, targetAlliance.id, payload.reason, trx);
+      const war = query.diplomacy;
+      const event = query.event;
 
       await trx.commit();
 
@@ -654,16 +473,13 @@ export class AllianceSocket {
     }
   }
 
-  private static async proposeDiplo(socket: UserSocket, targetName: string, type: number) {
+  static async proposeDiplo(socket: UserSocket, targetName: string, type: number) {
     const typeName = diplomacyTypeName[type];
     const trx = await transaction.start(knexDb.world);
     try {
       if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.manageAlliance) { throw new ErrorMessage('Not permitted to do that'); }
 
-      const alliances = await Alliance.query(trx)
-        .where('id', socket.userData.allianceId)
-        .orWhere('name', 'ilike', targetName)
-        .eager('[diplomacyOrigin, diplomacyTarget]');
+      const alliances = await allianceQueries.getAllianceWithTarget({ id: socket.userData.allianceId }, targetName, trx);
 
       if (!alliances || alliances.length !== 2) { throw new ErrorMessage('Wrong alliance'); }
 
@@ -676,20 +492,9 @@ export class AllianceSocket {
         alliance.diplomacyTarget.some(({ originAllianceId }) => originAllianceId === targetAlliance.id);
       if (hasDiplo) { throw new ErrorMessage('Already involved in diplomacy with target alliance.'); }
 
-      const diplomacy = await AllianceDiplomacy.query(trx).insert({
-        status: DiplomacyStatus.pending,
-        type,
-        originPlayerId: socket.userData.playerId,
-        originAllianceId: socket.userData.allianceId,
-        targetAllianceId: targetAlliance.id,
-      });
-      const event = await AllianceEvent.query(trx).insert({
-        type: EventType.diplomacy,
-        status: diplomacyTypeToEventStatus[type],
-        originAllianceId: socket.userData.allianceId,
-        originPlayerId: socket.userData.playerId,
-        targetAllianceId: targetAlliance.id,
-      });
+      const query = await allianceQueries.proposeDiplomacy(socket.userData.playerId, socket.userData.allianceId, targetAlliance.id, type, trx);
+      const diplomacy = query.diplomacy;
+      const event = query.event;
 
       await trx.commit();
 
@@ -714,28 +519,26 @@ export class AllianceSocket {
     }
   }
 
-  private static async cancelDiplo(socket: UserSocket, targetId: number, type: number) {
+  static async cancelDiplo(socket: UserSocket, targetId: number, type: number) {
     const typeName = diplomacyTypeName[type];
     const trx = await transaction.start(knexDb.world);
     try {
       if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.manageAlliance) { throw new ErrorMessage('Not permitted to do that'); }
 
-      const diplomacy = await AllianceDiplomacy.query(trx)
-      .findById(targetId)
-      .eager('[originAlliance, targetAlliance]');
+      const diplomacy = await allianceQueries.getDiplomacy({ id: targetId }, trx);
       const targetAlliance = diplomacy.targetAlliance;
 
       if (!diplomacy || diplomacy.originAllianceId !== socket.userData.allianceId) { throw new ErrorMessage(`Can't cancel diplomacy`); }
       if (diplomacy.status !== DiplomacyStatus.pending) { throw new ErrorMessage(`Diplomacy is already active`); }
 
-      await diplomacy.$query(trx).delete();
-      const event = await AllianceEvent.query(trx).insert({
-        type: EventType.diplomacy,
-        status: EventStatus[`cancel${typeName}`],
-        originAllianceId: socket.userData.allianceId,
-        originPlayerId: socket.userData.playerId,
-        targetAllianceId: targetAlliance.id,
-      });
+      const event = await allianceQueries.cancelDiplomacy(
+        diplomacy,
+        socket.userData.playerId,
+        socket.userData.allianceId,
+        targetAlliance.id,
+        EventStatus[`cancel${typeName}`],
+        trx,
+      );
 
       await trx.commit();
 
@@ -756,29 +559,27 @@ export class AllianceSocket {
     }
   }
 
-  private static async rejectDiplo(socket: UserSocket, targetId: number, type: number) {
+  static async rejectDiplo(socket: UserSocket, targetId: number, type: number) {
     const typeName = diplomacyTypeName[type];
     const trx = await transaction.start(knexDb.world);
     try {
       if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.manageAlliance) { throw new ErrorMessage('Not permitted to do that'); }
 
-      const diplomacy = await AllianceDiplomacy.query(trx)
-      .findById(targetId)
-      .eager('[originAlliance, targetAlliance]');
+      const diplomacy = await allianceQueries.getDiplomacy({ id: targetId }, trx);
       const targetAlliance = diplomacy.targetAlliance;
       const originAlliance = diplomacy.originAlliance;
 
       if (!diplomacy || diplomacy.targetAllianceId !== socket.userData.allianceId) { throw new ErrorMessage(`Can't reject diplomacy`); }
       if (diplomacy.status !== DiplomacyStatus.pending) { throw new ErrorMessage(`Diplomacy is already active`); }
 
-      await diplomacy.$query(trx).delete();
-      const event = await AllianceEvent.query(trx).insert({
-        type: EventType.diplomacy,
-        status: EventStatus[`reject${typeName}`],
-        originAllianceId: socket.userData.allianceId,
-        originPlayerId: socket.userData.playerId,
-        targetAllianceId: targetAlliance.id,
-      });
+      const event = await allianceQueries.cancelDiplomacy(
+        diplomacy,
+        socket.userData.playerId,
+        socket.userData.allianceId,
+        targetAlliance.id,
+        EventStatus[`reject${typeName}`],
+        trx,
+      );
 
       await trx.commit();
 
@@ -799,41 +600,27 @@ export class AllianceSocket {
     }
   }
 
-  private static async acceptDiplo(socket: UserSocket, targetId: number, type: number) {
+  static async acceptDiplo(socket: UserSocket, targetId: number, type: number) {
     const typeName = diplomacyTypeName[type];
     const trx = await transaction.start(knexDb.world);
     try {
       if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.manageAlliance) { throw new ErrorMessage('Not permitted to do that'); }
 
-      const diplomacy = await AllianceDiplomacy.query(trx)
-      .findById(targetId)
-      .eager('[originAlliance, targetAlliance]');
+      const diplomacy = await allianceQueries.getDiplomacy({ id: targetId }, trx);
       const targetAlliance = diplomacy.targetAlliance;
       const originAlliance = diplomacy.originAlliance;
 
       if (!diplomacy || diplomacy.targetAllianceId !== socket.userData.allianceId) { throw new ErrorMessage(`Can't accept diplomacy`); }
       if (diplomacy.status !== DiplomacyStatus.pending) { throw new ErrorMessage(`Diplomacy is already active`); }
 
-      await diplomacy.$query(trx).patch({
-        status: DiplomacyStatus.ongoing,
-      });
-      const event = await AllianceEvent.query(trx).insert({
-        type: EventType.diplomacy,
-        status: EventStatus[`start${typeName}`],
-        originAllianceId: socket.userData.allianceId,
-        originPlayerId: socket.userData.playerId,
-        targetAllianceId: targetAlliance.id,
-      });
+      const query = await allianceQueries.acceptDiplomacy(diplomacy, socket.userData.playerId, trx);
+      const event = query.event;
 
       await trx.commit();
 
       const originPlayerProfile = { id: socket.userData.playerId, name: socket.userData.playerName };
       const originAllianceProfile = { id: socket.userData.allianceId, name: socket.userData.allianceName };
       const targetAllianceProfile = { id: targetAlliance.id, name: targetAlliance.name };
-
-      diplomacy.originPlayer = originPlayerProfile;
-      diplomacy.originAlliance = originAllianceProfile;
-      diplomacy.targetAlliance = targetAllianceProfile;
 
       event.originPlayer = originPlayerProfile;
       event.targetAlliance = targetAllianceProfile;
@@ -848,30 +635,28 @@ export class AllianceSocket {
     }
   }
 
-  private static async endDiplo(socket: UserSocket, targetId: number, type: number) {
+  static async endDiplo(socket: UserSocket, targetId: number, type: number) {
     const typeName = diplomacyTypeName[type];
     const trx = await transaction.start(knexDb.world);
     try {
       if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.manageAlliance) { throw new ErrorMessage('Not permitted to do that'); }
 
-      const diplomacy = await AllianceDiplomacy.query(trx)
-        .findById(targetId)
-        .eager('[originAlliance, targetAlliance]');
+      const diplomacy = await allianceQueries.getDiplomacy({ id: targetId }, trx);
 
       if (!diplomacy || !(diplomacy.targetAllianceId === socket.userData.allianceId || diplomacy.originAllianceId === socket.userData.allianceId)) {
         throw new ErrorMessage(`Can't end diplomacy`);
       }
-      if (diplomacy.status !== DiplomacyStatus.ongoing) { throw new ErrorMessage(`Diplomacy is not active`); }
+      if (diplomacy.status !== DiplomacyStatus.ongoing) { throw new ErrorMessage(`Diplomacy is not  active`); }
       const targetAlliance = diplomacy.targetAlliance.id === socket.userData.allianceId ? diplomacy.originAlliance : diplomacy.targetAlliance;
 
-      await diplomacy.$query(trx).delete();
-      const event = await AllianceEvent.query(trx).insert({
-        type: EventType.diplomacy,
-        status: EventStatus[`end${typeName}`],
-        originAllianceId: socket.userData.allianceId,
-        originPlayerId: socket.userData.playerId,
-        targetAllianceId: targetAlliance.id,
-      });
+      const event = await allianceQueries.cancelDiplomacy(
+        diplomacy,
+        socket.userData.playerId,
+        socket.userData.allianceId,
+        targetAlliance.id,
+        EventStatus[`end${typeName}`],
+        trx,
+      );
 
       await trx.commit();
 
@@ -892,14 +677,12 @@ export class AllianceSocket {
     }
   }
 
-  private static async updatePlayerRole(socket: UserSocket, payload: PlayerRolePayload) {
+  static async updatePlayerRole(socket: UserSocket, payload: PlayerRolePayload) {
     const trx = await transaction.start(knexDb.world);
     try {
       if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.manageRoles) { throw new ErrorMessage('Not permitted to do that'); }
 
-      const alliance = await Alliance.query(trx)
-        .findById(socket.userData.allianceId)
-        .eager('[members, roles]');
+      const alliance = await allianceQueries.getAllianceWithMembersRoles({ id: socket.userData.allianceId }, trx);
 
       if (!alliance) { throw new ErrorMessage('Wrong alliance'); }
 
@@ -909,23 +692,15 @@ export class AllianceSocket {
       const role = alliance.roles.find(({ id }) => id === payload.roleId);
       if (!role) { throw new ErrorMessage('Invalid target role'); }
 
-      const playerRole = alliance.roles.find(({ id }) => id === player.allianceRole);
-      if (playerRole === alliance.masterRoleId) { throw new ErrorMessage('Can\'t edit owner role'); }
+      const playerRole = alliance.roles.find(({ id }) => id === player.allianceRoleId);
+      if (playerRole.id === alliance.masterRoleId) {
+        if (player.id !== socket.userData.playerId) { throw new ErrorMessage('Can\'t edit other owner role'); }
+        const masterRoleCount = alliance.members.reduce((result, { allianceRoleId }) => result += +(allianceRoleId === alliance.masterRoleId) , 0);
+        if (player.id === socket.userData.playerId && masterRoleCount < 2) { throw new ErrorMessage('Alliance must have at least one owner'); }
+      }
       const oldRoleId = player.allianceRoleId;
 
-      await Player.query(trx)
-        .patch({
-          allianceRoleId: payload.roleId,
-        }).where({
-          id: player.id,
-        });
-      const event = await AllianceEvent.query(trx).insert({
-        type: EventType.roles,
-        status: EventStatus.updateMember,
-        originPlayerId: socket.userData.playerId,
-        targetPlayerId: player.id,
-        originAllianceId: socket.userData.allianceId,
-      });
+      const event = await allianceQueries.updatePlayerRole(payload.roleId, player.id, socket.userData.playerId, alliance.id);
 
       await trx.commit();
 
@@ -949,29 +724,16 @@ export class AllianceSocket {
     }
   }
 
-  private static async leaveAlliance(socket: UserSocket) {
+  static async leaveAlliance(socket: UserSocket) {
     const trx = await transaction.start(knexDb.world);
     try {
       const allianceId = socket.userData.allianceId;
-      const alliance = await Alliance.query(trx)
-        .findById(socket.userData.allianceId)
-        .eager('[members, roles]');
+      const alliance = await allianceQueries.getAllianceWithMembersRoles({ id: socket.userData.allianceId }, trx);
+
       if (!alliance) { throw new ErrorMessage('Wrong alliance'); }
       if (alliance.masterRoleId === socket.userData.allianceRoleId) { throw new ErrorMessage('Owner can\'t leave alliance'); }
 
-      await Player.query(trx)
-        .patch({
-          allianceId: null,
-          allianceRoleId: null,
-        }).where({
-          id: socket.userData.playerId,
-        });
-      const event = await AllianceEvent.query(trx).insert({
-        type: EventType.membership,
-        status: EventStatus.leave,
-        originAllianceId: allianceId,
-        originPlayerId: socket.userData.playerId,
-      });
+      const event = await allianceQueries.leaveAlliance(socket.userData.playerId, alliance.id, trx);
 
       await trx.commit();
 
@@ -980,8 +742,9 @@ export class AllianceSocket {
         name: socket.userData.playerName,
       };
       socket.userData = this.cleanSocketAlliance(socket.userData);
-      this.leaveAllianceRoom(socket, allianceId);mapManager.setTownAlliance({ id: alliance.id, name: alliance.name }, socket.userData.townIds);
-      
+      this.leaveAllianceRoom(socket, allianceId);
+      mapManager.setTownAlliance(null, socket.userData.townIds);
+
       socket.emit('alliance:leaveAllianceSuccess');
       io.sockets.in(`alliance.${allianceId}`).emit('alliance:event', { event, data: socket.userData.playerId });
     } catch (err) {
@@ -990,42 +753,18 @@ export class AllianceSocket {
     }
   }
 
-  // private static createForumCategory(socket: UserSocket, payload: ForumCategoryPayload) {
-    // return AllianceForumCategory.create({
-    //   name: payload.name,
-    //   description: payload.description,
-    //   AllianceId: socket.userData.allianceId })
-    //   .then((category) => {
-    //     socket.emit('alliance:forumCategoryCreate', category);
-    //   });
-  // }
-
-  private static async postMessage(socket: UserSocket, payload: MessagePayload) {
+  static async postMessage(socket: UserSocket, payload: MessagePayload) {
     try {
-      const message = await AllianceMessage.query(knexDb.world).insert({
-        text: payload.text,
-        playerId: socket.userData.playerId,
-        allianceId: socket.userData.allianceId,
-      });
+      const message = await allianceQueries.addMessage(payload.text, socket.userData.playerId, socket.userData.allianceId);
       message.player = { name: socket.userData.playerName };
       socket.emit('chat:postMessageSuccess', { message, messageStamp: payload.messageStamp });
       socket.broadcast.to(`alliance.${socket.userData.allianceId}`).emit('chat:newMessage', message);
     } catch (err) {
       socket.handleError(err, 'postMessage');
     }
-
-    //   .then((allianceMessage) => {
-    //     const message: any = allianceMessage.get();
-    //     message.Player = { name: socket.userData.playerName };
-    //     setTimeout(() => {
-
-    //       socket.emit('chat:messageCreated', message);
-    //       socket.broadcast.to(`alliance.${socket.userData.allianceId}`).emit('chat:newMessage', message);
-    //     }, 5000);
-    //   });
   }
 
-  private static resetRoomSocketAlliance(room, clientAction = (client: UserSocket) => null) {
+  static resetRoomSocketAlliance(room, clientAction = (client: UserSocket) => null) {
     Object.keys(room).forEach((socketId: string) => {
       const client = io.sockets.connected[socketId] as UserSocket;
       client.userData = this.cleanSocketAlliance(client.userData);
@@ -1034,7 +773,7 @@ export class AllianceSocket {
     });
   }
 
-  private static cleanSocketAlliance(data) {
+  static cleanSocketAlliance(data) {
     return {
       ...data,
       allinaceId: null,
@@ -1044,11 +783,11 @@ export class AllianceSocket {
     };
   }
 
-  private static hasItemByProp(items: any[], value: string | number, prop = 'id') {
+  static hasItemByProp(items: any[], value: string | number, prop = 'id') {
     return items.some((item) => item[prop] === value);
   }
 
-  private static permissionsChanged(oldPermissions: AlliancePermissions, newPermissions: AlliancePermissions) {
+  static permissionsChanged(oldPermissions: AlliancePermissions, newPermissions: AlliancePermissions) {
     const oldEntries = Object.entries(oldPermissions);
     const newEntries = Object.entries(newPermissions);
     return oldEntries.length === newEntries.length && Object.entries(oldPermissions).every(([name, value]) => newPermissions[name] === value);

@@ -1,15 +1,15 @@
 import { Combat, CombatStrength, Dict, TownUnit, MovementType } from 'strat-ego-common';
 import { transaction } from 'objection';
 
-import { MovementResolver } from './movement.resolver';
+import { MovementResolver } from './movementResolver';
 import { worldData } from '../world/worldData';
 import { TownSupport } from './townSupport';
 import { Town } from './town';
 import { townQueue } from '../townQueue';
 import { Movement } from './movement';
-import { knexDb } from '../../sqldb';
 import { World } from '../world/world';
-import { TownSocket } from './town.socket';
+import { TownSocket } from './townSocket';
+import * as townQueries from './townQueries';
 
 beforeAll(() => {
   worldData.unitMap = {
@@ -22,7 +22,7 @@ beforeAll(() => {
   } as World;
 });
 
-test('calculateSurvivalPercent should return a percent multiplier number', () => {
+it('calculateSurvivalPercent should return a percent multiplier number', () => {
   const cases = [
     [[100, 10], 0.9683772233983162],
     [[10, 20], -1.8284271247461903],
@@ -31,7 +31,7 @@ test('calculateSurvivalPercent should return a percent multiplier number', () =>
   cases.forEach(([item, expected]) => expect(MovementResolver.calculateSurvivalPercent(item[0], item[1])).toBe(expected));
 });
 
-test('updateMissingTown should process queues and remove processed', async () => {
+it('updateMissingTown should process queues and remove processed', async () => {
   const processed = ['mock', 2];
   const town = { id: 1, name: 'test town' };
   const testId = 12;
@@ -46,32 +46,44 @@ test('updateMissingTown should process queues and remove processed', async () =>
 });
 
 describe('resolveSupport', () => {
+  const units = {
+    archer: 3,
+    sword: 4,
+  };
   let movement;
-  beforeEach(async (done) => {
-    movement = await Movement.query(knexDb.world).insertGraph({
+  beforeEach(() => {
+    movement = {
+      id: 13,
       type: MovementType.support,
-      units: {
-        archer: 3,
-        sword: 4,
-      },
+      units,
+      originTownId: 1,
       originTown: {
+        id: 1,
+        originMovements: [{ id: 13 }],
+        targetMovements: [],
         location: [1, 1],
       },
+      targetTownId: 2,
       targetTown: {
+        id: 2,
+        originMovements: [],
+        targetMovements: [{ id: 13 }],
         location: [2, 2],
       },
+      haul: null,
       endsAt: Date.now(),
+    } as any;
+    const support = TownSupport.fromJson({
+      id: 453,
+      originTownId: movement.originTownId,
+      targetTownId: movement.targetTownId,
+      units,
     });
-    movement.originTown.originMovements = [{ id: movement.id }];
-    movement.targetTown.targetMovements = [{ id: movement.id }];
-    done();
-  });
-  afterEach(async (done) => {
-    await Town.query(knexDb.world).del();
-    done();
+    jest.spyOn(townQueries, 'deleteMovement').mockImplementationOnce(() => Promise.resolve());
+    jest.spyOn(townQueries, 'createSupport').mockImplementationOnce(() => Promise.resolve(support));
   });
 
-  test('should rollback transaction and rethrow error', async () => {
+  it('should rollback transaction and rethrow error', async () => {
     const error = 'test';
     const transactionSpy = jest.fn();
     jest.spyOn(transaction, 'start').mockImplementationOnce(() => ({ rollback: transactionSpy }));
@@ -89,7 +101,7 @@ describe('resolveSupport', () => {
     expect(transactionSpy).toHaveBeenCalled();
   });
 
-  test('should correctly resolve support for origin towns', async () => {
+  it('should correctly resolve support for origin towns', async () => {
     const target = movement.originTown;
     const missingTown = movement.targetTown;
     delete movement.targetTown;
@@ -102,7 +114,6 @@ describe('resolveSupport', () => {
     const socketSpy = jest.spyOn(TownSocket, 'emitToTownRoom').mockImplementationOnce(() => null);
 
     const resultTown = await MovementResolver.resolveSupport(movement, { ...target, originSupport: [] });
-    const movements = await Movement.query(knexDb.world).select();
     expect(resultTown.originSupport).toHaveLength(1);
     expect(resultTown.originSupport[0] instanceof TownSupport).toBeTruthy();
     expect(resultTown).toEqual({
@@ -112,13 +123,13 @@ describe('resolveSupport', () => {
     });
     expect(TownSocket.emitToTownRoom).toHaveBeenCalledWith(missingTown.id, {
       ...missingTown,
+      originSupport: [],
       targetMovements: [],
       targetSupport: resultTown.originSupport,
     }, 'town:update');
-    expect(movements).toHaveLength(0);
   });
 
-  test('should correctly resolve support for target towns', async () => {
+  it('should correctly resolve support for target towns', async () => {
     const target = movement.targetTown;
     const missingTown = movement.originTown;
     delete movement.originTown;
@@ -131,7 +142,6 @@ describe('resolveSupport', () => {
     const socketSpy = jest.spyOn(TownSocket, 'emitToTownRoom').mockImplementationOnce(() => null);
 
     const resultTown = await MovementResolver.resolveSupport(movement, { ...target, targetSupport: [] });
-    const movements = await Movement.query(knexDb.world).select();
     expect(resultTown.targetSupport).toHaveLength(1);
     expect(resultTown.targetSupport[0] instanceof TownSupport).toBeTruthy();
     expect(resultTown).toEqual({
@@ -143,8 +153,8 @@ describe('resolveSupport', () => {
       ...missingTown,
       originMovements: [],
       originSupport: resultTown.targetSupport,
+      targetSupport: [],
     }, 'town:update');
-    expect(movements).toHaveLength(0);
   });
 
 });
@@ -169,11 +179,11 @@ describe('combat strength', () => {
     { general: 20, cavalry: 600, archer: 8 },
   ];
 
-  test('calculateSupportStrength', () => {
+  it('calculateSupportStrength', () => {
     cases.forEach((item, i) => expect(MovementResolver.calculateSupportStrength(item.map((units) => ({ units })))).toEqual(expected[i]));
   });
 
-  test('calculateDefenseStrength', () => {
+  it('calculateDefenseStrength', () => {
     cases.forEach((item, i) => {
       const unitList = item
         .reduce((result, units) => {
@@ -185,7 +195,7 @@ describe('combat strength', () => {
     });
   });
 
-  test('calculateAttackStrength', () => {
+  it('calculateAttackStrength', () => {
     cases.forEach((item, i) => {
       const unitList = item
         .reduce((result, units) => {

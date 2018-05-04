@@ -11,9 +11,10 @@ import { UnitQueue } from '../unit/unitQueue';
 import { logger } from '../../logger';
 import { Movement } from './movement';
 import { mapManager } from '../map/mapManager';
-import { MovementResolver } from './movement.resolver';
+import { MovementResolver } from './movementResolver';
 import { scoreTracker } from '../player/playerScore';
 import { TownSupport } from './townSupport';
+import { getTown } from './townQueries';
 
 export interface ProcessingResult {
   town: Town;
@@ -457,17 +458,10 @@ export class Town extends BaseModel {
     };
   }
 
-  static getTown(where: Partial<Town>, trx: Knex.Transaction | Knex = knexDb.world) {
-    return Town
-      .query(trx)
-      .findOne(where)
-      .eager(this.townRelationsFiltered, this.townRelationFilters);
-  }
-
   static async processTownQueues(item: number | Town, time?: number, processed = []): Promise<ProcessingResult> {
     const queueTime = time || Date.now();
     try {
-      const town = typeof item === 'number' ? await Town.getTown({ id: item }, knexDb.world) : item;
+      const town = typeof item === 'number' ? await getTown({ id: item }, knexDb.world) : item;
 
       const queues = [
         ...town.buildingQueues,

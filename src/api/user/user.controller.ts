@@ -1,6 +1,5 @@
 import { signToken } from '../../auth/auth.service';
-import { User } from './user';
-import { knexDb } from '../../sqldb';
+import { getUsers, getUser, deleteUser, createUser } from './userQueries';
 
 function validationError(res, statusCode = 422) {
   return (err) => {
@@ -20,7 +19,7 @@ function handleError(res, statusCode = 500) {
  */
 export async function index(req, res) {
   try {
-    const users = await User.query(knexDb.main).select(['id', 'name', 'email', 'role', 'provider']);
+    const users = await getUsers();
     return res.status(200).json(users);
   } catch (err) {
     return handleError(res)(err);
@@ -32,11 +31,9 @@ export async function index(req, res) {
  */
 // export function create(req, res, next) {
 export async function create(req, res) {
-  const newUser = req.body;
-  newUser.provider = 'local';
-  newUser.role = 'member';
   try {
-    const user = await User.query(knexDb.main).insert(newUser);
+    const newUser = req.body;
+    const user = await createUser(newUser.name, newUser.email, newUser.password);
     return res.json({ token: signToken(user) });
   } catch (err) {
     return validationError(res)(err);
@@ -49,7 +46,7 @@ export async function create(req, res) {
 export async function show(req, res, next) {
   const userId = req.params.id;
   try {
-    const user = await User.query(knexDb.main).findById(userId);
+    const user = await getUser({ id: userId });
     return res.json(user.profile);
   } catch (err) {
     return validationError(res)(err);
@@ -62,7 +59,7 @@ export async function show(req, res, next) {
  */
 export async function destroy(req, res) {
   try {
-    const user = await User.query(knexDb.main).deleteById(req.params.id);
+    await deleteUser(req.params.id);
     return res.status(204).end();
   } catch (err) {
     return validationError(res)(err);
@@ -78,10 +75,10 @@ export async function changePassword(req, res) {
   const oldPass = String(req.body.oldPassword);
   const newPass = String(req.body.newPassword);
   try {
-    const user = await User.query(knexDb.main).findById(userId);
+    const user = await getUser({ id: userId });
     const isAuthenticated = await user.authenticate(oldPass);
     if (isAuthenticated) {
-      await user.$query(knexDb.main).patch({ password: newPass });
+      await changePassword(user, newPass);
       res.status(204).end();
     } else {
       return res.status(403).end();

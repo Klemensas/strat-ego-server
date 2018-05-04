@@ -5,13 +5,13 @@ import * as uws from 'uws';
 import { AlliancePermissions } from 'strat-ego-common';
 
 import * as config from './environment';
-import { PlayerSocket } from '../api/player/player.socket';
-import { AllianceSocket } from '../api/alliance/alliance.socket';
-import { TownSocket } from '../api/town/town.socket';
-import { MapSocket } from '../api/map/map.socket';
+import { PlayerSocket } from '../api/player/playerSocket';
+import { AllianceSocket } from '../api/alliance/allianceSocket';
+import { TownSocket } from '../api/town/townSocket';
+import { MapSocket } from '../api/map/mapSocket';
 import { logger } from '../logger';
 import { serializeError } from '../errorSerializer';
-import { RankingsSocket } from '../api/player/rankings.socket';
+import { RankingsSocket } from '../api/player/rankingsSocket';
 
 export interface AuthenticatedSocket extends SocketIO.Socket {
   decoded_token: {

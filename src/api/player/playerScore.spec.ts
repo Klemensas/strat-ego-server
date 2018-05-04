@@ -1,9 +1,9 @@
 import { ScoreTracker } from './playerScore';
 import { logger } from '../../logger';
 import { Player } from './player';
-import { knexDb } from '../../sqldb';
 import { worldData, WorldData } from '../world/worldData';
 import { World } from '../world/world';
+import * as playerQueries from './playerQueries';
 
 const examplePlayers = {
   1: {
@@ -61,14 +61,14 @@ beforeEach(() => {
   scoreTracker.rankings = exampleRankings.slice();
 });
 
-test('should initially have empty values', () => {
+it('should initially have empty values', () => {
   const freshTracker = new ScoreTracker();
   expect(freshTracker.playerScores).toEqual({});
   expect(freshTracker.rankings).toEqual([]);
   expect(freshTracker.lastUpdate).toEqual(null);
 });
 
-test('scores should return ranking value populated with playerScores in order', () => {
+it('scores should return ranking value populated with playerScores in order', () => {
   expect(scoreTracker.scores).toEqual(Object.values(examplePlayers));
 
   scoreTracker.rankings.sort((a, b) => scoreTracker.playerScores[b].score - scoreTracker.playerScores[a].score);
@@ -79,23 +79,24 @@ test('scores should return ranking value populated with playerScores in order', 
 });
 
 describe('readScores', () => {
-  let storedPlayers: Player[];
-  beforeEach(async () => {
+  const dbPlayers = players.map((player) => ({
+    id: player.id,
+    name: player.name,
+    score: player.towns && player.towns.length ? player.towns.reduce((s, t) => s + t.score, 0) : null,
+  }));
+  beforeEach(() => {
     scoreTracker = new ScoreTracker();
-    storedPlayers = await Player.query(knexDb.world).insertGraph(players);
+    jest.spyOn(playerQueries, 'getPlayerRankings').mockImplementation(() => Promise.resolve(dbPlayers));
   });
-  afterEach(async () => {
-    return await Player.query(knexDb.world).del();
-  });
-  test('should set all player scores', async () => {
+
+  it('should set all player scores', async () => {
     const sortSpy = jest.spyOn(scoreTracker, 'sortRankings');
     await scoreTracker.readScores();
-    const expectedPlayers = storedPlayers.reduce((result, item) => ({
+    const expectedPlayers = dbPlayers.reduce((result, item) => ({
       ...result,
       [item.id]: {
-        id: item.id,
-        name: item.name,
-        score: item.towns && item.towns.length ? item.towns.reduce((s, t) => s + t.score, 0) : 0,
+        ...item,
+        score: item.score || 0,
       },
     }), {});
     expect(scoreTracker.sortRankings).toHaveBeenCalledTimes(1);
@@ -104,9 +105,9 @@ describe('readScores', () => {
   });
 });
 
-test('readScores on error should log and rethrow', async () => {
-  const knexSpy = jest.spyOn(knexDb, 'world');
-  knexSpy.mockImplementation(() => null);
+it('readScores on error should log and rethrow', async () => {
+  const expectedError = 'error';
+  const knexSpy = jest.spyOn(playerQueries, 'getPlayerRankings').mockImplementationOnce(() => Promise.reject(expectedError));
   const loggerSpy = jest.spyOn(logger, 'error');
   loggerSpy.mockImplementation(() => null);
 
@@ -116,13 +117,12 @@ test('readScores on error should log and rethrow', async () => {
   } catch (err) {
     error = err;
   }
-  expect(error).toBeTruthy();
+  expect(error).toEqual(expectedError);
   expect(loggerSpy).toHaveBeenCalled();
-  knexSpy.mockRestore();
 });
 
 describe('setScore', () => {
-  test('should set target player score', () => {
+  it('should set target player score', () => {
     let targetPlayer = examplePlayers[exampleRankings[0]];
     let expectedScore = 555;
 
@@ -136,7 +136,7 @@ describe('setScore', () => {
     expect(scoreTracker.playerScores[targetPlayer.id].score).toEqual(expectedScore);
   });
 
-  test('should sortRankings on set', () => {
+  it('should sortRankings on set', () => {
     const sortSpy = jest.spyOn(scoreTracker, 'sortRankings');
 
     scoreTracker.setScore(1, scoreTracker.rankings[0]);
@@ -145,7 +145,7 @@ describe('setScore', () => {
 });
 
 describe('updateScore', () => {
-  test('should update target player score', () => {
+  it('should update target player score', () => {
     let scoreChange = 10;
     let targetPlayer = examplePlayers[exampleRankings[0]];
     let expectedScore = targetPlayer.score + scoreChange;
@@ -161,7 +161,7 @@ describe('updateScore', () => {
     expect(scoreTracker.playerScores[targetPlayer.id].score).toEqual(expectedScore);
   });
 
-  test('should sortRankings on update', () => {
+  it('should sortRankings on update', () => {
     const sortSpy = jest.spyOn(scoreTracker, 'sortRankings');
 
     scoreTracker.updateScore(1, scoreTracker.rankings[0]);
@@ -170,7 +170,7 @@ describe('updateScore', () => {
 });
 
 describe('sortRankings', () => {
-  test('should sort by score and id', () => {
+  it('should sort by score and id', () => {
     expect(scoreTracker.rankings).toEqual(exampleRankings);
 
     const descendingIds = [44, 4];
@@ -197,7 +197,7 @@ describe('sortRankings', () => {
     expect(scoreTracker.rankings).toEqual(sortedRankings);
   });
 
-  test('should set lastUpdate', () => {
+  it('should set lastUpdate', () => {
     const lastDate = Date.now() - 1;
 
     scoreTracker.sortRankings();
@@ -208,7 +208,7 @@ describe('sortRankings', () => {
 describe('addPlayer', () => {
   const newPlayer = { id: 12335, name: 'Player #12335', score: 11 };
 
-  test('should add target player', () => {
+  it('should add target player', () => {
     expect(scoreTracker.playerScores[newPlayer.id]).toBeFalsy();
     expect(scoreTracker.rankings.includes(newPlayer.id)).toBeFalsy();
 
@@ -217,7 +217,7 @@ describe('addPlayer', () => {
     expect(scoreTracker.rankings.includes(newPlayer.id)).toBeTruthy();
   });
 
-  test('should sortRankings on update', () => {
+  it('should sortRankings on update', () => {
     const sortSpy = jest.spyOn(scoreTracker, 'sortRankings');
 
     scoreTracker.addPlayer(newPlayer);

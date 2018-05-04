@@ -3,8 +3,9 @@ import { BuildingQueue } from './building/buildingQueue';
 import { UnitQueue } from './unit/unitQueue';
 import { Movement } from './town/movement';
 import { Town, TownQueue } from './town/town';
-import { TownSocket } from './town/town.socket';
+import { TownSocket } from './town/townSocket';
 import { logger } from '../logger';
+import { getSortedBuildingQueues, getSortedUnitQueues, getSortedMovements } from './world/worldQueries';
 
 export class TownEventQueue {
   queue: TownQueue[] = [];
@@ -14,9 +15,9 @@ export class TownEventQueue {
 
   public async loadQueues() {
     const [buildingQueues, unitQueues, movements] = await Promise.all([
-      BuildingQueue.query(knexDb.world).select().orderBy('endsAt', 'asc'),
-      UnitQueue.query(knexDb.world).select().orderBy('endsAt', 'asc'),
-      Movement.query(knexDb.world).select().orderBy('endsAt', 'asc'),
+      getSortedBuildingQueues(),
+      getSortedUnitQueues(),
+      getSortedMovements(),
     ]);
 
     this.inProgress = true;

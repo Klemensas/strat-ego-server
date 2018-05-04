@@ -144,12 +144,4 @@ export class Alliance extends BaseModel {
       ]`),
     };
   }
-
-  static getAlliance(where: Partial<Player>, trx: Knex.Transaction | Knex = knexDb.world) {
-    return Alliance
-      .query(trx)
-      .findOne(where)
-      .modify('fullAlliance');
-  }
-
 }

@@ -1,10 +1,9 @@
 import * as jwt from 'jsonwebtoken';
 import * as expressJwt from 'express-jwt';
 import * as compose from 'composable-middleware';
-import * as config from '../config/environment';
 
-import { User } from '../api/user/user';
-import { knexDb } from '../sqldb';
+import * as config from '../config/environment';
+import { getFullUser } from '../api/user/userQueries';
 
 const validateJwt = expressJwt({
   secret: config.secrets.session,
@@ -22,11 +21,7 @@ export function isAuthenticated() {
   return compose()
     .use(validate)
     .use((req, res, next) => {
-      User
-        .query(knexDb.main)
-        .findById(req.user.id)
-        .select('id', 'name', 'email', 'role', 'provider', 'createdAt', 'updatedAt')
-        .eager('worlds')
+      getFullUser({ id: req.user.id })
         .then((user) => {
           if (!user) {
             return res.status(401).end();
