@@ -16,7 +16,9 @@ let socket: UserSocket;
 let emitSpy;
 beforeEach(() => {
   socket = new EventEmitter() as UserSocket;
-  socket.handleError = jest.fn().mockImplementationOnce(() => null);
+  socket.handleError = jest.fn().mockImplementation(() => null);
+  socket.join = jest.fn().mockImplementation(() => null);
+  socket.userData = {};
   emitSpy = jest.spyOn(TownSocket, 'emitToTownRoom').mockImplementationOnce(() => null);
   emitSpy.mockReset();
   worldData.unitMap = {
@@ -113,6 +115,17 @@ describe('onConnect', () => {
       expect(TownSocket.cancelSupport).toHaveBeenCalledWith(socket, payload, 'target');
     });
   });
+});
+
+test('joinTownRoom should call join for every user town', () => {
+  socket.userData.townIds = [];
+  TownSocket.joinTownRoom(socket);
+  expect(socket.join).not.toHaveBeenCalled();
+
+  socket.userData.townIds = [564, 56, 11];
+  TownSocket.joinTownRoom(socket);
+  expect(socket.join).toHaveBeenCalledTimes(socket.userData.townIds.length);
+  expect(socket.join).toHaveBeenLastCalledWith(String(socket.userData.townIds[socket.userData.townIds.length - 1]));
 });
 
 describe('cancelSupport', () => {

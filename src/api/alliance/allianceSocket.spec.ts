@@ -7,15 +7,9 @@ import { PlayerRolePayload, RoleUpdatePayload, WarDeclarationPayload, DiplomacyT
 let socket: UserSocket;
 beforeEach(() => {
   socket = new EventEmitter() as UserSocket;
-  socket.handleError = jest.fn().mockImplementationOnce(() => null);
-  // worldData.unitMap = {
-  //   sword: { speed: 1 },
-  //   archer: { speed: 2 },
-  //   horse: { speed: 2 },
-  // } as any;
-  // worldData.world = {
-  //   baseProduction: 500,
-  // } as World;
+  socket.handleError = jest.fn().mockImplementation(() => null);
+  socket.join = jest.fn().mockImplementation(() => null);
+  socket.userData = {};
 });
 
 describe('onConnect', () => {
@@ -291,5 +285,17 @@ describe('onConnect', () => {
       expect(AllianceSocket.postMessage).toHaveBeenCalledWith(socket, payload);
     });
 
+  });
+});
+
+describe('joinAlliancRoom', () => {
+  test('should call join if user is in an alliance', () => {
+    const userAlliance = 12;
+    socket.userData.allianceId = userAlliance;
+    AllianceSocket.joinAllianceRoom(socket);
+    expect(socket.join).toHaveBeenCalledWith(`alliance.${userAlliance}`);
+  });
+  test('should not call join if user isn\'t in an alliance', () => {
+    expect(socket.join).not.toHaveBeenCalled();
   });
 });
