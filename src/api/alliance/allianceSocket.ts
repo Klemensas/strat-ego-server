@@ -445,24 +445,6 @@ export class AllianceSocket {
       const allianceId = socket.userData.allianceId;
 
       await destroyAlliance(allianceId, trx);
-      // await Alliance.query(trx).upsertGraph({
-      //   id: allianceId,
-      //   eventOrigin: [],
-      //   invitations: [],
-      //   diplomacyOrigin: [],
-      //   diplomacyTarget: [],
-      //   messages: [],
-      // });
-      // await Player.query(trx)
-      //   .patch({
-      //     allianceId: null,
-      //     allianceRoleId: null,
-      //   })
-      //   .where({
-      //     allianceId,
-      //   });
-      // await Alliance.query(trx).deleteById(allianceId);
-
       await trx.commit();
 
       this.destroyAllianceNotify(`alliance.${allianceId}`);
