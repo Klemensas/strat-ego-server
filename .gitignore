@@ -3,3 +3,4 @@
 **/_*
 /coverage/
 error.log
+.env

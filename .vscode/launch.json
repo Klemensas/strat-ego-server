@@ -16,7 +16,7 @@
             "type": "node",
             "request": "launch",
             "args": ["src/index.ts"],
-            "runtimeArgs": ["--nolazy", "-r", "ts-node/register"],
+            "runtimeArgs": ["--nolazy", "-r", "ts-node/register", "-r", "dotenv/config"],
             "sourceMaps": true,
             "outputCapture": "std",
             "cwd": "${workspaceRoot}",
