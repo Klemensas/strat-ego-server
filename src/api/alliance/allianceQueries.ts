@@ -73,6 +73,18 @@ export function getAllianceWithMembersRoles(where: Partial<Alliance>, connection
     .eager('[members, roles]');
 }
 
+export async function updateAlliance(alliance: Alliance, payload: Partial<Alliance>, connection: Transaction | Knex = knexDb.world) {
+  return alliance
+    .$query(connection)
+    .patch(payload);
+}
+
+export async function createAllianceEvent(payload: Partial<AllianceEvent>, connection: Transaction | Knex = knexDb.world) {
+  return AllianceEvent
+    .query(connection)
+    .insert(payload);
+}
+
 export function getDiplomacy(where: Partial<Alliance>, connection: Transaction | Knex = knexDb.world) {
   return AllianceDiplomacy
     .query(connection)
@@ -136,7 +148,7 @@ export async function createInvite(player: Player, inviterId: number, allianceId
   await player
     .$relatedQuery('invitations', connection)
     .relate(allianceId);
-  return await AllianceEvent
+  return AllianceEvent
     .query(connection)
     .insert({
       type: EventType.invitation,
