@@ -11,6 +11,8 @@ import { AllianceEvent } from './allianceEvent';
 export class Alliance extends BaseModel {
   readonly id: number;
   name: string;
+  description: string;
+  avatarUrl: string;
 
   // Associations
   roles?: Array<AllianceRole | Partial<AllianceRole>>;

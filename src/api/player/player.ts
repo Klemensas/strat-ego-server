@@ -10,6 +10,8 @@ export class Player extends BaseModel {
   readonly id: number;
   userId: number;
   name: string;
+  description: string;
+  avatarUrl: string;
 
   // Associations
   towns?: Town[];
