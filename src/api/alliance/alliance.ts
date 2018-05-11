@@ -26,6 +26,7 @@ export class Alliance extends BaseModel {
   diplomacyTarget?: Array<Partial<AllianceDiplomacy>>;
   eventOrigin?: Array<Partial<AllianceEvent>>;
   eventTarget?: Array<Partial<AllianceEvent>>;
+  events?: Array<Partial<AllianceEvent>>;
   messages?: Array<Partial<AllianceMessage>>;
 
   static tableName = 'Alliance';
@@ -132,18 +133,17 @@ export class Alliance extends BaseModel {
     return {
       selectProfile: (builder) => builder.select('id', 'name'),
       selectAllianceProfile: (builder) => builder.select('Alliance.id', 'name'),
-      fullAlliance: (builder) => builder.eager(`[
-        roles,
-        defaultRole,
-        masterRole,
-        members(selectProfileRole),
-        invitations(selectPlayerProfile)
-        diplomacyOrigin.[originAlliance(selectProfile), targetAlliance(selectProfile), originPlayer(selectProfile), targetPlayer(selectProfile)],
-        diplomacyTarget.[originAlliance(selectProfile), targetAlliance(selectProfile), originPlayer(selectProfile), targetPlayer(selectProfile)],
-        eventOrigin.[originAlliance(selectProfile), targetAlliance(selectProfile), originPlayer(selectProfile), targetPlayer(selectProfile)],
-        eventTarget.[originAlliance(selectProfile), targetAlliance(selectProfile), originPlayer(selectProfile), targetPlayer(selectProfile)],
-        messages.[player(selectProfile)]
-      ]`),
+      fullAlliance: (builder) => builder
+        .eager(`[
+          roles,
+          defaultRole,
+          masterRole,
+          members(selectProfileRole),
+          invitations(selectPlayerProfile)
+          diplomacyOrigin.[originAlliance(selectProfile), targetAlliance(selectProfile), originPlayer(selectProfile), targetPlayer(selectProfile)],
+          diplomacyTarget.[originAlliance(selectProfile), targetAlliance(selectProfile), originPlayer(selectProfile), targetPlayer(selectProfile)],
+          messages.[player(selectProfile)]
+        ]`),
     };
   }
 }

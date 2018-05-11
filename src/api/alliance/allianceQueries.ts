@@ -11,10 +11,25 @@ import { PlayerSocket } from '../player/playerSocket';
 import { AllianceDiplomacy } from './allianceDiplomacy';
 import { AllianceMessage } from './allianceMessage';
 
+// TODO: separate event creation from other queries
+
 export function getAlliance(where: Partial<Alliance>, connection: Transaction | Knex = knexDb.world) {
   return Alliance
     .query(connection)
     .findOne(where);
+}
+export function getAllianceEvents(id: number, connection: Transaction | Knex = knexDb.world) {
+  return AllianceEvent
+    .query(connection)
+    .where('originAllianceId', id)
+    .eager(`[originPlayer(selectProfile), targetPlayer(selectProfile), originAlliance(selectProfile), targetAlliance(selectProfile)]`)
+    .unionAll(function() {
+      this
+        .from('AllianceEvent')
+        .where('targetAllianceId', id);
+    })
+    .orderBy('createdAt', 'DESC')
+    .limit(20);
 }
 
 export function getAllianceWithTarget(where: Partial<Alliance>, target: string, connection: Transaction | Knex = knexDb.world) {
@@ -25,9 +40,17 @@ export function getAllianceWithTarget(where: Partial<Alliance>, target: string, 
     .eager('[diplomacyOrigin, diplomacyTarget]');
 }
 
-export function getFullAlliance(where: Partial<Alliance>, connection: Transaction | Knex = knexDb.world) {
-  return getAlliance(where, connection)
+// TODO: this is too complex
+export async function getFullAlliance(where: Partial<Alliance>, connection: Transaction | Knex = knexDb.world) {
+  if (Object.keys(where).length !== 1 || !where.hasOwnProperty('id')) {
+    throw new Error('only works with id');
+  }
+  const alliance = await getAlliance(where, connection)
     .modify('fullAlliance');
+  const events = await getAllianceEvents(where.id, connection);
+
+  alliance.events = events;
+  return alliance;
 }
 
 export function getAllianceWithMembersInvites(where: Partial<Alliance>, connection: Transaction | Knex = knexDb.world) {
