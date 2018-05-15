@@ -3,9 +3,14 @@ import { transaction } from 'objection';
 
 import { UserSocket, ErrorMessage, io } from '../../config/socket';
 import { AllianceSocket } from './allianceSocket';
-import { PlayerRolePayload, RoleUpdatePayload, WarDeclarationPayload, DiplomacyType, MessagePayload } from 'strat-ego-common';
+import { PlayerRolePayload, RoleUpdatePayload, WarDeclarationPayload, DiplomacyType, MessagePayload, AlliancePermissions } from 'strat-ego-common';
 import * as allianceQueries from './allianceQueries';
 import { mapManager } from '../map/mapManager';
+import * as cloudinary from '../../cloudinary';
+
+const transactionRollbackSpy = jest.fn();
+const transactionCommitSpy = jest.fn();
+const transactionMock = { rollback: transactionRollbackSpy, commit: transactionCommitSpy };
 
 let socket: UserSocket;
 beforeEach(() => {
@@ -284,6 +289,35 @@ describe('onConnect', () => {
       expect(AllianceSocket.endDiplo).toHaveBeenCalledWith(socket, payload, DiplomacyType.nap);
     });
 
+    it('should call loadProfile on loadProfile emit', () => {
+      jest.spyOn(AllianceSocket, 'loadProfile').mockImplementationOnce(() => null);
+      socket.emit('anything');
+      expect(AllianceSocket.loadProfile).not.toHaveBeenCalled();
+
+      const payload = 4;
+      socket.emit('alliance:loadProfile', payload);
+      expect(AllianceSocket.loadProfile).toHaveBeenCalledWith(socket, payload);
+    });
+
+    it('should call updateProfile on updateProfile emit', () => {
+      jest.spyOn(AllianceSocket, 'updateProfile').mockImplementationOnce(() => null);
+      socket.emit('anything');
+      expect(AllianceSocket.updateProfile).not.toHaveBeenCalled();
+
+      const payload = { description: 'test' };
+      socket.emit('alliance:updateProfile', payload);
+      expect(AllianceSocket.updateProfile).toHaveBeenCalledWith(socket, payload);
+    });
+
+    it('should call removeAvatar on removeAvatar emit', () => {
+      jest.spyOn(AllianceSocket, 'removeAvatar').mockImplementationOnce(() => null);
+      socket.emit('anything');
+      expect(AllianceSocket.removeAvatar).not.toHaveBeenCalled();
+
+      socket.emit('alliance:removeAvatar');
+      expect(AllianceSocket.removeAvatar).toHaveBeenCalledWith(socket);
+    });
+
     it('should call postMessage on postMessage emit', () => {
       jest.spyOn(AllianceSocket, 'postMessage').mockImplementationOnce(() => null);
       socket.emit('anything');
@@ -293,7 +327,6 @@ describe('onConnect', () => {
       socket.emit('chat:postMessage', payload);
       expect(AllianceSocket.postMessage).toHaveBeenCalledWith(socket, payload);
     });
-
   });
 });
 
@@ -312,9 +345,6 @@ describe('joinAlliancRoom', () => {
 describe('leavAlliance', () => {
   let getAllianceSpy;
   let leaveAllianceSpy;
-  const transactionRollbackSpy = jest.fn();
-  const transactionCommitSpy = jest.fn();
-  const transactionMock = { rollback: transactionRollbackSpy, commit: transactionCommitSpy };
 
   beforeEach(() => {
     getAllianceSpy = jest.spyOn(allianceQueries, 'getAllianceWithMembersRoles');
@@ -322,30 +352,32 @@ describe('leavAlliance', () => {
     jest.spyOn(transaction, 'start').mockImplementationOnce(() => (transactionMock));
   });
 
-  it('should rollback transaction and call socket error handler', async () => {
-    const error = 'dead';
-    getAllianceSpy.mockImplementationOnce(() => { throw error; });
+  describe('on error', () => {
+    it('should rollback transaction and call socket error handler', async () => {
+      const error = 'dead';
+      getAllianceSpy.mockImplementationOnce(() => { throw error; });
 
-    await AllianceSocket.leaveAlliance(socket);
-    expect(transactionRollbackSpy).toHaveBeenCalled();
-    expect(socket.handleError).toHaveBeenCalledWith(error, 'leaveAlliance', `alliance:leaveAllianceFail`);
+      await AllianceSocket.leaveAlliance(socket);
+      expect(transactionRollbackSpy).toHaveBeenCalled();
+      expect(socket.handleError).toHaveBeenCalledWith(error, 'leaveAlliance', `alliance:leaveAllianceFail`);
+    });
+
+    it('should throw on missing alliance', async () => {
+      getAllianceSpy.mockImplementationOnce(() => Promise.resolve(undefined));
+      await AllianceSocket.leaveAlliance(socket);
+      expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Wrong alliance'), 'leaveAlliance', `alliance:leaveAllianceFail`);
+    });
+
+    it('should throw on masterRole match', async () => {
+      const masterRoleId = 12;
+      socket.userData.allianceRoleId = masterRoleId;
+      getAllianceSpy.mockImplementationOnce(() => Promise.resolve({ masterRoleId }));
+      await AllianceSocket.leaveAlliance(socket);
+      expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Owner can\'t leave alliance'), 'leaveAlliance', `alliance:leaveAllianceFail`);
+    });
   });
 
-  it('should throw on missing alliance', async () => {
-    getAllianceSpy.mockImplementationOnce(() => Promise.resolve(undefined));
-    await AllianceSocket.leaveAlliance(socket);
-    expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Wrong alliance'), 'leaveAlliance', `alliance:leaveAllianceFail`);
-  });
-
-  it('should throw on masterRole match', async () => {
-    const masterRoleId = 12;
-    socket.userData.allianceRoleId = masterRoleId;
-    getAllianceSpy.mockImplementationOnce(() => Promise.resolve({ masterRoleId }));
-    await AllianceSocket.leaveAlliance(socket);
-    expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Owner can\'t leave alliance'), 'leaveAlliance', `alliance:leaveAllianceFail`);
-  });
-
-  describe('working', () => {
+  describe('on success', () => {
     const playerId = 1;
     const allianceId = 4;
     beforeEach(() => {
@@ -385,5 +417,253 @@ describe('leavAlliance', () => {
       });
     });
   });
+});
 
+describe('loadProfile', () => {
+  let getAllianceProfileSpy;
+  beforeEach(() => {
+    getAllianceProfileSpy = jest.spyOn(allianceQueries, 'getAllianceProfile');
+    jest.spyOn(transaction, 'start').mockImplementationOnce(() => (transactionMock));
+  });
+
+  describe('on error', () => {
+    it('should rollback transaction and call socket error handler', async () => {
+      const error = 'dead';
+      getAllianceProfileSpy.mockImplementationOnce(() => { throw error; });
+
+      await AllianceSocket.loadProfile(socket, 1);
+      expect(transactionRollbackSpy).toHaveBeenCalled();
+      expect(socket.handleError).toHaveBeenCalledWith(error, 'loadProfile', `alliance:loadProfileFail`);
+    });
+
+    it('should throw on missing alliance', async () => {
+      getAllianceProfileSpy.mockImplementationOnce(() => Promise.resolve(undefined));
+      await AllianceSocket.loadProfile(socket, 1);
+      expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Wrong alliance'), 'loadProfile', `alliance:loadProfileFail`);
+    });
+  });
+
+  describe('on success', () => {
+    const alliance = {
+      id: 1,
+      name: 'tester',
+    };
+
+    beforeEach(() => {
+      getAllianceProfileSpy.mockImplementationOnce(() => Promise.resolve(alliance));
+    });
+
+    it('should emit to socket', async () => {
+      await AllianceSocket.loadProfile(socket, 1);
+      expect(socket.emit).toHaveBeenCalledWith('alliance:loadProfileSuccess', alliance);
+    });
+  });
+});
+
+describe('updateProfile', () => {
+  let getAllianceSpy;
+  let updateAllianceSpy;
+  let createEventSpy;
+  let cloudinaryCheckSpy;
+  let cloudinaryRemoveSpy;
+  beforeEach(() => {
+    getAllianceSpy = jest.spyOn(allianceQueries, 'getAlliance');
+    updateAllianceSpy = jest.spyOn(allianceQueries, 'updateAlliance');
+    createEventSpy = jest.spyOn(allianceQueries, 'createAllianceEvent');
+    cloudinaryCheckSpy = jest.spyOn(cloudinary, 'isCloudinaryImage');
+    cloudinaryRemoveSpy = jest.spyOn(cloudinary, 'cloudinaryDelete');
+    jest.spyOn(transaction, 'start').mockImplementationOnce(() => (transactionMock));
+
+    socket.userData.alliancePermissions = {
+      editProfile: true,
+    } as AlliancePermissions;
+  });
+
+  describe('on error', () => {
+    it('should rollback transaction and call socket error handler', async () => {
+      const error = 'dead';
+      getAllianceSpy.mockImplementationOnce(() => { throw error; });
+
+      await AllianceSocket.updateProfile(socket, {});
+      expect(transactionRollbackSpy).toHaveBeenCalled();
+      expect(socket.handleError).toHaveBeenCalledWith(error, 'updateProfile', `alliance:updateProfileFail`);
+    });
+
+    it('should throw on missing permissions', async () => {
+      socket.userData.alliancePermissions.editProfile = false;
+      await AllianceSocket.updateProfile(socket, {});
+      expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Not permitted to do that'), 'updateProfile', `alliance:updateProfileFail`);
+    });
+
+    it('should throw on missing alliance', async () => {
+      getAllianceSpy.mockImplementationOnce(() => undefined);
+      await AllianceSocket.updateProfile(socket, {});
+      expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Wrong alliance'), 'updateProfile', `alliance:updateProfileFail`);
+    });
+
+    it('should throw on invalid avatarUrl', async () => {
+      getAllianceSpy.mockImplementationOnce(() => ({}));
+      cloudinaryCheckSpy.mockImplementationOnce(() => false);
+      await AllianceSocket.updateProfile(socket, { avatarUrl: 'yes' });
+      expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Invalid avatar'), 'updateProfile', `alliance:updateProfileFail`);
+    });
+
+    it('should throw on update alliance error', async () => {
+      const error = 'dead';
+      getAllianceSpy.mockImplementationOnce(() => ({}));
+      cloudinaryCheckSpy.mockImplementationOnce(() => true);
+      updateAllianceSpy.mockImplementationOnce(() => { throw error; });
+      await AllianceSocket.updateProfile(socket, { avatarUrl: 'yes' });
+      expect(socket.handleError).toHaveBeenCalledWith(error, 'updateProfile', `alliance:updateProfileFail`);
+    });
+
+    it('should throw on create event error', async () => {
+      const error = 'dead';
+      getAllianceSpy.mockImplementationOnce(() => ({}));
+      cloudinaryCheckSpy.mockImplementationOnce(() => true);
+      updateAllianceSpy.mockImplementationOnce(() => null);
+      createEventSpy.mockImplementationOnce(() => { throw error; });
+      await AllianceSocket.updateProfile(socket, { avatarUrl: 'yes' });
+      expect(socket.handleError).toHaveBeenCalledWith(error, 'updateProfile', `alliance:updateProfileFail`);
+    });
+
+    it('should throw on cloudinary delete error', async () => {
+      const error = 'dead';
+      getAllianceSpy.mockImplementationOnce(() => ({ avatarUrl: 'old' }));
+      cloudinaryCheckSpy.mockImplementationOnce(() => true);
+      updateAllianceSpy.mockImplementationOnce(() => null);
+      createEventSpy.mockImplementationOnce(() => ({}));
+      cloudinaryRemoveSpy.mockImplementationOnce(() => { throw error; });
+      await AllianceSocket.updateProfile(socket, { avatarUrl: 'yes' });
+      expect(socket.handleError).toHaveBeenCalledWith(error, 'updateProfile', `alliance:updateProfileFail`);
+    });
+  });
+
+  describe('on success', () => {
+    const alliance = {
+      id: 1,
+      name: 'tester',
+      description: 'test',
+      avatarUrl: 'defaultUrl',
+    };
+    const event = {
+      id: 2,
+    };
+
+    beforeEach(() => {
+      cloudinaryCheckSpy.mockImplementationOnce(() => true);
+      cloudinaryRemoveSpy.mockImplementationOnce(() => true);
+      getAllianceSpy.mockImplementationOnce(() => Promise.resolve(alliance));
+      updateAllianceSpy.mockImplementationOnce(() => Promise.resolve());
+      createEventSpy.mockImplementationOnce(() => Promise.resolve(event));
+    });
+
+    it('should emit to socket', async () => {
+      const payload = { avatarUrl: 'yes', description: 'baba' };
+      await AllianceSocket.updateProfile(socket, payload);
+
+      expect(socket.emit).toHaveBeenCalledWith('alliance:updateProfileSuccess', { event, data: payload });
+    });
+  });
+});
+
+describe('removeAvatar', () => {
+  let getAllianceSpy;
+  let updateAllianceSpy;
+  let createEventSpy;
+  let cloudinaryRemoveSpy;
+  beforeEach(() => {
+    getAllianceSpy = jest.spyOn(allianceQueries, 'getAlliance');
+    updateAllianceSpy = jest.spyOn(allianceQueries, 'updateAlliance');
+    createEventSpy = jest.spyOn(allianceQueries, 'createAllianceEvent');
+    cloudinaryRemoveSpy = jest.spyOn(cloudinary, 'cloudinaryDelete');
+    jest.spyOn(transaction, 'start').mockImplementationOnce(() => (transactionMock));
+
+    socket.userData.alliancePermissions = {
+      editProfile: true,
+    } as AlliancePermissions;
+  });
+
+  describe('on error', () => {
+    it('should rollback transaction and call socket error handler', async () => {
+      const error = 'dead';
+      getAllianceSpy.mockImplementationOnce(() => { throw error; });
+
+      await AllianceSocket.removeAvatar(socket);
+      expect(transactionRollbackSpy).toHaveBeenCalled();
+      expect(socket.handleError).toHaveBeenCalledWith(error, 'removeAvatar', `alliance:removeAvatarFail`);
+    });
+
+    it('should throw on missing permissions', async () => {
+      socket.userData.alliancePermissions.editProfile = false;
+      await AllianceSocket.removeAvatar(socket);
+      expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Not permitted to do that'), 'removeAvatar', `alliance:removeAvatarFail`);
+    });
+
+    it('should throw on missing alliance', async () => {
+      getAllianceSpy.mockImplementationOnce(() => undefined);
+      await AllianceSocket.removeAvatar(socket);
+      expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Wrong alliance'), 'removeAvatar', `alliance:removeAvatarFail`);
+    });
+
+    it('should throw on missing avatarUrl', async () => {
+      getAllianceSpy.mockImplementationOnce(() => ({}));
+      await AllianceSocket.removeAvatar(socket);
+      expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('No avatar present'), 'removeAvatar', `alliance:removeAvatarFail`);
+    });
+
+    it('should throw on cloudinary delete error', async () => {
+      const error = 'dead';
+      getAllianceSpy.mockImplementationOnce(() => ({ avatarUrl: 'old' }));
+      updateAllianceSpy.mockImplementationOnce(() => null);
+      createEventSpy.mockImplementationOnce(() => ({}));
+      cloudinaryRemoveSpy.mockImplementationOnce(() => { throw error; });
+      await AllianceSocket.removeAvatar(socket);
+      expect(socket.handleError).toHaveBeenCalledWith(error, 'removeAvatar', `alliance:removeAvatarFail`);
+    });
+
+    it('should throw on update alliance error', async () => {
+      const error = 'dead';
+      getAllianceSpy.mockImplementationOnce(() => ({ avatarUrl: 'any' }));
+      updateAllianceSpy.mockImplementationOnce(() => { throw error; });
+      cloudinaryRemoveSpy.mockImplementationOnce(() => null);
+      await AllianceSocket.removeAvatar(socket);
+      expect(socket.handleError).toHaveBeenCalledWith(error, 'removeAvatar', `alliance:removeAvatarFail`);
+    });
+
+    it('should throw on create event error', async () => {
+      const error = 'dead';
+      getAllianceSpy.mockImplementationOnce(() => ({ avatarUrl: 'any' }));
+      updateAllianceSpy.mockImplementationOnce(() => null);
+      createEventSpy.mockImplementationOnce(() => { throw error; });
+      cloudinaryRemoveSpy.mockImplementationOnce(() => null);
+      await AllianceSocket.removeAvatar(socket);
+      expect(socket.handleError).toHaveBeenCalledWith(error, 'removeAvatar', `alliance:removeAvatarFail`);
+    });
+  });
+
+  describe('on success', () => {
+    const alliance = {
+      id: 1,
+      name: 'tester',
+      description: 'test',
+      avatarUrl: 'defaultUrl',
+    };
+    const event = {
+      id: 2,
+    };
+
+    beforeEach(() => {
+      cloudinaryRemoveSpy.mockImplementationOnce(() => true);
+      getAllianceSpy.mockImplementationOnce(() => Promise.resolve(alliance));
+      updateAllianceSpy.mockImplementationOnce(() => Promise.resolve());
+      createEventSpy.mockImplementationOnce(() => Promise.resolve(event));
+    });
+
+    it('should emit to socket', async () => {
+      await AllianceSocket.removeAvatar(socket);
+
+      expect(socket.emit).toHaveBeenCalledWith('alliance:removeAvatarSuccess', { event, data: { avatarUrl: null } });
+    });
+  });
 });
