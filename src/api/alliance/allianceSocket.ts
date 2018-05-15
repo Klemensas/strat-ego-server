@@ -452,10 +452,18 @@ export class AllianceSocket {
       if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.editProfile) { throw new ErrorMessage('Not permitted to do that'); }
 
       const alliance = await allianceQueries.getAlliance({ id: socket.userData.allianceId }, trx);
-      const avatarUrl = payload.avatarUrl;
-      if (avatarUrl && !isCloudinaryImage(avatarUrl)) { throw new ErrorMessage('Invalid avatar'); }
 
-      await allianceQueries.updateAlliance(alliance, payload, trx);
+      let avatarToDelete;
+      const updatePayload: ProfileUpdate = {};
+      if (!alliance || payload.avatarUrl) {
+        if (!isCloudinaryImage(payload.avatarUrl)) { throw new ErrorMessage('Invalid avatar'); }
+
+        updatePayload.avatarUrl = payload.avatarUrl;
+        if (alliance.avatarUrl) { avatarToDelete = alliance.avatarUrl; }
+      }
+      if (payload.description) { updatePayload.description = payload.description; }
+
+      await allianceQueries.updateAlliance(alliance, updatePayload, trx);
       const event = await allianceQueries.createAllianceEvent({
         type: EventType.profile,
         status: EventStatus.update,
@@ -465,6 +473,9 @@ export class AllianceSocket {
       event.originAlliance = { id: alliance.id, name: alliance.name };
       event.originPlayer = { id: socket.userData.playerId, name: socket.userData.playerName };
 
+      if (avatarToDelete) {
+        await cloudinaryDelete(avatarToDelete);
+      }
       await trx.commit();
 
       const eventPayload = { event, data: payload };
@@ -482,7 +493,7 @@ export class AllianceSocket {
       if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.editProfile) { throw new ErrorMessage('Not permitted to do that'); }
 
       const alliance = await allianceQueries.getAlliance({ id: socket.userData.allianceId }, trx);
-      if (!alliance.avatarUrl) { throw new ErrorMessage('No avatar present'); }
+      if (!alliance || !alliance.avatarUrl) { throw new ErrorMessage('No avatar present'); }
 
       await cloudinaryDelete(alliance.avatarUrl);
       await allianceQueries.updateAlliance(alliance, { avatarUrl: null }, trx);
