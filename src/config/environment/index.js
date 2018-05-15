@@ -30,6 +30,11 @@ module.exports = {
     main: process.env.DB_MAIN || 'postgres://stratego:supasecretpassword@localhost:5433/stratego',
     world: process.env.DB_WORLD || 'postgres://stratego:supasecretpassword@localhost:5433/strategoWorld'
   },
+  cloudinary: {
+    name: process.env.CLOUDINARY_NAME,
+    apiKey: process.env.CLOUDINARY_API,
+    apiSecret: process.env.CLOUDINARY_SECRET
+  },
   seed: {
     queueRate: +(process.env.QUEUE_RATE || 0.5),
     queueCount: +(process.env.QUEUE_COUNT || 100),

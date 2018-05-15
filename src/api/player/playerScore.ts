@@ -1,11 +1,11 @@
-import { RankProfile } from 'strat-ego-common';
+import { PlayerProfile } from 'strat-ego-common';
 
 import { logger } from '../../logger';
 import { getPlayerRankings } from './playerQueries';
 
 // TODO: consider using better data structure and better sorting
 export class ScoreTracker {
-  public playerScores: { [id: number]: RankProfile } = {};
+  public playerScores: { [id: number]: PlayerProfile } = {};
   public rankings = [];
   public lastUpdate = null;
 
@@ -15,7 +15,7 @@ export class ScoreTracker {
 
   public async readScores() {
     try {
-      const players: RankProfile[] = await getPlayerRankings();
+      const players: PlayerProfile[] = await getPlayerRankings();
       players.forEach((player) => {
         player.score = +(player.score || 0);
         this.playerScores[player.id] = player;
@@ -45,7 +45,7 @@ export class ScoreTracker {
     this.lastUpdate = Date.now();
   }
 
-  public addPlayer(player: RankProfile) {
+  public addPlayer(player: PlayerProfile) {
     this.playerScores[player.id] = player;
     this.rankings.push(player.id);
     this.sortRankings();

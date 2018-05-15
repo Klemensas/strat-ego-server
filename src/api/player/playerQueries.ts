@@ -6,6 +6,7 @@ import { Player } from './player';
 import { Town } from '../town/town';
 import { Coords } from 'strat-ego-common';
 import { UserWorld } from '../user/userWorld';
+import { getFullAlliance } from '../alliance/allianceQueries';
 
 export function getPlayer(where: Partial<Player>, connection: Transaction | Knex = knexDb.world) {
   return Player
@@ -19,10 +20,10 @@ export function getPlayerByName(name: string, connection: Transaction | Knex = k
     .findOne('name', 'ilike', name);
 }
 
-export function getFullPlayer(where: Partial<Player>, connection: Transaction | Knex = knexDb.world) {
-  return getPlayer(where, connection)
+// TODO: this is too complex, consider changing architecture to break this up
+export async function getFullPlayer(where: Partial<Player>, connection: Transaction | Knex = knexDb.world) {
+  const player = await getPlayer(where, connection)
     .eager(`[
-      alliance(fullAlliance),
       allianceRole,
       originReports.[originTown, targetTown],
       targetReports.[originTown, targetTown],
@@ -32,7 +33,11 @@ export function getFullPlayer(where: Partial<Player>, connection: Transaction | 
     .modifyEager(`[
       originReports.[originTown,targetTown],
       targetReports.[originTown, targetTown]
-    ]`, (builder) => builder.select('id', 'name', 'location'));
+    ]`, (builder) => builder.select('id', 'name', 'location'))
+  if (player.allianceId !== null) {
+    player.alliance = await getFullAlliance({ id: player.allianceId }, connection);
+  }
+  return player;
 }
 
 export function getPlayerWithInvites(where: Partial<Player>, connection: Transaction | Knex = knexDb.world) {
@@ -51,6 +56,12 @@ export function getPlayerRankings(connection: Transaction | Knex = knexDb.world)
         .as('score'),
     )
     .orderBy('score', 'desc');
+}
+
+export function getPlayerProfile(where: Partial<Player>, connection: Transaction | Knex = knexDb.world) {
+  return getPlayer(where, connection)
+    .eager('[alliance(selectProfile), towns(selectTownProfile)]')
+    .select(['id', 'name', 'description', 'avatarUrl', 'createdAt']);
 }
 
 export async function createPlayer(
@@ -88,4 +99,10 @@ export function createPlayerTown(player: Player, location: Coords, connection: T
       location,
       name: `${player.name}s Town`,
     });
+}
+
+export async function updatePlayer(player: Player, payload: Partial<Player>, connection: Transaction | Knex = knexDb.world) {
+  return player
+    .$query(connection)
+    .patch(payload);
 }

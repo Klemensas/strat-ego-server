@@ -1,15 +1,16 @@
 import { transaction, Transaction, lit, raw } from 'objection';
-import { Coords } from 'strat-ego-common';
+import { Coords, ProfileUpdate } from 'strat-ego-common';
 
 import { knexDb } from '../../sqldb';
 import { Player } from './player';
 import { Town } from '../town/town';
 import { UserWorld } from '../user/userWorld';
 import { TownSocket } from '../town/townSocket';
-import { UserSocket } from '../../config/socket';
+import { UserSocket, ErrorMessage } from '../../config/socket';
 import { mapManager } from '../map/mapManager';
 import { scoreTracker } from './playerScore';
-import { getFullPlayer, createPlayer, createPlayerTown } from './playerQueries';
+import { getFullPlayer, createPlayer, createPlayerTown, getPlayerProfile, getPlayer, updatePlayer } from './playerQueries';
+import { isCloudinaryImage, cloudinaryDelete } from '../../cloudinary';
 
 export class PlayerSocket {
   static async onConnect(socket: UserSocket) {
@@ -29,9 +30,12 @@ export class PlayerSocket {
     socket.emit('player', player);
 
     socket.on('player:restart', () => this.restart(socket));
+    socket.on('player:loadProfile', (id: number) => this.loadProfile(socket, id));
+    socket.on('player:updateProfile', (payload: ProfileUpdate) => this.updateProfile(socket, payload));
+    socket.on('player:removeAvatar', () => this.removeAvatar(socket));
   }
 
-  private static async getOrCreatePlayer(socket) {
+  static async getOrCreatePlayer(socket) {
     const player = await getFullPlayer({ userId: socket.userData.userId });
     if (player) { return player; }
 
@@ -55,7 +59,7 @@ export class PlayerSocket {
     }
   }
 
-  private static async createPlayer(name: string, userId: number, worldName: string) {
+  static async createPlayer(name: string, userId: number, worldName: string) {
     let trxWorld: Transaction;
     let trxMain: Transaction;
     try {
@@ -76,13 +80,13 @@ export class PlayerSocket {
     }
   }
 
-  // private static async processPlayerTowns(player: Player) {
+  // static async processPlayerTowns(player: Player) {
   //   const playerTowns = await Promise.all(player.towns.map((town) => Town.processTownQueues(town)));
   //   player.towns = playerTowns.map(({ town, processed }) => town);
   //   return player;
   // }
 
-  private static async restart(socket: UserSocket) {
+  static async restart(socket: UserSocket) {
     socket.log(`player ${socket.userData.username} is restarting`);
     if (socket.userData.townIds.length) {
       socket.log('Can\'t restart with active towns');
@@ -113,8 +117,65 @@ export class PlayerSocket {
       await trxMain.rollback();
       await trxWorld.rollback();
 
-      socket.log('Error while restarting');
-      throw err;
+      socket.handleError(err, 'rest', 'player:restartFail');
+    }
+  }
+
+  static async loadProfile(socket: UserSocket, id: number) {
+    try {
+      const player = await getPlayerProfile({ id });
+      if (!player) { throw new ErrorMessage('Wrong player'); }
+
+      socket.emit('player:loadProfileSuccess', player);
+    } catch (err) {
+      socket.handleError(err, 'loadProfile', 'player:loadProfileFail');
+    }
+  }
+
+  static async updateProfile(socket: UserSocket, payload: ProfileUpdate) {
+    const trx = await transaction.start(knexDb.world);
+    try {
+      const player = await getPlayerProfile({ id: socket.userData.playerId }, trx);
+
+      let avatarToDelete;
+      const updatePayload: ProfileUpdate = {};
+      if (!player || payload.avatarUrl) {
+        if (!isCloudinaryImage(payload.avatarUrl)) { throw new ErrorMessage('Invalid avatar'); }
+
+        updatePayload.avatarUrl = payload.avatarUrl;
+        if (player.avatarUrl) { avatarToDelete = player.avatarUrl; }
+      }
+      if (payload.description) { updatePayload.description = payload.description; }
+
+      await updatePlayer(player, updatePayload, trx);
+
+      if (avatarToDelete) {
+        await cloudinaryDelete(avatarToDelete);
+      }
+      await trx.commit();
+
+      socket.emit('player:updateProfileSuccess', updatePayload);
+    } catch (err) {
+      await trx.rollback();
+      socket.handleError(err, 'updateProfile', 'player:updateProfileFail');
+    }
+  }
+
+  static async removeAvatar(socket: UserSocket) {
+    const trx = await transaction.start(knexDb.world);
+    try {
+      const player = await getPlayerProfile({ id: socket.userData.playerId }, trx);
+      if (!player || !player.avatarUrl) { throw new ErrorMessage('No avatar present'); }
+
+      await cloudinaryDelete(player.avatarUrl);
+      await updatePlayer(player, { avatarUrl: null }, trx);
+
+      await trx.commit();
+
+      socket.emit('player:removeAvatarSuccess', { avatarUrl: null });
+    } catch (err) {
+      await trx.rollback();
+      socket.handleError(err, 'removeAvatar', 'player:removeAvatarFail');
     }
   }
 }

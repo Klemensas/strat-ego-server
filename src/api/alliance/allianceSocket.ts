@@ -11,6 +11,7 @@ import {
   diplomacyTypeName,
   MessagePayload,
   RoleUpdatePayload,
+  ProfileUpdate,
 } from 'strat-ego-common';
 
 import { knexDb } from '../../sqldb';
@@ -25,6 +26,7 @@ import { AllianceDiplomacy } from './allianceDiplomacy';
 import { AllianceMessage } from './allianceMessage';
 import * as allianceQueries from './allianceQueries';
 import { getPlayer, getPlayerWithInvites, getPlayerByName } from '../player/playerQueries';
+import { cloudinaryDelete, isCloudinaryImage } from '../../cloudinary';
 
 // TODO: rework events
 // TODO: better permissions, cnsider moving permissions to database
@@ -47,6 +49,10 @@ export class AllianceSocket {
     socket.on('alliance:removeMember', (playerId: number) => this.removeMember(socket, playerId));
     socket.on('alliance:leave', () => this.leaveAlliance(socket));
     socket.on('alliance:destroy', () => this.destroyAlliance(socket));
+
+    socket.on('alliance:loadProfile', (id: number) => this.loadProfile(socket, id));
+    socket.on('alliance:updateProfile', (payload: ProfileUpdate) => this.updateProfile(socket, payload));
+    socket.on('alliance:removeAvatar', () => this.removeAvatar(socket));
 
     socket.on('alliance:declareWar', (payload: WarDeclarationPayload) => this.startWar(socket, payload));
     socket.on('alliance:proposeAlliance', (payload: string) => this.proposeDiplo(socket, payload, DiplomacyType.alliance));
@@ -426,6 +432,90 @@ export class AllianceSocket {
     } catch (err) {
       await trx.rollback();
       socket.handleError(err, 'destroyAlliance', 'alliance:destroyFail');
+    }
+  }
+
+  static async loadProfile(socket: UserSocket, id: number) {
+    try {
+      const alliance = await allianceQueries.getAllianceProfile({ id });
+      if (!alliance) { throw new ErrorMessage('Wrong alliance'); }
+
+      socket.emit('alliance:loadProfileSuccess', alliance);
+    } catch (err) {
+      socket.handleError(err, 'loadProfile', 'alliance:loadProfileFail');
+    }
+  }
+
+  static async updateProfile(socket: UserSocket, payload: ProfileUpdate) {
+    const trx = await transaction.start(knexDb.world);
+    try {
+      if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.editProfile) { throw new ErrorMessage('Not permitted to do that'); }
+
+      const alliance = await allianceQueries.getAlliance({ id: socket.userData.allianceId }, trx);
+
+      let avatarToDelete;
+      const updatePayload: ProfileUpdate = {};
+      if (!alliance) { throw new ErrorMessage('Wrong alliance'); }
+      if (payload.avatarUrl) {
+        if (!isCloudinaryImage(payload.avatarUrl)) { throw new ErrorMessage('Invalid avatar'); }
+
+        updatePayload.avatarUrl = payload.avatarUrl;
+        if (alliance.avatarUrl) { avatarToDelete = alliance.avatarUrl; }
+      }
+      if (payload.description) { updatePayload.description = payload.description; }
+
+      await allianceQueries.updateAlliance(alliance, updatePayload, trx);
+      const event = await allianceQueries.createAllianceEvent({
+        type: EventType.profile,
+        status: EventStatus.update,
+        originAllianceId: alliance.id,
+        originPlayerId: socket.userData.playerId,
+      }, trx);
+      event.originAlliance = { id: alliance.id, name: alliance.name };
+      event.originPlayer = { id: socket.userData.playerId, name: socket.userData.playerName };
+
+      if (avatarToDelete) {
+        await cloudinaryDelete(avatarToDelete);
+      }
+      await trx.commit();
+
+      const eventPayload = { event, data: payload };
+      socket.emit('alliance:updateProfileSuccess', eventPayload);
+      socket.to(`alliance.${socket.userData.allianceId}`).emit('alliance:event', eventPayload);
+    } catch (err) {
+      await trx.rollback();
+      socket.handleError(err, 'updateProfile', 'alliance:updateProfileFail');
+    }
+  }
+
+  static async removeAvatar(socket: UserSocket) {
+    const trx = await transaction.start(knexDb.world);
+    try {
+      if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.editProfile) { throw new ErrorMessage('Not permitted to do that'); }
+
+      const alliance = await allianceQueries.getAlliance({ id: socket.userData.allianceId }, trx);
+      if (!alliance) { throw new ErrorMessage('Wrong alliance'); }
+      if (!alliance.avatarUrl) { throw new ErrorMessage('No avatar present'); }
+
+      await cloudinaryDelete(alliance.avatarUrl);
+      await allianceQueries.updateAlliance(alliance, { avatarUrl: null }, trx);
+      const event = await allianceQueries.createAllianceEvent({
+        type: EventType.profile,
+        status: EventStatus.update,
+        originAllianceId: alliance.id,
+        originPlayerId: socket.userData.playerId,
+      }, trx);
+      event.originAlliance = { id: alliance.id, name: alliance.name };
+      event.originPlayer = { id: socket.userData.playerId, name: socket.userData.playerName };
+
+      await trx.commit();
+
+      const eventPayload = { event, data: { avatarUrl: null } };
+      socket.emit('alliance:removeAvatarSuccess', eventPayload);
+      socket.to(`alliance.${socket.userData.allianceId}`).emit('alliance:event', eventPayload);
+    } catch (err) {
+      await trx.rollback();
+      socket.handleError(err, 'removeAvatar', 'alliance:removeAvatarFail');
     }
   }
 
