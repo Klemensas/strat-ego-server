@@ -455,7 +455,8 @@ export class AllianceSocket {
 
       let avatarToDelete;
       const updatePayload: ProfileUpdate = {};
-      if (!alliance || payload.avatarUrl) {
+      if (!alliance) { throw new ErrorMessage('Wrong alliance'); }
+      if (payload.avatarUrl) {
         if (!isCloudinaryImage(payload.avatarUrl)) { throw new ErrorMessage('Invalid avatar'); }
 
         updatePayload.avatarUrl = payload.avatarUrl;
@@ -493,7 +494,8 @@ export class AllianceSocket {
       if (!socket.userData.alliancePermissions || !socket.userData.alliancePermissions.editProfile) { throw new ErrorMessage('Not permitted to do that'); }
 
       const alliance = await allianceQueries.getAlliance({ id: socket.userData.allianceId }, trx);
-      if (!alliance || !alliance.avatarUrl) { throw new ErrorMessage('No avatar present'); }
+      if (!alliance) { throw new ErrorMessage('Wrong alliance'); }
+      if (!alliance.avatarUrl) { throw new ErrorMessage('No avatar present'); }
 
       await cloudinaryDelete(alliance.avatarUrl);
       await allianceQueries.updateAlliance(alliance, { avatarUrl: null }, trx);

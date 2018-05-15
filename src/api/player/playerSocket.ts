@@ -35,7 +35,7 @@ export class PlayerSocket {
     socket.on('player:removeAvatar', () => this.removeAvatar(socket));
   }
 
-  private static async getOrCreatePlayer(socket) {
+  static async getOrCreatePlayer(socket) {
     const player = await getFullPlayer({ userId: socket.userData.userId });
     if (player) { return player; }
 
@@ -59,7 +59,7 @@ export class PlayerSocket {
     }
   }
 
-  private static async createPlayer(name: string, userId: number, worldName: string) {
+  static async createPlayer(name: string, userId: number, worldName: string) {
     let trxWorld: Transaction;
     let trxMain: Transaction;
     try {
@@ -80,13 +80,13 @@ export class PlayerSocket {
     }
   }
 
-  // private static async processPlayerTowns(player: Player) {
+  // static async processPlayerTowns(player: Player) {
   //   const playerTowns = await Promise.all(player.towns.map((town) => Town.processTownQueues(town)));
   //   player.towns = playerTowns.map(({ town, processed }) => town);
   //   return player;
   // }
 
-  private static async restart(socket: UserSocket) {
+  static async restart(socket: UserSocket) {
     socket.log(`player ${socket.userData.username} is restarting`);
     if (socket.userData.townIds.length) {
       socket.log('Can\'t restart with active towns');
@@ -172,7 +172,7 @@ export class PlayerSocket {
 
       await trx.commit();
 
-      socket.emit('alliance:removeAvatarSuccess', { avatarUrl: null });
+      socket.emit('player:removeAvatarSuccess', { avatarUrl: null });
     } catch (err) {
       await trx.rollback();
       socket.handleError(err, 'removeAvatar', 'player:removeAvatarFail');
