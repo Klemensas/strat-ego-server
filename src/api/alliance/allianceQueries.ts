@@ -73,6 +73,12 @@ export function getAllianceWithMembersRoles(where: Partial<Alliance>, connection
     .eager('[members, roles]');
 }
 
+export function getAllianceProfile(where: Partial<Alliance>, connection: Transaction | Knex = knexDb.world) {
+  return getAllianceWithMembers(where, connection)
+    .modifyEager('members', (builder) => builder.select('id'))
+    .select(['id', 'name', 'description', 'avatarUrl', 'createdAt']);
+}
+
 export async function updateAlliance(alliance: Alliance, payload: Partial<Alliance>, connection: Transaction | Knex = knexDb.world) {
   return alliance
     .$query(connection)

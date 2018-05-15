@@ -58,6 +58,12 @@ export function getPlayerRankings(connection: Transaction | Knex = knexDb.world)
     .orderBy('score', 'desc');
 }
 
+export function getPlayerProfile(where: Partial<Player>, connection: Transaction | Knex = knexDb.world) {
+  return getPlayer(where, connection)
+    .eager('[alliance(selectProfile), towns(selectTownProfile)]')
+    .select(['id', 'name', 'description', 'avatarUrl', 'createdAt']);
+}
+
 export async function createPlayer(
   name: string,
   location: Coords,
@@ -93,4 +99,10 @@ export function createPlayerTown(player: Player, location: Coords, connection: T
       location,
       name: `${player.name}s Town`,
     });
+}
+
+export async function updatePlayer(player: Player, payload: Partial<Player>, connection: Transaction | Knex = knexDb.world) {
+  return player
+    .$query(connection)
+    .patch(payload);
 }
