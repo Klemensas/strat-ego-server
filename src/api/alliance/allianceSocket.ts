@@ -49,6 +49,8 @@ export class AllianceSocket {
     socket.on('alliance:removeMember', (playerId: number) => this.removeMember(socket, playerId));
     socket.on('alliance:leave', () => this.leaveAlliance(socket));
     socket.on('alliance:destroy', () => this.destroyAlliance(socket));
+
+    socket.on('alliance:loadProfile', (id: number) => this.loadProfile(socket, id));
     socket.on('alliance:updateProfile', (payload: ProfileUpdate) => this.updateProfile(socket, payload));
     socket.on('alliance:removeAvatar', () => this.removeAvatar(socket));
 
@@ -430,6 +432,17 @@ export class AllianceSocket {
     } catch (err) {
       await trx.rollback();
       socket.handleError(err, 'destroyAlliance', 'alliance:destroyFail');
+    }
+  }
+
+  static async loadProfile(socket: UserSocket, id: number) {
+    try {
+      const alliance = await allianceQueries.getAllianceProfile({ id });
+      if (!alliance) { throw new ErrorMessage('Wrong alliance'); }
+
+      socket.emit('alliance:loadProfileSuccess', alliance);
+    } catch (err) {
+      socket.handleError(err, 'loadProfile', 'alliance:loadProfileFail');
     }
   }
 
