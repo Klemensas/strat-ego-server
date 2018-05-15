@@ -28,7 +28,12 @@ describe('onConnect', () => {
     'alliance:removeRole',
     'alliance:removeMember',
     'alliance:leave',
+
     'alliance:destroy',
+    'alliance:loadProfile',
+    'alliance:updateProfile',
+    'alliance:removeAvatar',
+
     'alliance:declareWar',
     'alliance:proposeAlliance',
     'alliance:proposeNap',
