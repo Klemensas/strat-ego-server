@@ -1,4 +1,4 @@
-import { Transaction, QueryContext } from 'objection';
+import { Transaction, QueryContext, QueryBuilder } from 'objection';
 import * as Knex from 'knex';
 import { MovementType, MovementPayload, Coords, Dict } from 'strat-ego-common';
 
@@ -12,15 +12,16 @@ import { Player } from '../player/player';
 import { Alliance } from '../alliance/alliance';
 import { Report } from './report';
 
-export function getTown(where: Partial<Town>, connection: Transaction | Knex = knexDb.world) {
+export function getTowns(where: Partial<Town>, connection: Transaction | Knex = knexDb.world) {
   return Town
     .query(connection)
-    .findOne(where)
-    .eager(Town.townRelationsFiltered, Town.townRelationFilters);
+    .where(where);
 }
 
 export function getFullTown(where: Partial<Town>, connection: Transaction | Knex = knexDb.world) {
-  return getTown(where, connection)
+  return getTowns(where, connection)
+    .limit(1)
+    .first()
     .eager(Town.townRelationsFiltered, Town.townRelationFilters);
 }
 
@@ -59,6 +60,13 @@ export function updateTown(town: Town, payload: Partial<Town>, context: object, 
   return town
     .$query(connection)
     .patch(payload)
+    .context(context);
+}
+
+export function upsertTowns(payload: Array<Partial<Town>>, context: object, connection: Transaction | Knex = knexDb.world) {
+  return Town
+    .query(connection)
+    .upsertGraph(payload, { noDelete: true })
     .context(context);
 }
 
