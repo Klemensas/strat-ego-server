@@ -35,7 +35,7 @@ app.use(morgan('dev'));
 app.use(cors());
 routing(app);
 
-worldData.readWorld(worldName)
+worldData.initialize(worldName)
   .then(() => scoreTracker.readScores())
   .then(() => townQueue.loadQueues())
   .then(() => mapManager.initialize())

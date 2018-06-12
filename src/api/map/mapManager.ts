@@ -192,7 +192,7 @@ export class MapManager {
   }
 
   public async expandRing(trx?: Transaction | Knex) {
-    await this.worldData.increaseRing(this.world, trx);
+    await this.worldData.increaseRing(trx);
     this.lastExpansion = +this.worldData.world.lastExpansion;
   }
 

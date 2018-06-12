@@ -642,7 +642,7 @@ export const seed = (
   })))
   .then(() => Building.query(knex).del())
   .then(() => Building.query(knex).insert(generateBuildings(speed)))
-  .then(() => worldData.readWorld(world.name))
+  .then(() => worldData.initialize(world.name))
   .then(() => Town.query(knex).del())
   .then(async () => {
     const coords = getCoordsInRange(townArea, townDistance, mapSize);

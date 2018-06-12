@@ -16,7 +16,7 @@ export class WorldData {
   public buildings: Building[] = [];
   public buildingMap: Dict<Building> = {};
 
-  get fullWorld() {
+  public get fullWorld() {
     return {
       world: this.world,
       units: this.units,
@@ -26,7 +26,7 @@ export class WorldData {
     };
   }
 
-  public async readWorld(name: string) {
+  public async initialize(name: string) {
     try {
       const [world, buildings, units] = await Promise.all([
         getWorld(name),
@@ -49,7 +49,7 @@ export class WorldData {
 
   // Note: this gets called on a time basis and running out of locations, as a result of this
   // updating lastExpansion it will considerably hasten expansion rate on faster growth
-  public async increaseRing(name: string, trx: Transaction | Knex = knexDb.main) {
+  public async increaseRing(trx: Transaction | Knex = knexDb.main) {
     try {
       await updateWorld(
         this.world,
@@ -65,6 +65,10 @@ export class WorldData {
       logger.error(err, 'Error while updating world ring size.');
       throw err;
     }
+  }
+
+  public async updateGrowth(trx: Transaction | Knex = knexDb.main) {
+    return updateWorld(this.world, { townLastGrowth: +this.world.townLastGrowth + this.world.townGrowthInterval }, trx);
   }
 }
 
