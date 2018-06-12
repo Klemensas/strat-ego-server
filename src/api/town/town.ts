@@ -14,7 +14,7 @@ import { mapManager } from '../map/mapManager';
 import { MovementResolver } from './movementResolver';
 import { scoreTracker } from '../player/playerScore';
 import { TownSupport } from './townSupport';
-import { getTown } from './townQueries';
+import { getFullTown } from './townQueries';
 
 export interface ProcessingResult {
   town: Town;
@@ -461,7 +461,7 @@ export class Town extends BaseModel {
   static async processTownQueues(item: number | Town, time?: number, processed = []): Promise<ProcessingResult> {
     const queueTime = time || Date.now();
     try {
-      const town = typeof item === 'number' ? await getTown({ id: item }, knexDb.world) : item;
+      const town = typeof item === 'number' ? await getFullTown({ id: item }, knexDb.world) : item;
 
       const queues = [
         ...town.buildingQueues,

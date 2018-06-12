@@ -17,6 +17,7 @@ import { mapManager } from './api/map/mapManager';
 import { logger } from './logger';
 import { scoreTracker } from './api/player/playerScore';
 import { townQueue } from './api/townQueue';
+import { townGrowth } from './api/town/townGrowth';
 
 const app = express();
 const env = app.get('env');
@@ -35,10 +36,11 @@ app.use(morgan('dev'));
 app.use(cors());
 routing(app);
 
-worldData.readWorld(worldName)
+worldData.initialize(worldName)
   .then(() => scoreTracker.readScores())
   .then(() => townQueue.loadQueues())
   .then(() => mapManager.initialize())
+  .then(() => townGrowth.checkGrowth())
   .then(() => initializeSocket(io))
   .then(() => logger.info('server ready!'))
   .catch((err) => {

@@ -265,6 +265,7 @@ export class TownSocket {
       const movement = query.movement;
       const updatedTown = query.town;
 
+      await trx.commit();
       townQueue.addToQueue(movement);
       return { town: updatedTown, movement };
     } catch (err) {
