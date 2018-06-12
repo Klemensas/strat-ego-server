@@ -1,7 +1,7 @@
 exports.up = function(knex, Promise) {
   return knex.schema.table('World', table => {
-    table.integer('townGrowthInterval').unsigned().notNullable();
-    table.bigInteger('townLastGrowth').unsigned().notNullable();
+    table.integer('townGrowthInterval').unsigned().notNullable().defaultTo(1000000);
+    table.bigInteger('townLastGrowth').unsigned().notNullable().defaultTo(Date.now());
   });
 };
 
