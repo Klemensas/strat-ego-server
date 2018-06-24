@@ -4,8 +4,6 @@ import * as worldQueries from '../world/worldQueries';
 import { Unit } from '../unit/unit';
 import { Building } from '../building/building';
 import { knexDb } from '../../sqldb';
-import { MapManager } from '../map/mapManager';
-// import * as map from '../map/mapManager';
 
 const world = { name: 'test' } as World;
 const units = [{ id: 1, name: 'sworder' }] as Unit[];
@@ -108,7 +106,10 @@ describe('increaseRing', () => {
   it('shuld catch and rethrow errors', async () => {
     const error = 'thrown error';
     updateWorldSpy.mockImplementationOnce(() => Promise.reject(error));
-    worldData.world = { currentRing: 1 } as World;
+    worldData.world = {
+      ...worldData.world,
+      currentRing: 1,
+    } as World;
 
     let result;
     try {

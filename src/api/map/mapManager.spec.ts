@@ -196,6 +196,7 @@ describe('map expansion', () => {
   beforeEach(() => {
     increaseSpy = jest.spyOn(worldData, 'increaseRing').mockImplementation(() => {
       worldData.world = {
+        ...worldData.world,
         currentRing: 2,
         lastExpansion: Date.now(),
       } as any;
@@ -243,6 +244,7 @@ describe('map expansion', () => {
     beforeEach(() => {
       mapManager.expansionGrowth = 1;
       worldData.world = {
+        ...worldData.world,
         currentRing: 1,
       } as World;
       scheduleSpy = jest.spyOn(mapManager, 'scheduleExpansion');
