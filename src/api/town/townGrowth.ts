@@ -21,10 +21,10 @@ export class TownGrowth {
 
     try {
       await this.growTowns(nextGrowth);
-      this.checkGrowth();
+      return this.checkGrowth();
     } catch (err) {
       logger.error(err, 'Errored while attempting to grow abandoned towns, retrying');
-      this.checkGrowth(time);
+      return this.checkGrowth(time);
     }
   }
 

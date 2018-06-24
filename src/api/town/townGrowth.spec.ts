@@ -55,7 +55,6 @@ beforeEach(() => {
   } as World;
   worldData.buildings = buildings;
   worldData.buildingMap = buildingMap;
-  // townGrowth = new TownGrowth(worldData);
   townGrowth = worldData.townGrowth;
 });
 afterEach(() => {
@@ -68,10 +67,17 @@ describe('checkGrowth', () => {
   });
 
   it('should catch errors and recall with last timestamp', async () => {
-    const growTownsSpy = jest.spyOn(townGrowth, 'growTowns').mockImplementationOnce(() => Promise.reject(null));
+    let shouldReject = true;
+    jest.spyOn(townGrowth, 'growTowns').mockImplementation(() => {
+      if (shouldReject) {
+        shouldReject = false;
+        return Promise.reject();
+      }
+      Promise.resolve();
+    });
 
     await townGrowth.checkGrowth(Date.now() + 1);
-    expect(townGrowth.checkGrowth).toHaveBeenCalledTimes(2);
+    expect(townGrowth.checkGrowth).toHaveBeenCalledTimes(3);
   });
 
   it('should call growTown and schedule a new update', async () => {
