@@ -5,8 +5,8 @@ import { UserSocket, ErrorMessage, io } from '../../config/socket';
 import { AllianceSocket } from './allianceSocket';
 import { PlayerRolePayload, RoleUpdatePayload, WarDeclarationPayload, DiplomacyType, MessagePayload, AlliancePermissions } from 'strat-ego-common';
 import * as allianceQueries from './allianceQueries';
-import { mapManager } from '../map/mapManager';
 import * as cloudinary from '../../cloudinary';
+import { worldData } from '../world/worldData';
 
 const transactionRollbackSpy = jest.fn();
 const transactionCommitSpy = jest.fn();
@@ -388,7 +388,7 @@ describe('leavAlliance', () => {
         masterRoleId: 13,
       }));
       jest.spyOn(AllianceSocket, 'leaveAllianceRoom').mockImplementationOnce(() => null);
-      jest.spyOn(mapManager, 'setTownAlliance').mockImplementationOnce(() => null);
+      jest.spyOn(worldData.mapManager, 'setTownAlliance').mockImplementationOnce(() => null);
 
       leaveAllianceSpy.mockImplementationOnce(() => Promise.resolve({}));
     });
@@ -397,7 +397,7 @@ describe('leavAlliance', () => {
       await AllianceSocket.leaveAlliance(socket);
       expect(leaveAllianceSpy).toHaveBeenCalledWith(playerId, allianceId, transactionMock);
       expect(AllianceSocket.leaveAllianceRoom).toHaveBeenCalled();
-      expect(mapManager.setTownAlliance).toHaveBeenCalled();
+      expect(worldData.mapManager.setTownAlliance).toHaveBeenCalled();
     });
 
     it('should emit to socket', async () => {

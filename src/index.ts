@@ -13,11 +13,9 @@ import * as config from './config/environment';
 import routing from './routes';
 import { initializeSocket, io, setupIo } from './config/socket';
 import { worldData } from './api/world/worldData';
-import { mapManager } from './api/map/mapManager';
 import { logger } from './logger';
 import { scoreTracker } from './api/player/playerScore';
 import { townQueue } from './api/townQueue';
-import { townGrowth } from './api/town/townGrowth';
 
 const app = express();
 const env = app.get('env');
@@ -39,8 +37,6 @@ routing(app);
 worldData.initialize(worldName)
   .then(() => scoreTracker.readScores())
   .then(() => townQueue.loadQueues())
-  .then(() => mapManager.initialize())
-  .then(() => townGrowth.checkGrowth())
   .then(() => initializeSocket(io))
   .then(() => logger.info('server ready!'))
   .catch((err) => {

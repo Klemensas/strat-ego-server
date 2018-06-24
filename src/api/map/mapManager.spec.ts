@@ -1,11 +1,12 @@
 import { MapTown, Coords, Dict } from 'strat-ego-common';
 import * as lolex from 'lolex';
 
+import { WorldData } from '../world/worldData';
 import { MapManager } from './mapManager';
-import { worldData } from '../world/worldData';
 import { Town } from '../town/town';
 import { World } from '../world/world';
 import * as townQueries from '../town/townQueries';
+import { TownGrowth } from '../town/townGrowth';
 
 let mapManager: MapManager;
 const plainTowns = [{
@@ -29,9 +30,11 @@ const plainTowns = [{
 }] as Town[];
 
 let clock: lolex.Clock;
+let worldData: WorldData;
 beforeEach(() => {
   clock = lolex.install();
-  mapManager = new MapManager(worldData);
+  worldData = new WorldData(MapManager, TownGrowth);
+  mapManager = worldData.mapManager;
 });
 afterEach(() => {
   clock.uninstall();
@@ -266,11 +269,12 @@ describe('map expansion', () => {
       await mapManager.scheduleExpansion();
       expect(mapManager.expandRing).not.toHaveBeenCalled();
       expect(mapManager.scheduleExpansion).toHaveBeenCalledTimes(1);
-      expect(mapManager.availableCoords).toEqual(coords);
 
       clock.tick(1);
+      await mapManager.isExpanded;
       expect(mapManager.expandRing).toHaveBeenCalledTimes(1);
-      expect(mapManager.scheduleExpansion).toHaveBeenCalledTimes(2);
+      expect(mapManager.scheduleExpansion).toHaveBeenCalledTimes(3);
+      expect(mapManager.availableCoords).toEqual(coords);
     });
 
   //   it('should update isExpanded when scheduling', async () => {

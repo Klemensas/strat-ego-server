@@ -4,6 +4,8 @@ import * as worldQueries from '../world/worldQueries';
 import { Unit } from '../unit/unit';
 import { Building } from '../building/building';
 import { knexDb } from '../../sqldb';
+import { MapManager } from '../map/mapManager';
+// import * as map from '../map/mapManager';
 
 const world = { name: 'test' } as World;
 const units = [{ id: 1, name: 'sworder' }] as Unit[];
@@ -11,8 +13,15 @@ const unitMap = units.reduce((result, unit) => ({ ...result, [unit.name]: unit }
 const buildings = [{ id: 2, name: 'house' }] as Building[];
 const buildingMap = buildings.reduce((result, building) => ({ ...result, [building.name]: building }), {});
 let worldData: WorldData;
+
+class TestManager {
+  constructor() {}
+  initialize() { return Promise.resolve(); }
+  checkGrowth() { return jest.fn().mockImplementation(() => Promise.resolve()); }
+}
+
 beforeEach(() => {
-  worldData = new WorldData();
+  worldData = new WorldData(TestManager as any, TestManager as any);
 });
 
 describe('fullWorld', () => {

@@ -1,5 +1,5 @@
 import * as Knex from 'knex';
-import { transaction, QueryBuilder } from 'objection';
+import { transaction } from 'objection';
 import { Resources, TownBuildings, Coords, Requirements, QueueType, MovementType, TownUnit, Dict } from 'strat-ego-common';
 
 import { BaseModel } from '../../sqldb/baseModel';
@@ -10,7 +10,6 @@ import { BuildingQueue } from '../building/buildingQueue';
 import { UnitQueue } from '../unit/unitQueue';
 import { logger } from '../../logger';
 import { Movement } from './movement';
-import { mapManager } from '../map/mapManager';
 import { MovementResolver } from './movementResolver';
 import { scoreTracker } from '../player/playerScore';
 import { TownSupport } from './townSupport';
@@ -209,7 +208,7 @@ export class Town extends BaseModel {
       await trx.commit();
 
       scoreTracker.updateScore(this.score - originalScore, this.playerId);
-      mapManager.setTownScore(this.score, this.location);
+      worldData.mapManager.setTownScore(this.score, this.location);
       this.buildingQueues = this.buildingQueues.filter(({ id }) => id !== item.id);
       return this;
     } catch (err) {

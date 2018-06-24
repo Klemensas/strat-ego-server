@@ -2,13 +2,11 @@ import { transaction } from 'objection';
 import { EventEmitter } from 'events';
 
 import { TownSocket } from './townSocket';
-import { TownSupport } from './townSupport';
 import { Town } from './town';
 import { World } from '../world/world';
 import { worldData } from '../world/worldData';
 import { UserSocket, ErrorMessage } from '../../config/socket';
 import { townQueue } from '../townQueue';
-import { Movement } from './movement';
 import * as townQueries from './townQueries';
 import { NamePayload, BuildPayload, RecruitPayload, TroopMovementPayload, MovementType } from 'strat-ego-common';
 

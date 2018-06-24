@@ -1,15 +1,14 @@
 import * as lolex from 'lolex';
 import { transaction } from 'objection';
 
-import { knexDb } from '../../sqldb';
 import { WorldData, worldData as worldDataInstance } from '../world/worldData';
 import { Town } from '../town/town';
 import { World } from '../world/world';
 import * as townQueries from '../town/townQueries';
-import * as worldQueries from '../world/worldQueries';
 import { Unit } from '../unit/unit';
 import { Building } from '../building/building';
 import { TownGrowth } from './townGrowth';
+import { MapManager } from '../map/mapManager';
 
 const world = {
   name: 'test',
@@ -47,7 +46,7 @@ let clock: lolex.Clock;
 
 beforeEach(() => {
   clock = lolex.install();
-  worldData = new WorldData();
+  worldData = new WorldData(MapManager as any, TownGrowth as any);
   worldData.world = {
     ...world,
     townLastGrowth: Date.now(),

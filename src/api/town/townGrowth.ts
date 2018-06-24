@@ -1,13 +1,11 @@
 import { transaction } from 'objection';
-import { TownBuildings } from 'strat-ego-common';
+import { TownBuildings, Coords } from 'strat-ego-common';
 import * as seedrandom from 'seedrandom';
 
-import { World } from '../world/world';
 import { knexDb } from '../../sqldb';
 import { getTowns, upsertTowns } from './townQueries';
-import { worldData as worldDataInstance, WorldData } from '../world/worldData';
+import { WorldData } from '../world/worldData';
 import { Town } from './town';
-import { updateWorld } from '../world/worldQueries';
 import { logger } from '../../logger';
 
 export class TownGrowth {
@@ -39,11 +37,9 @@ export class TownGrowth {
         const buildings = this.growRandomBuilding(town, growthTime);
         if (buildings) {
           result.push({
-            town: {
-              ...town,
-              resources: town.getResources(growthTime),
-              loyalty: town.getLoyalty(growthTime),
-            },
+            ...town,
+            resources: town.getResources(growthTime),
+            loyalty: town.getLoyalty(growthTime),
             buildings,
             updatedAt: growthTime,
           });
@@ -51,7 +47,9 @@ export class TownGrowth {
         return result;
       }, []);
 
-      const updateResult = await upsertTowns(grownTowns, { resourcesUpdated: true, loyaltyUpdated: true, updateScore: true }, worldTrx);
+      if (grownTowns.length) {
+        const updateResult = await upsertTowns(grownTowns, { resourcesUpdated: true, loyaltyUpdated: true, updateScore: true }, worldTrx);
+      }
       await this.worldData.updateGrowth(mainTrx);
 
       await worldTrx.commit();
@@ -80,6 +78,33 @@ export class TownGrowth {
       },
     };
   }
-}
 
-export const townGrowth = new TownGrowth(worldDataInstance);
+  public async generateRingTowns(coords: Coords[], seedBase: string | number) {
+    const trx = await transaction.start(knexDb.world);
+    try {
+      const [emptyCoords, targetTowns] = coords.reduce((result, coord) => {
+        const isTown = (seedrandom(`${seedBase}.${coord.join(',')}`).quick() < this.worldData.world.barbPercent);
+        if (isTown) {
+          result[1].push({
+            location: coord,
+          });
+        } else {
+          result[0].push(coord);
+        }
+        return result;
+      }, [[], []]);
+
+      const towns = targetTowns && targetTowns.length ? await upsertTowns(targetTowns, {}, trx) : [];
+      await trx.commit();
+      return {
+        towns,
+        coords: emptyCoords,
+      };
+    } catch (err) {
+      logger.error(err, 'Errored while generating towns for ring, will retry');
+      await trx.rollback();
+      coords = await this.worldData.mapManager.getAvailableCoords();
+      return this.generateRingTowns(coords, seedBase);
+    }
+  }
+}
