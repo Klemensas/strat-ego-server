@@ -1,16 +1,13 @@
 import { transaction, Transaction, lit, raw } from 'objection';
-import { Coords, ProfileUpdate } from 'strat-ego-common';
+import { ProfileUpdate } from 'strat-ego-common';
 
 import { knexDb } from '../../sqldb';
-import { Player } from './player';
-import { Town } from '../town/town';
-import { UserWorld } from '../user/userWorld';
 import { TownSocket } from '../town/townSocket';
 import { UserSocket, ErrorMessage } from '../../config/socket';
-import { mapManager } from '../map/mapManager';
 import { scoreTracker } from './playerScore';
 import { getFullPlayer, createPlayer, createPlayerTown, getPlayerProfile, getPlayer, updatePlayer } from './playerQueries';
 import { isCloudinaryImage, cloudinaryDelete } from '../../cloudinary';
+import { worldData } from '../world/worldData';
 
 export class PlayerSocket {
   static async onConnect(socket: UserSocket) {
@@ -46,7 +43,7 @@ export class PlayerSocket {
         socket.userData.worldName,
       );
       const createdPlayer = await getFullPlayer({ userId: socket.userData.userId });
-      mapManager.addPlayerTowns(createdPlayer);
+      worldData.mapManager.addPlayerTowns(createdPlayer);
       scoreTracker.addPlayer({
         id: createdPlayer.id,
         name: createdPlayer.name,
@@ -66,8 +63,8 @@ export class PlayerSocket {
       trxMain = await transaction.start(knexDb.main);
       trxWorld = await transaction.start(knexDb.world);
 
-      const location = await mapManager.chooseLocation(trxMain);
-      const player: any = await createPlayer(name, location, userId, worldName, trxWorld, trxMain);
+      const location = await worldData.mapManager.chooseLocation(trxMain);
+      const player = await createPlayer(name, location, userId, worldName, trxWorld, trxMain);
       await trxMain.commit();
       await trxWorld.commit();
 
@@ -98,14 +95,14 @@ export class PlayerSocket {
       trxMain = await transaction.start(knexDb.main);
       trxWorld = await transaction.start(knexDb.world);
 
-      const location = await mapManager.chooseLocation(trxMain);
+      const location = await worldData.mapManager.chooseLocation(trxMain);
       const player = await getFullPlayer({ userId: socket.userData.playerId }, trxWorld);
       await createPlayerTown(player, location, trxWorld);
 
       await trxMain.commit();
       await trxWorld.commit();
 
-      mapManager.addPlayerTowns(player);
+      worldData.mapManager.addPlayerTowns(player);
       scoreTracker.setScore(player.towns[0].score, player.id);
       socket.userData = {
         ...socket.userData,

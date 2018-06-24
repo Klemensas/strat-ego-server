@@ -7,7 +7,6 @@ import {
   Profile,
   DiplomacyType,
   DiplomacyStatus,
-  diplomacyTypeToEventStatus,
   diplomacyTypeName,
   MessagePayload,
   RoleUpdatePayload,
@@ -16,17 +15,12 @@ import {
 
 import { knexDb } from '../../sqldb';
 import { io, UserSocket, AuthenticatedSocket, ErrorMessage } from '../../config/socket';
-import { Alliance } from './alliance';
 import { transaction } from 'objection';
-import { setAlliancePermissions, AllianceRole } from './allianceRole';
-import { AllianceEvent } from './allianceEvent';
-import { Player } from '../player/player';
-import { mapManager } from '../map/mapManager';
-import { AllianceDiplomacy } from './allianceDiplomacy';
-import { AllianceMessage } from './allianceMessage';
+import { AllianceRole } from './allianceRole';
 import * as allianceQueries from './allianceQueries';
-import { getPlayer, getPlayerWithInvites, getPlayerByName } from '../player/playerQueries';
+import { getPlayerWithInvites, getPlayerByName } from '../player/playerQueries';
 import { cloudinaryDelete, isCloudinaryImage } from '../../cloudinary';
+import { worldData } from '../world/worldData';
 
 // TODO: rework events
 // TODO: better permissions, cnsider moving permissions to database
@@ -143,7 +137,7 @@ export class AllianceSocket {
       socket.userData.allianceName = alliance.name;
       socket.userData.allianceRoleId = alliance.masterRole.id;
       socket.userData.alliancePermissions = alliance.masterRole.permissions;
-      mapManager.setTownAlliance({ id: alliance.id, name: alliance.name }, socket.userData.townIds);
+      worldData.mapManager.setTownAlliance({ id: alliance.id, name: alliance.name }, socket.userData.townIds);
 
       this.joinAllianceRoom(socket);
       socket.emit('alliance:createSuccess', alliance);
@@ -287,7 +281,7 @@ export class AllianceSocket {
       alliance.invitations = alliance.invitations.filter((id) => id !== player.id);
 
       io.sockets.in(`alliance.${alliance.id}`).emit('alliance:event', { event, data: member });
-      mapManager.setTownAlliance({ id: alliance.id, name: alliance.name }, socket.userData.townIds);
+      worldData.mapManager.setTownAlliance({ id: alliance.id, name: alliance.name }, socket.userData.townIds);
       socket.emit('alliance:acceptInviteSuccess', alliance);
       socket.userData = {
         ...socket.userData,
@@ -833,7 +827,7 @@ export class AllianceSocket {
       };
       socket.userData = this.cleanSocketAlliance(socket.userData);
       this.leaveAllianceRoom(socket, allianceId);
-      mapManager.setTownAlliance(null, socket.userData.townIds);
+      worldData.mapManager.setTownAlliance(null, socket.userData.townIds);
 
       socket.emit('alliance:leaveAllianceSuccess');
       io.sockets.in(`alliance.${allianceId}`).emit('alliance:event', { event, data: socket.userData.playerId });
@@ -858,7 +852,7 @@ export class AllianceSocket {
     Object.keys(room).forEach((socketId: string) => {
       const client = io.sockets.connected[socketId] as UserSocket;
       client.userData = this.cleanSocketAlliance(client.userData);
-      mapManager.setTownAlliance(null, client.userData.townIds);
+      worldData.mapManager.setTownAlliance(null, client.userData.townIds);
       clientAction(client);
     });
   }

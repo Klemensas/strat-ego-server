@@ -1,20 +1,20 @@
 import * as lolex from 'lolex';
 import { transaction } from 'objection';
 
-import { knexDb } from '../../sqldb';
-import { WorldData, worldData as worldDataInstance } from '../world/worldData';
+import { worldData } from '../world/worldData';
 import { Town } from '../town/town';
 import { World } from '../world/world';
 import * as townQueries from '../town/townQueries';
-import * as worldQueries from '../world/worldQueries';
 import { Unit } from '../unit/unit';
 import { Building } from '../building/building';
 import { TownGrowth } from './townGrowth';
+import { Coords } from 'strat-ego-common/dist';
 
 const world = {
   name: 'test',
   baseProduction: 10,
   loyaltyRegeneration: 1,
+  barbPercent: 0.5,
 } as World;
 const units = [{ id: 1, name: 'sworder' }] as Unit[];
 const unitMap = units.reduce((result, unit) => ({ ...result, [unit.name]: unit }), {});
@@ -41,13 +41,13 @@ const townRequirements = Town.fromJson({
   buildings: { [buildings[1].name]: { level: 0, queued: 0 } },
 }, { skipValidation: true });
 
-let worldData: WorldData;
+// let worldData: WorldData;
 let townGrowth: TownGrowth;
 let clock: lolex.Clock;
 
 beforeEach(() => {
   clock = lolex.install();
-  worldData = new WorldData();
+  // worldData = new WorldData(MapManager as any, TownGrowth as any);
   worldData.world = {
     ...world,
     townLastGrowth: Date.now(),
@@ -55,7 +55,8 @@ beforeEach(() => {
   } as World;
   worldData.buildings = buildings;
   worldData.buildingMap = buildingMap;
-  townGrowth = new TownGrowth(worldData);
+  // townGrowth = new TownGrowth(worldData);
+  townGrowth = worldData.townGrowth;
 });
 afterEach(() => {
   clock.uninstall();
@@ -115,8 +116,6 @@ describe('growTowns', () => {
     jest.spyOn(townQueries, 'getTowns').mockImplementationOnce(() => [town, townMaxed]);
     jest.spyOn(townQueries, 'upsertTowns').mockImplementationOnce(() => null);
     jest.spyOn(worldData, 'updateGrowth').mockImplementationOnce(() => null);
-    worldDataInstance.buildingMap = buildingMap;
-    worldDataInstance.world = world;
     await townGrowth.growTowns(1);
     expect(townQueries.upsertTowns).toHaveBeenCalled();
     expect(worldData.updateGrowth).toHaveBeenCalled();
@@ -144,5 +143,59 @@ describe('growRandomBuilding', () => {
     // Requirements not met
     worldData.buildings = [buildings[1]];
     expect(townGrowth.growRandomBuilding(townMaxed, 1)).toEqual(null);
+  });
+});
+
+describe('generateRingTowns', () => {
+  let upsertTownsSpy;
+  let rollbackSpy;
+  let transactionSpy;
+  const availableCoords: Coords[] = [[1, 3], [1, 2]];
+  const townCoords: Coords[] = [[1, 3]];
+  // Current seedBase generates town with [1,3] coord
+  const seedBase = 'test-base';
+  beforeEach(() => {
+    rollbackSpy = jest.fn();
+    upsertTownsSpy = jest.spyOn(townQueries, 'upsertTowns');
+    transactionSpy = jest.spyOn(transaction, 'start').mockImplementation(() => ({ rollback: rollbackSpy, commit: jest.fn() }));
+    jest.spyOn(worldData.mapManager, 'getAvailableCoords').mockImplementationOnce(() => (availableCoords));
+  });
+
+  it('should catch errors and retry', async () => {
+    const errorMessage = 'fatal error';
+    let shouldThrow = true;
+    upsertTownsSpy.mockImplementation(() => {
+      if (shouldThrow) {
+        shouldThrow = false;
+        throw errorMessage;
+      }
+      return [];
+    });
+    jest.spyOn(townGrowth, 'generateRingTowns');
+
+    await townGrowth.generateRingTowns(townCoords, seedBase);
+    expect(worldData.mapManager.getAvailableCoords).toHaveBeenCalled();
+    expect(townGrowth.generateRingTowns).toHaveBeenLastCalledWith(availableCoords, seedBase);
+  });
+
+  it('should not upsert if no towns picked', async () => {
+    worldData.world.barbPercent = 0;
+    const result = await townGrowth.generateRingTowns(availableCoords, seedBase);
+    expect(upsertTownsSpy).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      towns: [],
+      coords: availableCoords,
+    });
+  });
+
+  it('should return all created towns', async () => {
+    worldData.world.barbPercent = 1;
+    upsertTownsSpy.mockImplementationOnce((towns) => towns);
+
+    const result = await townGrowth.generateRingTowns(availableCoords, seedBase);
+    expect(result).toEqual({
+      towns: availableCoords.map((location) => ({ location })),
+      coords: [],
+    });
   });
 });

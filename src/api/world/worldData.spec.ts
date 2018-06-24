@@ -11,8 +11,15 @@ const unitMap = units.reduce((result, unit) => ({ ...result, [unit.name]: unit }
 const buildings = [{ id: 2, name: 'house' }] as Building[];
 const buildingMap = buildings.reduce((result, building) => ({ ...result, [building.name]: building }), {});
 let worldData: WorldData;
+
+class TestManager {
+  constructor() {}
+  initialize() { return Promise.resolve(); }
+  checkGrowth() { return jest.fn().mockImplementation(() => Promise.resolve()); }
+}
+
 beforeEach(() => {
-  worldData = new WorldData();
+  worldData = new WorldData(TestManager as any, TestManager as any);
 });
 
 describe('fullWorld', () => {
@@ -99,7 +106,10 @@ describe('increaseRing', () => {
   it('shuld catch and rethrow errors', async () => {
     const error = 'thrown error';
     updateWorldSpy.mockImplementationOnce(() => Promise.reject(error));
-    worldData.world = { currentRing: 1 } as World;
+    worldData.world = {
+      ...worldData.world,
+      currentRing: 1,
+    } as World;
 
     let result;
     try {

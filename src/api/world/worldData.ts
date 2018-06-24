@@ -1,6 +1,6 @@
 import * as Knex from 'knex';
 import { Transaction } from 'objection';
-import { WorldData as WorldDataModel, Dict } from 'strat-ego-common';
+import { Dict } from 'strat-ego-common';
 
 import { Building } from '../building/building';
 import { Unit } from '../unit/unit';
@@ -8,6 +8,8 @@ import { World } from './world';
 import { knexDb } from '../../sqldb';
 import { logger } from '../../logger';
 import { getWorld, getBuildings, getUnits, updateWorld } from './worldQueries';
+import { TownGrowth } from '../town/townGrowth';
+import { MapManager } from '../map/mapManager';
 
 export class WorldData {
   public world: World;
@@ -15,6 +17,8 @@ export class WorldData {
   public unitMap: Dict<Unit> = {};
   public buildings: Building[] = [];
   public buildingMap: Dict<Building> = {};
+  public townGrowth: TownGrowth;
+  public mapManager: MapManager;
 
   public get fullWorld() {
     return {
@@ -24,6 +28,11 @@ export class WorldData {
       buildings: this.buildings,
       buildingMap: this.buildingMap,
     };
+  }
+
+  constructor(mapManagerConstructor: new (WorldData: WorldData) => MapManager, townGrowthConstructor: new (WorldData: WorldData) => TownGrowth) {
+    this.mapManager = new mapManagerConstructor(this);
+    this.townGrowth = new townGrowthConstructor(this);
   }
 
   public async initialize(name: string) {
@@ -41,6 +50,9 @@ export class WorldData {
 
       this.units = units;
       this.unitMap = units.reduce((map, item) => ({ ...map, [item.name]: item }), {});
+
+      await this.townGrowth.checkGrowth();
+      await this.mapManager.initialize();
     } catch (err) {
       logger.error(err, 'Error while reading world data.');
       throw err;
@@ -72,4 +84,4 @@ export class WorldData {
   }
 }
 
-export const worldData = new WorldData();
+export const worldData = new WorldData(MapManager, TownGrowth);
