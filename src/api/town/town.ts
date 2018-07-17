@@ -159,7 +159,7 @@ export class Town extends BaseModel {
   hasEnoughResources(target: Resources) {
     return this.resources.wood >= target.wood && this.resources.clay >= target.clay && this.resources.iron >= target.iron;
   }
-  // Note: can't specify queueType here without ts complaining
+  // TODO: figure how to specify queueType here without ts complaining
   getLastQueue(queueType: string) {
     const queue: Array<BuildingQueue | UnitQueue> = this[queueType];
 

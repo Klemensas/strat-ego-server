@@ -105,7 +105,7 @@ export class AllianceSocket {
   }
 
   static destroyAllianceNotify(room: string) {
-    io.sockets.in(room).emit('alliance:destroyed');
+    io.sockets.in(room).emit('alliance:destroySuccess');
     this.resetRoomSocketAlliance(io.sockets.adapter.rooms[room].sockets, (client) => client.leave(room));
   }
 
