@@ -1,9 +1,4 @@
 import {
-  Coords,
-  TownError,
-  MovementType,
-  Dict,
-  TownUnit,
   NamePayload,
   BuildPayload,
   RecruitPayload,

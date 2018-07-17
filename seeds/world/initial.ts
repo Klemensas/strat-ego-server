@@ -661,16 +661,24 @@ export const seed = (
   .then(async (towns: Town[]) => {
     await Player.query(knex).del();
 
+    let townIndex = 0;
     const availableTowns = towns.map(({ id }) => id);
     const players = demoUsers.map((user, index) => {
       let assignedTowns = [];
       // Alays assign owns to special users
       if (index < 2) {
         assignedTowns = availableTowns.slice(0, 2).map((id) => ({ id }));
+        towns[townIndex].playerId = user.id;
+        towns[townIndex + 1].playerId = user.id;
+        townIndex += 2;
       } else {
         for (let i = 0; i < maxTowns && availableTowns.length > i; i++) {
           const shouldAssign = Math.random() <= townRate;
-          if (shouldAssign) { assignedTowns.push({ id: availableTowns[i] }); }
+          if (shouldAssign) {
+            assignedTowns.push({ id: availableTowns[i] });
+            towns[townIndex].playerId = user.id;
+            townIndex++;
+          }
         }
       }
       availableTowns.splice(0, assignedTowns.length);

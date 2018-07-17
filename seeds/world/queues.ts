@@ -4,9 +4,6 @@ import { MovementType } from 'strat-ego-common';
 import * as seedrandom from 'seedrandom';
 
 import { Town } from '../../src/api/town/town';
-import { Movement } from '../../src/api/town/movement';
-import { BuildingQueue } from '../../src/api/building/buildingQueue';
-import { UnitQueue } from '../../src/api/unit/unitQueue';
 import { worldData } from '../../src/api/world/worldData';
 
 const maxUnits = 100;
@@ -17,19 +14,21 @@ export const seed = async (knex, seedString: string, towns: Town[], queueRate: n
   const trx = await transaction.start(knex);
   try {
     const time = Date.now();
-    // Note: this seeds to abandoned towns as well. Such towns normally shouldn't have queues.
-    towns = towns.map((town) => {
-      for (let i = 0; i < queueCount; i++) {
-        if (rng.quick() > queueRate) { continue; }
+    const queueTowns = towns.reduce((result, town) => {
+      if (town.playerId) {
+        for (let i = 0; i < queueCount; i++) {
+          if (rng.quick() > queueRate) { continue; }
 
-        const index = Math.floor(rng.quick() * (queueTypes.length));
-        const queueType = queueTypes[index];
-        const queueTime = Math.round(time + (queueSpread * (i / queueCount)));
-        town = generateQueueItem(town, queueTime, queueType);
+          const index = Math.floor(rng.quick() * (queueTypes.length));
+          const queueType = queueTypes[index];
+          const queueTime = Math.round(time + (queueSpread * (i / queueCount)));
+          town = generateQueueItem(town, queueTime, queueType);
+        }
+        result.push(town);
       }
-      return town;
-    });
-    await Town.query(knex).upsertGraph(towns);
+      return result;
+    }, []);
+    await Town.query(knex).upsertGraph(queueTowns);
     await trx.commit();
     return towns;
   } catch (err) {

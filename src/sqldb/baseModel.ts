@@ -1,8 +1,9 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { Model } from 'objection';
+import { DbErrors } from 'objection-db-errors';
 
-export class BaseModel extends Model {
+export class BaseModel extends DbErrors(Model) {
   '#id'?: string;
   '#ref'?: string;
   '#dbRef'?: string;
