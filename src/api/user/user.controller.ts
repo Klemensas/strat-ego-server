@@ -1,15 +1,18 @@
 import { signToken } from '../../auth/auth.service';
 import { getUsers, getUser, deleteUser, createUser } from './userQueries';
 
-function validationError(res, statusCode = 422) {
-  return (err) => {
-    res.status(statusCode).json(err);
-  };
-}
-
 function handleError(res, statusCode = 500) {
   return (err) => {
-    res.status(statusCode).send(err);
+    const error = {
+      message: 'Unforseen error',
+    };
+    if (err && err.constructor) {
+      switch (err.constructor.name) {
+        case 'UniqueViolationError':
+          error.message = `${err.columns.join(', ')} already in use, please pick another one.`;
+      }
+    }
+    res.status(statusCode).send(error);
   };
 }
 
@@ -29,14 +32,14 @@ export async function index(req, res) {
 /**
  * Creates a new user
  */
-// export function create(req, res, next) {
 export async function create(req, res) {
   try {
     const newUser = req.body;
     const user = await createUser(newUser.name, newUser.email, newUser.password);
     return res.json({ token: signToken(user) });
   } catch (err) {
-    return validationError(res)(err);
+
+    return handleError(res, 422)(err);
   }
 }
 
@@ -69,7 +72,6 @@ export async function destroy(req, res) {
 /**
  * Change a users password
  */
-// export function changePassword(req, res, next) {
 export async function changePassword(req, res) {
   const userId = req.user.id;
   const oldPass = String(req.body.oldPassword);
