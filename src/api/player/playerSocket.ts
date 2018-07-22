@@ -1,4 +1,4 @@
-import { transaction, Transaction, lit, raw } from 'objection';
+import { transaction, Transaction } from 'objection';
 import { ProfileUpdate } from 'strat-ego-common';
 
 import { knexDb } from '../../sqldb';

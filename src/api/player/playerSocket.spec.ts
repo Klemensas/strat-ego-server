@@ -24,6 +24,7 @@ describe('onConnect', () => {
     'player:loadProfile',
     'player:updateProfile',
     'player:removeAvatar',
+    'player:progressTutorial',
   ];
 
   it('should register events', async () => {
