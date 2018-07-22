@@ -23,7 +23,7 @@ export class BaseModel extends DbErrors {
 
   static get modelPaths() {
     const base = path.join(__dirname, '..', 'api');
-    return fs.readdirSync(path.join(__dirname, '..', 'api')).map((folder) => path.join(base, folder));
+    return fs.readdirSync(base).map((folder) => path.join(base, folder));
   }
 
   $beforeValidate(jsonSchema, json, opt) {

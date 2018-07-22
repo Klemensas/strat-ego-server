@@ -44,7 +44,7 @@ export function getTownsMapProfile(connection: Transaction | Knex = knexDb.world
   return Town
     .query(connection)
     .select('id', 'name', 'location', 'score')
-    .eager('[player, player.alliance]')
+    .eager('[player.[alliance]]')
     .pick(Player, ['id', 'name', 'alliance'])
     .pick(Alliance, ['id', 'name']);
 }
