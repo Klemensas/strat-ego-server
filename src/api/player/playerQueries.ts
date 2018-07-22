@@ -33,7 +33,7 @@ export async function getFullPlayer(where: Partial<Player>, connection: Transact
     .modifyEager(`[
       originReports.[originTown,targetTown],
       targetReports.[originTown, targetTown]
-    ]`, (builder) => builder.select('id', 'name', 'location'))
+    ]`, (builder) => builder.select('id', 'name', 'location'));
   if (player.allianceId !== null) {
     player.alliance = await getFullAlliance({ id: player.allianceId }, connection);
   }
@@ -105,4 +105,11 @@ export async function updatePlayer(player: Player, payload: Partial<Player>, con
   return player
     .$query(connection)
     .patch(payload);
+}
+
+export async function progressTutorial(playerId: number, connection: Transaction | Knex = knexDb.world) {
+  return Player
+    .query(connection)
+    .where({ id: playerId })
+    .increment('tutorialStage', 1);
 }
