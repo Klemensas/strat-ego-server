@@ -1,11 +1,11 @@
-import { transaction, Transaction, lit, raw } from 'objection';
+import { transaction, Transaction } from 'objection';
 import { ProfileUpdate } from 'strat-ego-common';
 
 import { knexDb } from '../../sqldb';
 import { TownSocket } from '../town/townSocket';
 import { UserSocket, ErrorMessage } from '../../config/socket';
 import { scoreTracker } from './playerScore';
-import { getFullPlayer, createPlayer, createPlayerTown, getPlayerProfile, getPlayer, updatePlayer } from './playerQueries';
+import { getFullPlayer, createPlayer, createPlayerTown, getPlayerProfile, getPlayer, updatePlayer, progressTutorial } from './playerQueries';
 import { isCloudinaryImage, cloudinaryDelete } from '../../cloudinary';
 import { worldData } from '../world/worldData';
 
@@ -30,6 +30,7 @@ export class PlayerSocket {
     socket.on('player:loadProfile', (id: number) => this.loadProfile(socket, id));
     socket.on('player:updateProfile', (payload: ProfileUpdate) => this.updateProfile(socket, payload));
     socket.on('player:removeAvatar', () => this.removeAvatar(socket));
+    socket.on('player:progressTutorial', () => this.progressTutorial(socket));
   }
 
   static async getOrCreatePlayer(socket) {
@@ -173,6 +174,16 @@ export class PlayerSocket {
     } catch (err) {
       await trx.rollback();
       socket.handleError(err, 'removeAvatar', 'player:removeAvatarFail');
+    }
+  }
+
+  static async progressTutorial(socket: UserSocket) {
+    try {
+      await progressTutorial(socket.userData.playerId);
+
+      socket.emit('player:progressTutorialSuccess');
+    } catch (err) {
+      socket.handleError(err, 'progressTutorial', 'player:progressTutorialFail');
     }
   }
 }

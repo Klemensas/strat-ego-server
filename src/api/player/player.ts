@@ -1,6 +1,5 @@
 import * as Knex from 'knex';
 
-import { knexDb } from '../../sqldb';
 import { BaseModel } from '../../sqldb/baseModel';
 import { Town } from '../town/town';
 import { Alliance } from '../alliance/alliance';
@@ -12,6 +11,7 @@ export class Player extends BaseModel {
   name: string;
   description: string;
   avatarUrl: string;
+  tutorialStage: number;
 
   // Associations
   towns?: Town[];

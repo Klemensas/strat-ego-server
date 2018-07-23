@@ -1,9 +1,19 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { Model } from 'objection';
-import { DbErrors } from 'objection-db-errors';
+import { Model, Constructor, Transaction, QueryBuilder } from 'objection';
+import * as dbErrors from 'db-errors';
+import * as knex from 'knex';
 
-export class BaseModel extends DbErrors(Model) {
+class DbErrors extends Model {
+  static query<QM extends Model>(
+    this: Constructor<QM>,
+    trxOrKnex?: Transaction | knex,
+  ): QueryBuilder<QM> {
+    return super.query.apply(this, arguments).onError((err) => Promise.reject(dbErrors.wrapError(err)));
+  }
+}
+
+export class BaseModel extends DbErrors {
   '#id'?: string;
   '#ref'?: string;
   '#dbRef'?: string;
@@ -13,7 +23,7 @@ export class BaseModel extends DbErrors(Model) {
 
   static get modelPaths() {
     const base = path.join(__dirname, '..', 'api');
-    return fs.readdirSync(path.join(__dirname, '..', 'api')).map((folder) => path.join(base, folder));
+    return fs.readdirSync(base).map((folder) => path.join(base, folder));
   }
 
   $beforeValidate(jsonSchema, json, opt) {
