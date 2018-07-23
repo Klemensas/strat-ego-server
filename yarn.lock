@@ -4386,7 +4386,7 @@ stealthy-require@^1.1.0:
 
 "strat-ego-common@github:klemensas/strat-ego-common":
   version "0.0.1"
-  resolved "https://codeload.github.com/klemensas/strat-ego-common/tar.gz/cd76f8dfdfa49f8ddb3b80870ac9f64d55b374e1"
+  resolved "https://codeload.github.com/klemensas/strat-ego-common/tar.gz/a50c7627923a9385beb57f32076b7ae764e7b6f6"
 
 stream-combiner@~0.0.4:
   version "0.0.4"

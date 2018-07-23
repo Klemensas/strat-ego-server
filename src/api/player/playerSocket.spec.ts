@@ -271,3 +271,29 @@ describe('removeAvatar', () => {
     });
   });
 });
+
+describe('progressTutorial', () => {
+  let progressTutorialSpy;
+  beforeEach(() => {
+    progressTutorialSpy = jest.spyOn(playerQueries, 'progressTutorial');
+  });
+
+  describe('on error', () => {
+    it('should throw', async () => {
+      const error = 'progress error';
+      progressTutorialSpy.mockImplementationOnce(() => { throw error; });
+
+      await PlayerSocket.progressTutorial(socket);
+      expect(socket.handleError).toHaveBeenCalledWith(error, 'progressTutorial', `player:progressTutorialFail`);
+    });
+  });
+
+  describe('on success', () => {
+    it('should emit socket event', async () => {
+      progressTutorialSpy.mockImplementationOnce(() => null);
+
+      await PlayerSocket.progressTutorial(socket);
+      expect(socket.emit).toHaveBeenCalledWith('player:progressTutorialSuccess');
+    });
+  });
+});
