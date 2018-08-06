@@ -9,7 +9,6 @@ import {
   DiplomacyStatus,
   diplomacyTypeName,
   MessagePayload,
-  RoleUpdatePayload,
   ProfileUpdate,
 } from 'strat-ego-common';
 
@@ -21,6 +20,11 @@ import * as allianceQueries from './allianceQueries';
 import { getPlayerWithInvites, getPlayerByName } from '../player/playerQueries';
 import { cloudinaryDelete, isCloudinaryImage } from '../../cloudinary';
 import { worldData } from '../world/worldData';
+
+export interface RoleUpdatePayload {
+  roles: Array<Partial<AllianceRole>>;
+  newRoles: Array<Partial<AllianceRole>>;
+}
 
 // TODO: rework events
 // TODO: better permissions, cnsider moving permissions to database
@@ -297,6 +301,8 @@ export class AllianceSocket {
     }
   }
 
+  // TODO: fix common type usage, atm it differs a bit and doesn't work here
+  // static async updateRoles(socket: UserSocket, payload: RoleUpdatePayload) {
   static async updateRoles(socket: UserSocket, payload: RoleUpdatePayload) {
     const trx = await transaction.start(knexDb.world);
     try {

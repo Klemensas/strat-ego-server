@@ -1,7 +1,8 @@
 import { EventEmitter } from 'events';
 import { transaction } from 'objection';
+import * as http from 'http';
 
-import { UserSocket, ErrorMessage, io } from '../../config/socket';
+import { UserSocket, ErrorMessage, setupIo } from '../../config/socket';
 import { AllianceSocket } from './allianceSocket';
 import { PlayerRolePayload, RoleUpdatePayload, WarDeclarationPayload, DiplomacyType, MessagePayload, AlliancePermissions } from 'strat-ego-common';
 import * as allianceQueries from './allianceQueries';
@@ -402,11 +403,18 @@ describe('leavAlliance', () => {
 
     it('should emit to socket', async () => {
       const emitSpy = jest.fn();
-      io = {
-        sockets: {
-          in: jest.fn().mockImplementationOnce(() => ({ emit: emitSpy })),
-        },
+      const server = http.createServer();
+      const io = setupIo(server);
+      io.sockets = {
+        in: jest.fn().mockImplementationOnce(() => ({ emit: emitSpy })),
       } as any;
+      // Object.assign(io, {
+      //   sockets: {
+      //     in: jest.fn().mockImplementationOnce(() => ({ emit: emitSpy })),
+      //   },
+      // });
+      // io = {
+      // } as any,
       await AllianceSocket.leaveAlliance(socket);
       expect(socket.emit).toHaveBeenCalledWith('alliance:leaveAllianceSuccess');
       expect(emitSpy).toHaveBeenCalledWith('alliance:event', {
