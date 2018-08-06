@@ -5,6 +5,7 @@
     "moduleResolution": "node",
     "target": "es6",
     "outDir": "./build",
+    "rootDir": "./src",
     "lib": [
         "es6",
         "es2017"
@@ -17,6 +18,8 @@
     "build",
     "node_modules",
     "knexfile.*",
-    "migrations"
+    "migrations",
+    "coverage",
+    "seeds"
   ]
 }
