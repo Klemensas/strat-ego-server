@@ -52,7 +52,7 @@ export async function show(req, res, next) {
     const user = await getUser({ id: userId });
     return res.json(user.profile);
   } catch (err) {
-    return validationError(res)(err);
+    return handleError(res)(err);
   }
 }
 
@@ -65,7 +65,7 @@ export async function destroy(req, res) {
     await deleteUser(req.params.id);
     return res.status(204).end();
   } catch (err) {
-    return validationError(res)(err);
+    return handleError(res)(err);
   }
 }
 
@@ -86,7 +86,7 @@ export async function changePassword(req, res) {
       return res.status(403).end();
     }
   } catch (err) {
-    return validationError(res)(err);
+    return handleError(res)(err);
   }
 }
 

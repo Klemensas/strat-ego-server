@@ -5,9 +5,8 @@ import { Alliance } from './alliance';
 import { Player } from '../player/player';
 import { knexDb } from '../../sqldb';
 import { setAlliancePermissions, AllianceRole } from './allianceRole';
-import { EventType, EventStatus, DiplomacyStatus, DiplomacyType, diplomacyTypeToEventStatus } from 'strat-ego-common';
+import { EventType, EventStatus, DiplomacyStatus, DiplomacyType } from 'strat-ego-common';
 import { AllianceEvent } from './allianceEvent';
-import { PlayerSocket } from '../player/playerSocket';
 import { AllianceDiplomacy } from './allianceDiplomacy';
 import { AllianceMessage } from './allianceMessage';
 
