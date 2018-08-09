@@ -17,11 +17,6 @@ export default app => {
   app.use(morgan('dev'));
   app.use(cors());
 
-  if (env === 'development') {
-    app.use(require('express-status-monitor')());
-    app.use(require('connect-livereload')());
-  }
-
   if (env === 'development' || env === 'test') {
     app.use(errorHandler()); // Error handler - has to be last
   }

@@ -59,6 +59,7 @@ export const setupIo = (server: http.Server) => {
     noServer: true,
     perMessageDeflate: false,
   });
+  return io;
 };
 
 export function initializeSocket(socketio: SocketIO.Server) {
