@@ -56,10 +56,10 @@ export class MapManager {
       let alliance = null;
 
       if (town.player) {
-        owner = town.player ? {
+        owner = {
           id: town.player.id,
           name: town.player.name,
-        } : null;
+        };
         alliance = town.player.alliance ? {
           id: town.player.alliance.id,
           name: town.player.alliance.name,
