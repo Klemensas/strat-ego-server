@@ -38,7 +38,12 @@ worldData.initialize(worldName)
   .then(() => scoreTracker.readScores())
   .then(() => townQueue.loadQueues())
   .then(() => initializeSocket(io))
-  .then(() => logger.info('server ready!'))
+  .then(() => {
+    if (!worldData.world || !worldData.units.length || !worldData.buildings.length) {
+      throw new Error('Missing world data, please check database.');
+    }
+    logger.info('server ready!');
+  })
   .catch((err) => {
     logger.error(err, 'server dead');
     process.exit(1);
