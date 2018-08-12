@@ -237,19 +237,14 @@ describe('map expansion', () => {
     });
   });
   describe('scheduleExpansion', () => {
-    const coords = [[1, 1], [1, 2]];
-    let scheduleSpy;
-    let coordSpy;
-    let expandSpy;
     beforeEach(() => {
       mapManager.expansionGrowth = 1;
       worldData.world = {
         ...worldData.world,
         currentRing: 1,
       } as World;
-      scheduleSpy = jest.spyOn(mapManager, 'scheduleExpansion');
-      coordSpy = jest.spyOn(mapManager, 'getAvailableCoords').mockImplementation(() => Promise.resolve([...coords]));
-      expandSpy = jest.spyOn(mapManager, 'expandRing').mockImplementation(() => {
+      jest.spyOn(mapManager, 'scheduleExpansion');
+      jest.spyOn(mapManager, 'expandRing').mockImplementation(() => {
         mapManager.lastExpansion = Date.now() + 1000;
         return Promise.resolve();
       });
@@ -263,45 +258,6 @@ describe('map expansion', () => {
       expect(mapManager.expandRing).toHaveBeenCalledTimes(1);
       expect(mapManager.scheduleExpansion).toHaveBeenCalledTimes(2);
     });
-
-    it('should update coords and schedule the next expansion', async () => {
-      mapManager.expansionRate = 1;
-      mapManager.lastExpansion = Date.now();
-
-      await mapManager.scheduleExpansion();
-      expect(mapManager.expandRing).not.toHaveBeenCalled();
-      expect(mapManager.scheduleExpansion).toHaveBeenCalledTimes(1);
-
-      clock.tick(1);
-      await mapManager.isExpanded;
-      expect(mapManager.expandRing).toHaveBeenCalledTimes(1);
-      expect(mapManager.scheduleExpansion).toHaveBeenCalledTimes(3);
-      expect(mapManager.availableCoords).toEqual(coords);
-    });
-
-  //   it('should update isExpanded when scheduling', async () => {
-  //     expandSpy.mockImplementation(() => new Promise((resolve) => setTimeout(() => {
-  //       mapManager.lastExpansion = Date.now() + 1000;
-  //       resolve();
-  //     }, 500)));
-  //     mapManager.expansionRate = 2;
-  //     mapManager.lastExpansion = Date.now();
-
-  //     await mapManager.scheduleExpansion();
-  //     expect(mapManager.scheduleExpansion).toHaveBeenCalledTimes(1);
-
-  //     let expandedResolved = false;
-  //     jest.advanceTimersByTime(1);
-  //     mapManager.isExpanded.then(() => expandedResolved = true);
-  //     expect(mapManager.scheduleExpansion).toHaveBeenCalledTimes(2);
-  //     expect(expandedResolved).toBeFalsy();
-
-  //     jest.advanceTimersByTime(550);
-  //     expect(expandedResolved).toBeTruthy();
-  //     expect(mapManager.expandRing).toHaveBeenCalledTimes(1);
-  //     expect(mapManager.scheduleExpansion).toHaveBeenCalledTimes(2);
-
-  //   });
   });
 
   it('getRingCoords should return accurate ring coords', () => {
@@ -330,12 +286,57 @@ describe('map expansion', () => {
     expect(mapManager.getCoordsInRange(2, 2, 3)).toEqual(expectedRange);
   });
 
-  it('expandRing should call increase ring and update expansion date', async () => {
-    const prevExpansion = Date.now() - 1;
-    mapManager.lastExpansion = prevExpansion;
-    await mapManager.expandRing();
-    expect(worldData.increaseRing).toHaveBeenCalledTimes(1);
-    expect(mapManager.lastExpansion).toBeGreaterThan(+prevExpansion);
+  describe('expandRing', () => {
+    const coords = [[2, 20], [1, 2], [1, 1], [1, 4], [2, 5], [2, 1]];
+    const leftoverCoords = coords.filter((coord) => !coord.includes(2));
+    const newTowns = [{
+      id: 112,
+      name: 'town #112',
+      location: [12, 11],
+      score: 112,
+    }, {
+      id: 234,
+      player: {
+        id: 11,
+        name: 'player #11',
+      },
+      name: 'town #234',
+      location: [34, 23],
+      score: 234,
+    }];
+    beforeEach(() => {
+      // mapManager.mapData = {
+      //   ['1,1']: { owner: null, alliance: null, id: 1, name: 'test #1', location: [1, 1], score: 1 },
+      // };
+      worldData.world = {
+        ...worldData.world,
+        currentRing: 1,
+      } as World;
+      jest.spyOn(mapManager, 'scheduleExpansion');
+      jest.spyOn(mapManager, 'addTown');
+      jest.spyOn(mapManager, 'getAvailableCoords').mockImplementation(() => Promise.resolve([...coords]));
+      jest.spyOn(worldData.townGrowth, 'generateRingTowns').mockImplementation(() => Promise.resolve({
+        towns: newTowns,
+        coords: leftoverCoords,
+      }));
+    });
+
+    it('should call increase ring and update expansion date', async () => {
+      const prevExpansion = Date.now() - 1;
+      mapManager.lastExpansion = prevExpansion;
+      await mapManager.expandRing();
+      expect(worldData.increaseRing).toHaveBeenCalledTimes(1);
+      expect(mapManager.lastExpansion).toBeGreaterThan(+prevExpansion);
+    });
+
+    it('should update coords and add new towns', async () => {
+      mapManager.expansionRate = 1;
+
+      await mapManager.expandRing();
+
+      expect(mapManager.addTown).toHaveBeenCalledWith(...newTowns);
+      expect(mapManager.availableCoords).toEqual(leftoverCoords);
+    });
   });
 
   describe('getAvailableCoords', () => {

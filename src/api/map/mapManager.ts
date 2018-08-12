@@ -56,10 +56,10 @@ export class MapManager {
       let alliance = null;
 
       if (town.player) {
-        owner = town.player ? {
+        owner = {
           id: town.player.id,
           name: town.player.name,
-        } : null;
+        };
         alliance = town.player.alliance ? {
           id: town.player.alliance.id,
           name: town.player.alliance.name,
@@ -179,6 +179,13 @@ export class MapManager {
     }
 
     await this.expandRing();
+
+    return this.scheduleExpansion();
+  }
+
+  public async expandRing(trx?: Transaction | Knex) {
+    await this.worldData.increaseRing(trx);
+    this.lastExpansion = +this.worldData.world.lastExpansion;
     const newCoords = await this.getAvailableCoords(this.getCoordsInRange(
       this.worldData.world.generationArea,
       this.worldData.world.currentRing,
@@ -187,13 +194,6 @@ export class MapManager {
     const { coords, towns } = await this.worldData.townGrowth.generateRingTowns(newCoords, this.lastExpansion);
     this.addTown(...towns);
     this.availableCoords = coords;
-
-    return this.scheduleExpansion();
-  }
-
-  public async expandRing(trx?: Transaction | Knex) {
-    await this.worldData.increaseRing(trx);
-    this.lastExpansion = +this.worldData.world.lastExpansion;
   }
 
   public async getAvailableCoords(coords: Coords[] = this.availableCoords) {
