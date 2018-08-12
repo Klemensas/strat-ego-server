@@ -1,4 +1,5 @@
 import * as bunyan from 'bunyan';
+import * as path from 'path';
 
 import * as config from './config/environment';
 
@@ -16,7 +17,7 @@ switch (config.env) {
         stream: process.stdout,
       }, {
         level: 'error',
-        path: 'error.log',
+        path: path.join(__dirname, '../error.log'),
       }, {
         level: 'error',
         stream: process.stdout,
