@@ -34,7 +34,7 @@ export async function getFullPlayer(where: Partial<Player>, connection: Transact
       originReports.[originTown,targetTown],
       targetReports.[originTown, targetTown]
     ]`, (builder) => builder.select('id', 'name', 'location'));
-  if (player.allianceId !== null) {
+  if (player && player.allianceId !== null) {
     player.alliance = await getFullAlliance({ id: player.allianceId }, connection);
   }
   return player;
