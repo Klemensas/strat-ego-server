@@ -43,14 +43,7 @@ export class PlayerSocket {
         socket.userData.userId,
         socket.userData.worldName,
       );
-      const createdPlayer = await getFullPlayer({ userId: socket.userData.userId });
-      worldData.mapManager.addPlayerTowns(createdPlayer);
-      scoreTracker.addPlayer({
-        id: createdPlayer.id,
-        name: createdPlayer.name,
-        score: createdPlayer.towns[0].score,
-      });
-      return createdPlayer;
+      return getFullPlayer({ userId: socket.userData.userId });
     } catch (err) {
       socket.log('Cannot create player', err);
       throw err;
@@ -68,6 +61,12 @@ export class PlayerSocket {
       const player = await createPlayer(name, location, userId, worldName, trxWorld, trxMain);
       await trxMain.commit();
       await trxWorld.commit();
+      worldData.mapManager.addPlayerTowns(player);
+      scoreTracker.addPlayer({
+        id: player.id,
+        name: player.name,
+        score: player.towns[0].score,
+      });
 
       return player;
     } catch (err) {
