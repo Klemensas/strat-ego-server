@@ -146,6 +146,11 @@ export async function createAlliance(creator: number, name: string, connection: 
     })
     .where({ id: creator });
 
+  // Merge events to match get
+  alliance.events = [alliance.eventOrigin[0]];
+  delete alliance.eventOrigin;
+  delete alliance.eventTarget;
+
   return alliance;
 }
 

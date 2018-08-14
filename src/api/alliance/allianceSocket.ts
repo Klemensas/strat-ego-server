@@ -130,7 +130,7 @@ export class AllianceSocket {
         name: socket.userData.playerName,
         allianceRole: alliance.masterRole,
       }];
-      alliance.eventOrigin[0].originPlayer = {
+      alliance.events[0].originPlayer = {
         id: socket.userData.playerId,
         name: socket.userData.playerName,
       };
