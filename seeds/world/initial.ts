@@ -297,7 +297,8 @@ const buildingList: any = [
     },
     baseTime: 20,
     timeFactor: 1.4,
-    baseScore: 30,
+    baseScore: 3,
+    initialScore: 20,
     scoreFactor: 1.75,
   }, {
     name: 'barracks',
@@ -319,7 +320,8 @@ const buildingList: any = [
     },
     baseTime: 30,
     timeFactor: 1.2,
-    baseScore: 20,
+    baseScore: 5,
+    initialScore: 18,
     scoreFactor: 1.6,
     additional: {
       recruitment: {
@@ -351,7 +353,8 @@ const buildingList: any = [
     },
     baseTime: 15,
     timeFactor: 1.2,
-    baseScore: 14,
+    baseScore: 2,
+    initialScore: 8,
     scoreFactor: 1.4,
     additional: {
       production: {
@@ -379,7 +382,8 @@ const buildingList: any = [
     },
     baseTime: 15,
     timeFactor: 1.2,
-    baseScore: 14,
+    baseScore: 2,
+    initialScore: 8,
     scoreFactor: 1.4,
     additional: {
       production: {
@@ -407,7 +411,8 @@ const buildingList: any = [
     },
     baseTime: 18,
     timeFactor: 1.2,
-    baseScore: 14,
+    baseScore: 2,
+    initialScore: 8,
     scoreFactor: 1.4,
     additional: {
       production: {
@@ -435,7 +440,8 @@ const buildingList: any = [
     },
     baseTime: 60,
     timeFactor: 1.2,
-    baseScore: 10,
+    baseScore: 3,
+    initialScore: 11,
     scoreFactor: 1.5,
     additional: {
       defense: {
@@ -463,7 +469,8 @@ const buildingList: any = [
     },
     baseTime: 17,
     timeFactor: 1.2,
-    baseScore: 13,
+    baseScore: 2,
+    initialScore: 6,
     scoreFactor: 1.44,
     additional: {
       storage: {
@@ -491,7 +498,8 @@ const buildingList: any = [
     },
     baseTime: 20,
     timeFactor: 1.2,
-    baseScore: 16,
+    baseScore: 2,
+    initialScore: 5,
     scoreFactor: 1.38,
     additional: {
       population: {
@@ -516,7 +524,8 @@ const buildingList: any = [
     },
     baseTime: 14400,
     timeFactor: 1,
-    baseScore: 300,
+    baseScore: 50,
+    initialScore: 300,
     scoreFactor: 2,
     requirements: [{
       item: 'headquarters',
@@ -543,7 +552,7 @@ function generateBuildings(speed, list = buildingList) {
           clay: Math.ceil(building.costs.clay.base * (building.costs.clay.factor ** i)),
           iron: Math.ceil(building.costs.iron.base * (building.costs.iron.factor ** i)),
         },
-        score:  Math.ceil(building.baseScore * (building.scoreFactor ** i)),
+        score: i < 2 ? i * building.initialScore : Math.ceil(building.baseScore * (building.scoreFactor ** i)),
       };
       if (building.additional) {
         Object.entries(building.additional).forEach(([key, value]: any) => {

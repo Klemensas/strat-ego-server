@@ -11,7 +11,7 @@ const buildings = [{
     min: 1,
   },
   data: [
-    { score: 1, buildTime: 1, costs: { wood: 1, clay: 1, iron: 1 } },
+    { score: 0, buildTime: 1, costs: { wood: 1, clay: 1, iron: 1 } },
     { score: 2, buildTime: 2, costs: { wood: 2, clay: 2, iron: 2 } },
     { score: 3, buildTime: 3, costs: { wood: 3, clay: 3, iron: 3 } },
     { score: 4, buildTime: 4, costs: { wood: 4, clay: 4, iron: 4 } },
@@ -24,7 +24,7 @@ const buildings = [{
     min: 1,
   },
   data: [
-    { score: 5, buildTime: 1, costs: { wood: 1, clay: 1, iron: 1 }, population: 0 },
+    { score: 0, buildTime: 1, costs: { wood: 1, clay: 1, iron: 1 }, population: 0 },
     { score: 6, buildTime: 60, costs: { wood: 60, clay: 60, iron: 60 }, population: 100 },
   ],
 }];
