@@ -13,7 +13,7 @@ import {
 } from 'strat-ego-common';
 
 import { knexDb } from '../../sqldb';
-import { io, UserSocket, AuthenticatedSocket, ErrorMessage } from '../../config/socket';
+import { io, UserSocket, AuthenticatedSocket, ErrorMessage, SocketUserData } from '../../config/socket';
 import { transaction } from 'objection';
 import { AllianceRole } from './allianceRole';
 import * as allianceQueries from './allianceQueries';
@@ -863,10 +863,10 @@ export class AllianceSocket {
     });
   }
 
-  static cleanSocketAlliance(data) {
+  static cleanSocketAlliance(data: SocketUserData): SocketUserData {
     return {
       ...data,
-      allinaceId: null,
+      allianceId: null,
       allianceName: null,
       allianceRoleId: null,
       alliancePermissions: null,

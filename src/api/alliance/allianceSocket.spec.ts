@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 import { transaction } from 'objection';
 import * as http from 'http';
 
-import { UserSocket, ErrorMessage, setupIo } from '../../config/socket';
+import { UserSocket, ErrorMessage, setupIo, SocketUserData } from '../../config/socket';
 import { AllianceSocket } from './allianceSocket';
 import { PlayerRolePayload, RoleUpdatePayload, WarDeclarationPayload, DiplomacyType, MessagePayload, AlliancePermissions } from 'strat-ego-common';
 import * as allianceQueries from './allianceQueries';
@@ -673,5 +673,28 @@ describe('removeAvatar', () => {
 
       expect(socket.emit).toHaveBeenCalledWith('alliance:removeAvatarSuccess', { event, data: { avatarUrl: null } });
     });
+  });
+});
+
+describe('cleanSocketAlliance', () => {
+  const socketData = {
+    allianceId: 5,
+    allianceName: 'test',
+    allianceRoleId: 1,
+    alliancePermissions: { 1: true },
+  } as any;
+  const nulledData = Object.keys(socketData).reduce((result, key) => ({ ...result, [key]: null }), {});
+
+  it('should return nullified alliance data', () => {
+    expect(AllianceSocket.cleanSocketAlliance(socketData)).toEqual(nulledData);
+  });
+
+  it('should preserve other data', () => {
+    const additionalData = {
+      name: 'test',
+      userId: 1,
+      date: Date.now(),
+    };
+    expect(AllianceSocket.cleanSocketAlliance({ ...socketData, ...additionalData })).toEqual({ ...nulledData, ...additionalData });
   });
 });
