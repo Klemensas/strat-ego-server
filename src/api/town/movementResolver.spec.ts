@@ -1,4 +1,4 @@
-import { Combat, CombatStrength, Dict, TownUnit, MovementType } from 'strat-ego-common';
+import { Dict, MovementType } from 'strat-ego-common';
 import { transaction } from 'objection';
 
 import { MovementResolver } from './movementResolver';
@@ -6,7 +6,6 @@ import { worldData } from '../world/worldData';
 import { TownSupport } from './townSupport';
 import { Town } from './town';
 import { townQueue } from '../townQueue';
-import { Movement } from './movement';
 import { World } from '../world/world';
 import { TownSocket } from './townSocket';
 import * as townQueries from './townQueries';
