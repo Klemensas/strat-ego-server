@@ -1,4 +1,3 @@
-import { knexDb } from '../sqldb';
 import { BuildingQueue } from './building/buildingQueue';
 import { UnitQueue } from './unit/unitQueue';
 import { Movement } from './town/movement';
@@ -8,6 +7,7 @@ import { logger } from '../logger';
 import { getSortedBuildingQueues, getSortedUnitQueues, getSortedMovements } from './world/worldQueries';
 
 export class TownEventQueue {
+  maxAttempts = 3;
   queue: TownQueue[] = [];
   earliestItem: TownQueue;
   queueTimeout: NodeJS.Timer;
@@ -78,9 +78,8 @@ export class TownEventQueue {
   }
 
   public setEarliestItem() {
-    if (this.inProgress) { return; }
     // Exit if earliest item is on track
-    if (!this.queue.length || (this.earliestItem && this.earliestItem.endsAt < this.queue[0].endsAt)) {
+    if (this.inProgress || !this.queue.length || (this.earliestItem && this.earliestItem.endsAt <= this.queue[0].endsAt)) {
       return;
     }
 
@@ -89,18 +88,23 @@ export class TownEventQueue {
     this.queueTimeout = setTimeout(() => this.processItem(), +this.earliestItem.endsAt - Date.now());
   }
 
-  public async processItem() {
+  public async processItem(attempt = 1) {
     this.inProgress = true;
     const targetTown = !(this.earliestItem instanceof Movement) ? (this.earliestItem as UnitQueue | BuildingQueue).townId : this.earliestItem.targetTownId;
     try {
-      const { town, processed } = await Town.processTownQueues(targetTown, +this.earliestItem.endsAt);
+      logger.info('[queue] processing item', this.earliestItem);
+      const { town } = await Town.processTownQueues(targetTown, +this.earliestItem.endsAt);
       TownSocket.emitToTownRoom(town.id, town, 'town:update');
 
       this.inProgress = false;
       this.removeFromQueue(this.earliestItem);
     } catch (err) {
-      logger.error('Errored while processing queue item, retrying...', err);
-      this.processItem();
+      if (attempt >= this.maxAttempts) {
+        logger.error('Failed processing item', this.earliestItem, this.queue.slice(0, 3), err);
+        throw new Error('Failed to process queue item too many times');
+      }
+      logger.error(`Errored while processing queue item, retrying #${attempt}`, err);
+      return this.processItem(++attempt);
     }
   }
 }
