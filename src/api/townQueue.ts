@@ -76,8 +76,7 @@ export class TownEventQueue {
       TownSocket.emitToTownRoom(town.id, town, 'town:update');
 
       this.inProgress = false;
-      this.earliestItem = null;
-      this.setEarliestItem();
+      this.removeFromQueue(this.earliestItem);
     } catch (err) {
       logger.error('Errored while processing queue item, retrying...', err);
       this.processItem();
