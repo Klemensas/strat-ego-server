@@ -57,13 +57,12 @@ export class TownEventQueue {
 
   public setEarliestItem() {
     if (this.inProgress) { return; }
-
-    // Exit if next item is sooner than earliest queue item
-    if (!this.queue.length || (this.earliestItem && this.earliestItem.endsAt <= this.queue[0].endsAt)) {
+    // Exit if earliest item is on track
+    if (!this.queue.length || (this.earliestItem && this.earliestItem.endsAt < this.queue[0].endsAt)) {
       return;
     }
 
-    this.earliestItem = this.queue.shift();
+    this.earliestItem = this.queue[0];
     clearTimeout(this.queueTimeout);
     this.queueTimeout = setTimeout(() => this.processItem(), +this.earliestItem.endsAt - Date.now());
   }
