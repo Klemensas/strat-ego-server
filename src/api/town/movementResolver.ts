@@ -78,18 +78,22 @@ export class MovementResolver {
     const otherTown = await MovementResolver.updateMissingTown(missingTown, +movement.endsAt - 1);
 
     let result: ResolvedAttack;
+    let emittedTown = 'targetTown';
+    let returnedTown = 'originTown';
+    // Pick arguments based on whether caller is origin
     if (isOrigin) {
+      emittedTown = 'originTown';
+      returnedTown = 'targetTown';
       result = await MovementResolver.resolveAttack(movement, otherTown, town);
-      if (result.movement) {
-        townQueue.addToQueue(result.movement);
-      }
-      TownSocket.emitToTownRoom(result.targetTown.id, result.targetTown, 'town:update');
-      return result.originTown;
     } else {
       result = await MovementResolver.resolveAttack(movement, town, otherTown);
-      TownSocket.emitToTownRoom(result.originTown.id, result.originTown, 'town:update');
-      return result.targetTown;
     }
+
+    if (result.movement) {
+      townQueue.addToQueue(result.movement);
+    }
+    TownSocket.emitToTownRoom(result[emittedTown].id, result[emittedTown], 'town:update');
+    return result[returnedTown];
   }
 
   static async resolveAttack(movement: Movement, targetTown: Town, originTown: Town) {
@@ -400,8 +404,8 @@ export class MovementResolver {
       // Victorious return movement
       if (attackOutcome.origin.movement) {
         const query = await createMovement(
-          originTown,
           targetTown,
+          originTown,
           {
             ...attackOutcome.origin.movement,
             endsAt,
