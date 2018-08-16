@@ -57,7 +57,24 @@ export class TownEventQueue {
 
   public removeFromQueue(...items: TownQueue[]) {
     if (!items || !items.length) { return; }
-    this.queue = this.queue.filter((item) => !items.find(({ id }) => item.id === id));
+
+    if (this.earliestItem && items.some((item) => this.earliestItem.id === item.id && item.constructor.name === this.earliestItem.constructor.name)) {
+      this.earliestItem = null;
+    }
+
+    let i = 0;
+    while (items.length && i < this.queue.length) {
+      const removedItem = items.findIndex((item) => item.id === this.queue[i].id && item.constructor.name === this.queue[i].constructor.name);
+      if (removedItem !== -1) {
+        this.queue.splice(i, 1);
+        items.splice(removedItem, 1);
+        continue;
+      }
+      i++;
+    }
+
+    // If removed item is earliest set new earliest item
+    this.setEarliestItem();
   }
 
   public setEarliestItem() {
