@@ -31,8 +31,10 @@ export class TownEventQueue {
   // Sort provided items, then loop through current items to find earlier item and insert there
   public addToQueue(item: TownQueue | TownQueue[]) {
     const target = item instanceof Array ? item.shift() : item;
-    const closerToBeggining = !this.queue.length ? true :
-      Math.abs(this.queue[0].endsAt - target.endsAt) <= Math.abs(this.queue[this.queue.length - 1].endsAt - target.endsAt);
+    // Enforce number type to prevent string and number comparison
+    target.endsAt = +target.endsAt;
+
+    const closerToBeggining = this.queue.length < 3 ? true : (this.queue[0].endsAt + this.queue[this.queue.length - 1].endsAt) / 2 > target.endsAt;
     let index = closerToBeggining ? 0 : this.queue.length - 1;
     if (closerToBeggining) {
       while (index < this.queue.length) {
@@ -40,8 +42,11 @@ export class TownEventQueue {
         index++;
       }
     } else {
-      while (index > 0) {
-        if (this.queue[index].endsAt < target.endsAt) { break; }
+      while (index >= 0) {
+        if (this.queue[index].endsAt <= target.endsAt) {
+          index++;
+          break;
+        }
         index--;
       }
     }
