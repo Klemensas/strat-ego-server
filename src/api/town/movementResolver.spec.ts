@@ -32,7 +32,7 @@ it('calculateSurvivalPercent should return a percent multiplier number', () => {
 });
 
 it('updateMissingTown should process queues and remove processed', async () => {
-  const processed = ['mock', 2];
+  const processed = [{ id: 1 }, { id: 2}];
   const town = { id: 1, name: 'test town' };
   const testId = 12;
   const testDate = 4567;
