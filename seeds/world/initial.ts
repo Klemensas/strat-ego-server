@@ -639,8 +639,8 @@ export const seed = (
   speed = 1,
   baseProduction = 30,
   townPercent = 0.6,
-  townArea = 13,
-  townDistance = 13,
+  townArea = 5,
+  townDistance = 5,
 ) =>
   Unit.query(knex).del().then(() => Unit.query(knex).insert(unitList.map((unit) => {
     unit.speed /= speed / 1000;
