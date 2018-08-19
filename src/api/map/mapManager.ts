@@ -186,18 +186,14 @@ export class MapManager {
   public async expandRing(trx?: Transaction | Knex) {
     await this.worldData.increaseRing(trx);
     this.lastExpansion = +this.worldData.world.lastExpansion;
-    const newCoords = await this.getAvailableCoords(this.getCoordsInRange(
-      this.worldData.world.generationArea,
-      this.worldData.world.currentRing,
-      Math.ceil(this.worldData.world.size / 2),
-    ));
+    const ringCoords = this.getRingCoords(Math.ceil(this.worldData.world.size / 2), this.worldData.world.currentRing);
+    const newCoords = [...ringCoords.top, ...ringCoords.right, ...ringCoords.bottom, ...ringCoords.left];
     const { coords, towns } = await this.worldData.townGrowth.generateRingTowns(newCoords, this.lastExpansion);
     this.addTown(...towns);
-    this.availableCoords = coords;
+    this.availableCoords = [...this.availableCoords, ...coords];
   }
 
   public async getAvailableCoords(coords: Coords[] = this.availableCoords) {
-    // knex requires wrapping in an array http://knexjs.org/#Raw-Bindings
     const towns = await getTownLocationsByCoords(coords);
     const usedLocations = towns.map(({ location }) => location.join(','));
     return coords.filter((c) => !usedLocations.includes(c.join(',')));

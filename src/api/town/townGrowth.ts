@@ -101,10 +101,13 @@ export class TownGrowth {
         coords: emptyCoords,
       };
     } catch (err) {
-      logger.error(err, 'Errored while generating towns for ring, will retry');
+      logger.error(err, 'Errored while generating towns for ring');
       await trx.rollback();
-      coords = await this.worldData.mapManager.getAvailableCoords();
-      return this.generateRingTowns(coords, seedBase);
+      const availableCoords = await this.worldData.mapManager.getAvailableCoords(coords);
+      return {
+        towns: [],
+        coords: availableCoords,
+      };
     }
   }
 }
