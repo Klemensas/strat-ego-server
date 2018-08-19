@@ -1,6 +1,6 @@
-import { Transaction, QueryContext, QueryBuilder } from 'objection';
+import { Transaction, raw } from 'objection';
 import * as Knex from 'knex';
-import { MovementType, MovementPayload, Coords, Dict } from 'strat-ego-common';
+import { MovementType, Coords } from 'strat-ego-common';
 
 import { knexDb } from '../../sqldb';
 import { Town } from './town';
@@ -33,11 +33,10 @@ export function getTownSupport(id: number, connection: Transaction | Knex = knex
 }
 
 export function getTownLocationsByCoords(coords: Coords[], connection: Transaction | Knex = knexDb.world) {
-  // knex requires wrapping in an array http://knexjs.org/#Raw-Bindings
   return Town
     .query(connection)
     .select('location')
-    .whereIn('location', coords.map((item) => ([item])) as any);
+    .innerJoin(raw(`(VALUES ${coords.map((coord) => `(array[${coord.join(', ')}])`).join(', ')}) location(l)`), 'l', 'Town.location');
 }
 
 export function getTownsMapProfile(connection: Transaction | Knex = knexDb.world) {
