@@ -52,6 +52,12 @@ export class TownEventQueue {
     }
     this.queue.splice(index, 0, target);
     if (item instanceof Array && item.length) { return this.addToQueue(item); }
+    logger.info('[queue] adding item', item);
+
+    const inOrder = this.queue.every((t, i, arr) => i + 2 >= arr.length ? true : +t.endsAt <= +arr[i + 1].endsAt);
+    if (!inOrder) {
+      throw new Error('queue not in order');
+    }
     this.setEarliestItem();
   }
 
@@ -72,6 +78,7 @@ export class TownEventQueue {
       }
       i++;
     }
+    logger.info('[queue] removed items', items);
 
     // If removed item is earliest set new earliest item
     this.setEarliestItem();
@@ -84,6 +91,7 @@ export class TownEventQueue {
     }
 
     this.earliestItem = this.queue[0];
+    logger.info('[queue] updating earliest item', this.earliestItem);
     clearTimeout(this.queueTimeout);
     this.queueTimeout = setTimeout(() => this.processItem(), +this.earliestItem.endsAt - Date.now());
   }
