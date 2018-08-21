@@ -47,6 +47,9 @@ export class TownSocket {
       if (!socket.userData.townIds.includes(payload.town)) { throw new ErrorMessage('No town found'); }
 
       const town = await renameTown(payload.name, payload.town);
+      if (!town) { throw new Error('Couldn\'t find specified player town'); }
+
+      worldData.mapManager.setTownName(payload.name, payload.town);
       this.emitToTownRoom(payload.town, payload.name, 'town:renameSuccess');
     } catch (err) {
       socket.handleError(err, 'name', 'town:renameFail', payload);

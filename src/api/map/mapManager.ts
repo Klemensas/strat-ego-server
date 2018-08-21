@@ -94,6 +94,14 @@ export class MapManager {
     }
   }
 
+  public setTownName(name: string, townId: number) {
+    const townList = Object.entries(this.mapData);
+    const target = townList.find(([key, data]) => data.id === townId);
+    if (target) {
+      this.mapData[target[0]].name = name;
+    }
+  }
+
   public getRingCoords(size: number, ring: number) {
     const min = size - ring;
     const max = size + ring;

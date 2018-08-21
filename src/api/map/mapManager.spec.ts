@@ -174,12 +174,38 @@ describe('town editing', () => {
       mapManager.setTownScore(-1, target);
       expect(mapManager.mapData).toEqual(mapData);
     });
+
     it('should update target town score', () => {
       const target = Object.values(mapData)[0].location;
       const expected = 12343;
       expect(mapManager.mapData[target.join(',')].score).not.toEqual(expected);
       mapManager.setTownScore(expected, target);
       expect(mapManager.mapData[target.join(',')].score).toEqual(expected);
+    });
+  });
+
+  describe('setTownName', () => {
+    it('should ignore missing towns', () => {
+      const target = 10000;
+      expect(mapManager.mapData).toEqual(mapData);
+      mapManager.setTownName('name', target);
+      expect(mapManager.mapData).toEqual(mapData);
+    });
+
+    it('should update target town name', () => {
+      const target = Object.values(mapData)[0];
+      const targetId = target.id;
+      const newName = 'new name';
+      const expectedMapData = {
+        ...mapManager.mapData,
+        [target.location.join(',')]: {
+          ...target,
+          name: newName,
+        },
+      };
+
+      mapManager.setTownName(newName, targetId);
+      expect(mapManager.mapData).toEqual(expectedMapData);
     });
   });
 });
