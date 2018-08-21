@@ -29,7 +29,7 @@ export function getTownSupport(id: number, connection: Transaction | Knex = knex
   return TownSupport
     .query(connection)
     .findById(id)
-    .eager('[originTown(selectTownProfile), targetTown(selectTownProfile)');
+    .eager('[originTown(selectTownProfile), targetTown(selectTownProfile)]');
 }
 
 export function getTownLocationsByCoords(coords: Coords[], connection: Transaction | Knex = knexDb.world) {
