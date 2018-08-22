@@ -123,7 +123,7 @@ it('joinTownRoom should call join for every user town', () => {
   socket.userData.townIds = [564, 56, 11];
   TownSocket.joinTownRoom(socket);
   expect(socket.join).toHaveBeenCalledTimes(socket.userData.townIds.length);
-  expect(socket.join).toHaveBeenLastCalledWith(String(socket.userData.townIds[socket.userData.townIds.length - 1]));
+  expect(socket.join).toHaveBeenLastCalledWith(`town.${socket.userData.townIds[socket.userData.townIds.length - 1]}`);
 });
 
 describe('cancelSupport', () => {

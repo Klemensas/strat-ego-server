@@ -33,12 +33,12 @@ export class TownSocket {
   }
 
   static joinTownRoom(socket: UserSocket) {
-    socket.userData.townIds.forEach((id) => socket.join(String(id)));
+    socket.userData.townIds.forEach((id) => socket.join(`town.${id}`));
   }
 
-  static emitToTownRoom(room: number, payload: any, topic: string = 'town') {
-    const roomName = String(room);
-    io.sockets.in(roomName).emit(topic, payload);
+  static emitToTownRoom(townId: number, payload: any, topic: string = 'town') {
+    io.sockets.in(`town.${townId}`).emit(topic, payload);
+  }
   }
 
   static async rename(socket: UserSocket, payload: NamePayload) {
