@@ -39,6 +39,7 @@ export interface AttackOutcome {
   origin: OriginOutcome;
   target: TargetOutcome;
   report: Partial<Report>;
+  conquered?: boolean;
 }
 
 export interface ResolvedAttack {
@@ -99,6 +100,7 @@ export class MovementResolver {
   }
 
   static async resolveAttack(movement: Movement, targetTown: Town, originTown: Town) {
+    // Note targetTowns.units is an object so unitArrays.defense has a ref
     const unitArrays: CombatantList = {
       attack: Object.entries(movement.units),
       defense: Object.entries(targetTown.units),
@@ -261,7 +263,6 @@ export class MovementResolver {
 
     const loyaltyChange = MovementResolver.getLoyaltyChange(attackResult.survivors.noble);
     const loyalty = targetLoyalty - loyaltyChange;
-    const isConquered = loyalty <= 0;
 
     const targetOutcome: TargetOutcome = {
       resources,
@@ -279,10 +280,8 @@ export class MovementResolver {
     }, { ...defenseResult.combatUnits });
     targetOutcome.units = defenseResult.units;
 
-    if (isConquered) {
-      targetOutcome.playerId = originTown.playerId;
-      targetOutcome.loyalty = worldData.world.initialLoyalty;
-      targetOutcome.units = Town.getInitialUnits();
+    const conquered = loyalty <= 0;
+    if (conquered) {
       attackResult.unitChange = true;
       originOutcome.movement.units.noble -= 1;
     }
@@ -306,6 +305,7 @@ export class MovementResolver {
         },
         loyaltyChange: [targetLoyalty, loyalty],
       },
+      conquered,
     });
   }
 
@@ -428,11 +428,19 @@ export class MovementResolver {
         originTown.targetMovements.push(newMovement);
       }
 
-      // Target losses
+      // If target has any losses
       if (attackOutcome.target) {
         // Remove all support if target lost
         if (report.outcome === CombatOutcome.attack) {
           await deleteAllStationedSupport(targetTown, trx);
+
+          if (attackOutcome.conquered) {
+            attackOutcome.target.playerId = originTown.playerId;
+            attackOutcome.target.loyalty = worldData.world.initialLoyalty;
+            attackOutcome.target.units = Town.getInitialUnits();
+
+            await deleteAllSentSupport(targetTown, trx);
+          }
         } else {
           await Promise.all(support.map((item) => item.units ?
             updateStationedSupport(targetTown, item.id, { units: item.units }, trx) :
