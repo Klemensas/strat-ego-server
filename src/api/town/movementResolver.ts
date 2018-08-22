@@ -95,7 +95,9 @@ export class MovementResolver {
     if (result.movement) {
       townQueue.addToQueue(result.movement);
     }
-    TownSocket.emitToTownRoom(result[emittedTown].id, result[emittedTown], 'town:update');
+    // Use report playerIds since towns might be updated already
+    PlayerSocket.emitToPlayer(result.report.originPlayerId, { side: 'origin', report: result.report }, 'player:addReport');
+    PlayerSocket.emitToPlayer(result.report.targetPlayerId, { side: 'target', report: result.report }, 'player:addReport');
     return result[returnedTown];
   }
 
@@ -407,8 +409,10 @@ export class MovementResolver {
       const report = await createReport({
         ...attackOutcome.report,
         originTownId: originTown.id,
+        originTown: { id: originTown.id, location: originTown.location },
         originPlayerId: originTown.playerId,
         targetTownId: targetTown.id,
+        targetTown: { id: targetTown.id, location: targetTown.location },
         targetPlayerId: targetTown.playerId,
       }, trx);
 
