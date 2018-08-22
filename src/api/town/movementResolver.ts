@@ -14,10 +14,11 @@ import {
   updateTown,
   createSupport,
   createMovement,
-  deleteAllTownSupport,
-  deleteTownSupport,
-  updateTownSupport,
   createReport,
+  deleteAllStationedSupport,
+  deleteAllSentSupport,
+  deleteStationedSupport,
+  updateStationedSupport,
 } from './townQueries';
 
 const defaultStrength: CombatStrength = { general: 0, cavalry: 0, archer: 0 };
@@ -431,11 +432,11 @@ export class MovementResolver {
       if (attackOutcome.target) {
         // Remove all support if target lost
         if (report.outcome === CombatOutcome.attack) {
-          await deleteAllTownSupport(targetTown, trx);
+          await deleteAllStationedSupport(targetTown, trx);
         } else {
           await Promise.all(support.map((item) => item.units ?
-            updateTownSupport(targetTown, item.id, { units: item.units }, trx) :
-            deleteTownSupport(targetTown, item.id, trx),
+            updateStationedSupport(targetTown, item.id, { units: item.units }, trx) :
+            deleteStationedSupport(targetTown, item.id, trx),
           ));
         }
         await updateTown(

@@ -155,18 +155,24 @@ export async function deleteSupport(support: TownSupport, endsAt: number, connec
   return movement;
 }
 
-export function deleteAllTownSupport(town: Town, connection: Transaction | Knex = knexDb.world) {
+export function deleteAllSentSupport(town: Town, connection: Transaction | Knex = knexDb.world) {
+  return town
+    .$relatedQuery('originSupport', connection)
+    .del();
+}
+
+export function deleteAllStationedSupport(town: Town, connection: Transaction | Knex = knexDb.world) {
   return town
     .$relatedQuery('targetSupport', connection)
     .del();
 }
 
-export function deleteTownSupport(town: Town, targetId: number, connection: Transaction | Knex = knexDb.world) {
-  return deleteAllTownSupport(town, connection)
+export function deleteStationedSupport(town: Town, targetId: number, connection: Transaction | Knex = knexDb.world) {
+  return deleteAllStationedSupport(town, connection)
     .where('id', targetId);
 }
 
-export function updateTownSupport(town: Town, targetId: number, payload: Partial<TownSupport>, connection: Transaction | Knex = knexDb.world) {
+export function updateStationedSupport(town: Town, targetId: number, payload: Partial<TownSupport>, connection: Transaction | Knex = knexDb.world) {
   return town
     .$relatedQuery<TownSupport>('targetSupport', connection)
     .patch(payload)
