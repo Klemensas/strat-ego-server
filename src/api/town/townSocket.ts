@@ -39,6 +39,44 @@ export class TownSocket {
   static emitToTownRoom(townId: number, payload: any, topic: string = 'town') {
     io.sockets.in(`town.${townId}`).emit(topic, payload);
   }
+
+  static clearTownRoom(room: string, clientAction?: (client) => void) {
+    const socketRoom = io.sockets.adapter.rooms[room];
+    if (!socketRoom) { return; }
+
+    Object.keys(socketRoom.sockets).forEach((socketId) => {
+      const client = io.sockets.connected[socketId] as UserSocket;
+      client.leave(room);
+      if (clientAction) { clientAction(client); }
+    });
+  }
+
+  static playersToTownRoom(playerId: number, townRoom: string, clientAction?: (client) => void) {
+    const room = `player.${playerId}`;
+    const socketRoom = io.sockets.adapter.rooms[room];
+    if (!socketRoom) { return; }
+
+    Object.keys(socketRoom.sockets).forEach((socketId) => {
+      const client = io.sockets.connected[socketId] as UserSocket;
+      client.join(townRoom);
+      if (clientAction) { clientAction(client); }
+    });
+  }
+
+  static townConquered(town: Town) {
+    const room = `town.${town.id}`;
+    this.emitToTownRoom(town.id, town.id, 'town:lost');
+    this.clearTownRoom(room, (client: UserSocket) => {
+      client.userData = {
+        ...client.userData,
+        townIds: client.userData.townIds.filter((id) => id !== town.id),
+      };
+    });
+
+    this.playersToTownRoom(town.playerId, room, (client: UserSocket) => {
+      client.userData.townIds.push(town.id);
+    });
+    this.emitToTownRoom(town.id, town, 'town:conquered');
   }
 
   static async rename(socket: UserSocket, payload: NamePayload) {

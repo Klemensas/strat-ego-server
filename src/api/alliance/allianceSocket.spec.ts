@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 import { transaction } from 'objection';
 import * as http from 'http';
 
-import { UserSocket, ErrorMessage, setupIo, SocketUserData } from '../../config/socket';
+import { UserSocket, ErrorMessage, setupIo } from '../../config/socket';
 import { AllianceSocket } from './allianceSocket';
 import { PlayerRolePayload, RoleUpdatePayload, WarDeclarationPayload, DiplomacyType, MessagePayload, AlliancePermissions } from 'strat-ego-common';
 import * as allianceQueries from './allianceQueries';

@@ -1,11 +1,12 @@
 import { transaction } from 'objection';
 import { EventEmitter } from 'events';
+import * as http from 'http';
 
 import { TownSocket } from './townSocket';
 import { Town } from './town';
 import { World } from '../world/world';
 import { worldData } from '../world/worldData';
-import { UserSocket, ErrorMessage } from '../../config/socket';
+import { UserSocket, ErrorMessage, setupIo } from '../../config/socket';
 import { townQueue } from '../townQueue';
 import * as townQueries from './townQueries';
 import { NamePayload, BuildPayload, RecruitPayload, TroopMovementPayload, MovementType } from 'strat-ego-common';
@@ -124,6 +125,64 @@ it('joinTownRoom should call join for every user town', () => {
   TownSocket.joinTownRoom(socket);
   expect(socket.join).toHaveBeenCalledTimes(socket.userData.townIds.length);
   expect(socket.join).toHaveBeenLastCalledWith(`town.${socket.userData.townIds[socket.userData.townIds.length - 1]}`);
+});
+
+describe('io', () => {
+  let io;
+  let rooms;
+  let sockets;
+  beforeEach(() => {
+    const server = http.createServer();
+    io = setupIo(server);
+    sockets = {};
+    rooms = {};
+    io.sockets = {
+      adapter: {
+        rooms,
+      },
+      connected: sockets,
+    } as any;
+  });
+
+  describe('clearTownRoom', () => {
+    it('should exit cleanly if room missing', () => {
+      expect(() => TownSocket.clearTownRoom('')).not.toThrow();
+    });
+
+    it('should leave room for all related sockets and call clientAction', () => {
+      const room = 'town.1';
+      const leave = jest.fn();
+      const action = jest.fn();
+      sockets.test1 = { leave };
+      sockets.test2 = { leave };
+      rooms[room] = { sockets: { test1: null, test2: null } };
+
+      TownSocket.clearTownRoom(room, action);
+      expect(action).toHaveBeenCalledTimes(Object.keys(sockets).length);
+      expect(leave).toHaveBeenCalledTimes(Object.keys(sockets).length);
+    });
+  });
+
+  describe('playersToTownRoom', () => {
+    it('should exit cleanly if room missing', () => {
+      expect(() => TownSocket.playersToTownRoom(1, '')).not.toThrow();
+    });
+
+    it('should join room for all related sockets and call clientAction', () => {
+      const playerId = 12;
+      const room = `player.${playerId}`;
+      const townRoom = 'town.2';
+      const join = jest.fn();
+      const action = jest.fn();
+      sockets.test1 = { join };
+      sockets.test2 = { join };
+      rooms[room] = { sockets: { test1: null, test2: null } };
+
+      TownSocket.playersToTownRoom(playerId, townRoom, action);
+      expect(action).toHaveBeenCalledTimes(Object.keys(sockets).length);
+      expect(join).toHaveBeenCalledTimes(Object.keys(sockets).length);
+    });
+  });
 });
 
 describe('cancelSupport', () => {
