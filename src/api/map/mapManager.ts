@@ -7,6 +7,7 @@ import { Player } from '../player/player';
 import { WorldData } from '../world/worldData';
 import { knexDb } from '../../sqldb';
 import { getTownLocationsByCoords, getTownsMapProfile } from '../town/townQueries';
+import { logger } from '../../logger';
 
 export class MapManager {
   public mapData: Dict<MapTown> = {};
@@ -100,6 +101,26 @@ export class MapManager {
     if (target) {
       this.mapData[target[0]].name = name;
     }
+  }
+
+  public townConquered(town: Partial<Town>, originCoords: Coords) {
+    const { name, score, id, location } = town;
+    const originTown = this.mapData[originCoords.join(',')];
+    // Throw on missing origin town in map data
+    if (!originTown) {
+      logger.error('Conquering town missing in map data', originCoords, this.mapData);
+      throw new Error('Missing town data');
+    }
+
+    this.mapData[town.location.join(',')] = {
+      ...this.mapData[town.location.join(',')],
+      id,
+      name,
+      location,
+      owner: originTown.owner,
+      alliance: originTown.alliance,
+      score,
+    };
   }
 
   public getRingCoords(size: number, ring: number) {

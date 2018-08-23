@@ -208,6 +208,45 @@ describe('town editing', () => {
       expect(mapManager.mapData).toEqual(expectedMapData);
     });
   });
+
+  describe('townConquered', () => {
+    it('should throw on missing originTown', () => {
+      expect(() => mapManager.townConquered({}, [1, 1])).toThrow();
+    });
+
+    it('should update mapData', () => {
+      const originTown: MapTown = {
+        id: 1,
+        location: [1, 1],
+        score: 101,
+        name: 'town #1',
+        owner: { id: 11, name: 'player #11' },
+        alliance: { id: 22, name: 'alliance #22' },
+      };
+      const targetTown: MapTown = {
+        id: 2,
+        location: [2, 2],
+        score: 202,
+        name: 'town #2',
+        owner: null,
+        alliance: null,
+      };
+      const data = {
+        [originTown.location.join(',')]: { ...originTown },
+        [targetTown.location.join(',')]: { ...targetTown },
+      };
+      mapManager.mapData = { ...data };
+      mapManager.townConquered(targetTown, originTown.location);
+      expect(mapManager.mapData).toEqual(({
+        ...data,
+        [targetTown.location.join(',')]: {
+          ...targetTown,
+          owner: originTown.owner,
+          alliance: originTown.alliance,
+        },
+      }));
+    });
+  });
 });
 
 describe('map expansion', () => {
