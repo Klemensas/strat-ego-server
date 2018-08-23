@@ -7,6 +7,7 @@ import { Player } from '../player/player';
 import { WorldData } from '../world/worldData';
 import { knexDb } from '../../sqldb';
 import { getTownLocationsByCoords, getTownsMapProfile } from '../town/townQueries';
+import { logger } from '../../logger';
 
 export class MapManager {
   public mapData: Dict<MapTown> = {};
@@ -92,6 +93,34 @@ export class MapManager {
     if (target) {
       target.score = score;
     }
+  }
+
+  public setTownName(name: string, townId: number) {
+    const townList = Object.entries(this.mapData);
+    const target = townList.find(([key, data]) => data.id === townId);
+    if (target) {
+      this.mapData[target[0]].name = name;
+    }
+  }
+
+  public townConquered(town: Partial<Town>, originCoords: Coords) {
+    const { name, score, id, location } = town;
+    const originTown = this.mapData[originCoords.join(',')];
+    // Throw on missing origin town in map data
+    if (!originTown) {
+      logger.error('Conquering town missing in map data', originCoords, this.mapData);
+      throw new Error('Missing town data');
+    }
+
+    this.mapData[town.location.join(',')] = {
+      ...this.mapData[town.location.join(',')],
+      id,
+      name,
+      location,
+      owner: originTown.owner,
+      alliance: originTown.alliance,
+      score,
+    };
   }
 
   public getRingCoords(size: number, ring: number) {
@@ -186,18 +215,14 @@ export class MapManager {
   public async expandRing(trx?: Transaction | Knex) {
     await this.worldData.increaseRing(trx);
     this.lastExpansion = +this.worldData.world.lastExpansion;
-    const newCoords = await this.getAvailableCoords(this.getCoordsInRange(
-      this.worldData.world.generationArea,
-      this.worldData.world.currentRing,
-      Math.ceil(this.worldData.world.size / 2),
-    ));
+    const ringCoords = this.getRingCoords(Math.ceil(this.worldData.world.size / 2), this.worldData.world.currentRing);
+    const newCoords = [...ringCoords.top, ...ringCoords.right, ...ringCoords.bottom, ...ringCoords.left];
     const { coords, towns } = await this.worldData.townGrowth.generateRingTowns(newCoords, this.lastExpansion);
     this.addTown(...towns);
-    this.availableCoords = coords;
+    this.availableCoords = [...this.availableCoords, ...coords];
   }
 
   public async getAvailableCoords(coords: Coords[] = this.availableCoords) {
-    // knex requires wrapping in an array http://knexjs.org/#Raw-Bindings
     const towns = await getTownLocationsByCoords(coords);
     const usedLocations = towns.map(({ location }) => location.join(','));
     return coords.filter((c) => !usedLocations.includes(c.join(',')));

@@ -42,7 +42,7 @@ module.exports = {
     expansionRate: +(process.env.EXPANSION_RATE || 172800000),
     expansionGrowth: +(process.env.EXPANSION_GROWTH || 1.1),
     speed: +(process.env.WORLD_SPEED || 100),
-    demoUserCount: +(process.env.DEMO_USERS || 100),
+    demoUserCount: +(process.env.DEMO_USERS || 10),
     baseProduction: +(process.env.BASE_PRODUCTION || 5000),
   },
   ...envVariables[env],

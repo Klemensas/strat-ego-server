@@ -174,12 +174,77 @@ describe('town editing', () => {
       mapManager.setTownScore(-1, target);
       expect(mapManager.mapData).toEqual(mapData);
     });
+
     it('should update target town score', () => {
       const target = Object.values(mapData)[0].location;
       const expected = 12343;
       expect(mapManager.mapData[target.join(',')].score).not.toEqual(expected);
       mapManager.setTownScore(expected, target);
       expect(mapManager.mapData[target.join(',')].score).toEqual(expected);
+    });
+  });
+
+  describe('setTownName', () => {
+    it('should ignore missing towns', () => {
+      const target = 10000;
+      expect(mapManager.mapData).toEqual(mapData);
+      mapManager.setTownName('name', target);
+      expect(mapManager.mapData).toEqual(mapData);
+    });
+
+    it('should update target town name', () => {
+      const target = Object.values(mapData)[0];
+      const targetId = target.id;
+      const newName = 'new name';
+      const expectedMapData = {
+        ...mapManager.mapData,
+        [target.location.join(',')]: {
+          ...target,
+          name: newName,
+        },
+      };
+
+      mapManager.setTownName(newName, targetId);
+      expect(mapManager.mapData).toEqual(expectedMapData);
+    });
+  });
+
+  describe('townConquered', () => {
+    it('should throw on missing originTown', () => {
+      expect(() => mapManager.townConquered({}, [1, 1])).toThrow();
+    });
+
+    it('should update mapData', () => {
+      const originTown: MapTown = {
+        id: 1,
+        location: [1, 1],
+        score: 101,
+        name: 'town #1',
+        owner: { id: 11, name: 'player #11' },
+        alliance: { id: 22, name: 'alliance #22' },
+      };
+      const targetTown: MapTown = {
+        id: 2,
+        location: [2, 2],
+        score: 202,
+        name: 'town #2',
+        owner: null,
+        alliance: null,
+      };
+      const data = {
+        [originTown.location.join(',')]: { ...originTown },
+        [targetTown.location.join(',')]: { ...targetTown },
+      };
+      mapManager.mapData = { ...data };
+      mapManager.townConquered(targetTown, originTown.location);
+      expect(mapManager.mapData).toEqual(({
+        ...data,
+        [targetTown.location.join(',')]: {
+          ...targetTown,
+          owner: originTown.owner,
+          alliance: originTown.alliance,
+        },
+      }));
     });
   });
 });

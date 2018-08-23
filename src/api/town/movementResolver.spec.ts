@@ -1,4 +1,4 @@
-import { Combat, CombatStrength, Dict, TownUnit, MovementType } from 'strat-ego-common';
+import { Dict, MovementType } from 'strat-ego-common';
 import { transaction } from 'objection';
 
 import { MovementResolver } from './movementResolver';
@@ -6,7 +6,6 @@ import { worldData } from '../world/worldData';
 import { TownSupport } from './townSupport';
 import { Town } from './town';
 import { townQueue } from '../townQueue';
-import { Movement } from './movement';
 import { World } from '../world/world';
 import { TownSocket } from './townSocket';
 import * as townQueries from './townQueries';
@@ -32,7 +31,7 @@ it('calculateSurvivalPercent should return a percent multiplier number', () => {
 });
 
 it('updateMissingTown should process queues and remove processed', async () => {
-  const processed = ['mock', 2];
+  const processed = [{ id: 1 }, { id: 2}];
   const town = { id: 1, name: 'test town' };
   const testId = 12;
   const testDate = 4567;

@@ -20,22 +20,24 @@ export interface AuthenticatedSocket extends SocketIO.Socket {
   };
 }
 
+export interface SocketUserData {
+  worldName?: string;
+  userId?: number;
+  username?: string;
+  playerName?: string;
+  playerId?: number;
+  townIds?: number[];
+  allianceId?: number;
+  allianceName?: string;
+  allianceRoleId?: number;
+  alliancePermissions?: AlliancePermissions;
+  updatedAt?: number;
+  connectedAt?: number;
+}
+
 export interface UserSocket extends AuthenticatedSocket {
   address: string;
-  userData: {
-    worldName?: string;
-    userId?: number;
-    username?: string;
-    playerName?: string;
-    playerId?: number;
-    townIds?: number[];
-    allianceId?: number;
-    allianceName?: string;
-    allianceRoleId?: number;
-    alliancePermissions?: AlliancePermissions;
-    updatedAt?: number;
-    connectedAt?: number;
-  };
+  userData: SocketUserData;
   log(...data: any[]): void;
   handleError(err: any, type: string, target?: string, payload?: any): void;
 }

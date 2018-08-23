@@ -14,11 +14,14 @@ import {
   updateTown,
   createSupport,
   createMovement,
-  deleteAllTownSupport,
-  deleteTownSupport,
-  updateTownSupport,
   createReport,
+  deleteAllStationedSupport,
+  deleteAllSentSupport,
+  deleteStationedSupport,
+  updateStationedSupport,
 } from './townQueries';
+import { PlayerSocket } from '../player/playerSocket';
+import { scoreTracker } from '../player/playerScore';
 
 const defaultStrength: CombatStrength = { general: 0, cavalry: 0, archer: 0 };
 const combatTypes = ['general', 'cavalry', 'archer'];
@@ -38,6 +41,7 @@ export interface AttackOutcome {
   origin: OriginOutcome;
   target: TargetOutcome;
   report: Partial<Report>;
+  conquered?: boolean;
 }
 
 export interface ResolvedAttack {
@@ -49,6 +53,7 @@ export interface ResolvedAttack {
 
 export interface SupportChange {
   id: number;
+  initialUnits: Dict<number>;
   units: Dict<number>;
 }
 export type MovementUnitArray = [string, number];
@@ -78,21 +83,38 @@ export class MovementResolver {
     const otherTown = await MovementResolver.updateMissingTown(missingTown, +movement.endsAt - 1);
 
     let result: ResolvedAttack;
+    let emittedTown = 'targetTown';
+    let returnedTown = 'originTown';
+    // Pick arguments based on whether caller is origin
     if (isOrigin) {
+      emittedTown = 'originTown';
+      returnedTown = 'targetTown';
       result = await MovementResolver.resolveAttack(movement, otherTown, town);
-      if (result.movement) {
-        townQueue.addToQueue(result.movement);
-      }
-      TownSocket.emitToTownRoom(result.targetTown.id, result.targetTown, 'town:update');
-      return result.originTown;
     } else {
       result = await MovementResolver.resolveAttack(movement, town, otherTown);
-      TownSocket.emitToTownRoom(result.originTown.id, result.originTown, 'town:update');
-      return result.targetTown;
     }
+
+    if (result.movement) {
+      townQueue.addToQueue(result.movement);
+    }
+    // Use report playerIds since towns might be updated already
+    PlayerSocket.emitToPlayer(result.report.originPlayerId, { side: 'origin', report: result.report }, 'player:addReport');
+    PlayerSocket.emitToPlayer(result.report.targetPlayerId, { side: 'target', report: result.report }, 'player:addReport');
+    // Town was conquered
+    if (result.originTown.playerId === result.targetTown.playerId) {
+      TownSocket.townConquered(result.targetTown);
+      worldData.mapManager.townConquered(result.targetTown, result.originTown.location);
+      scoreTracker.updateScore(result.report.originPlayerId, result.targetTown.score);
+      scoreTracker.updateScore(result.report.targetPlayerId, -result.targetTown.score);
+    } else {
+      TownSocket.emitToTownRoom(result[emittedTown].id, result[emittedTown], 'town:update');
+    }
+
+    return result[returnedTown];
   }
 
   static async resolveAttack(movement: Movement, targetTown: Town, originTown: Town) {
+    // Note targetTowns.units is an object so unitArrays.defense has a ref
     const unitArrays: CombatantList = {
       attack: Object.entries(movement.units),
       defense: Object.entries(targetTown.units),
@@ -102,16 +124,16 @@ export class MovementResolver {
 
     const defenseStrength = MovementResolver.calculateDefenseStrength(unitArrays.defense);
     const supportStrength = MovementResolver.calculateSupportStrength(targetTown.targetSupport);
+
+    supportStrength.total = supportStrength.general + supportStrength.cavalry + supportStrength.archer;
+    attackStrength.total = attackStrength.general + attackStrength.cavalry + attackStrength.archer;
+    defenseStrength.total = defenseStrength.general + defenseStrength.cavalry + defenseStrength.archer;
     const totalDefenseStrength: CombatStrength = {
       general: defenseStrength.general + supportStrength.general,
       cavalry: defenseStrength.cavalry + supportStrength.cavalry,
       archer: defenseStrength.archer + supportStrength.archer,
       total: defenseStrength.total + supportStrength.total,
     };
-
-    supportStrength.total = supportStrength.general + supportStrength.cavalry + supportStrength.archer;
-    attackStrength.total = attackStrength.general + attackStrength.cavalry + attackStrength.archer;
-    defenseStrength.total = defenseStrength.general + defenseStrength.cavalry + defenseStrength.archer;
 
     if (totalDefenseStrength.total === 0) {
       return MovementResolver.handleAttackWin(unitArrays, 1, movement, targetTown, originTown);
@@ -255,7 +277,6 @@ export class MovementResolver {
 
     const loyaltyChange = MovementResolver.getLoyaltyChange(attackResult.survivors.noble);
     const loyalty = targetLoyalty - loyaltyChange;
-    const isConquered = loyalty <= 0;
 
     const targetOutcome: TargetOutcome = {
       resources,
@@ -267,17 +288,15 @@ export class MovementResolver {
       result.units[key].inside = 0;
       return result;
     }, { units: {}, combatUnits: {} });
+    const reportDefense = targetTown.targetSupport.reduce((result: Dict<number>, { units }): Dict<number> => {
+      Object.entries(units).forEach(([key, val]) => result[key] = result[key] + val || val);
+      return result;
+    }, { ...defenseResult.combatUnits });
     targetOutcome.units = defenseResult.units;
 
-    if (isConquered) {
-      const destinationPlayerId = targetTown.playerId;
-      targetOutcome.playerId = originTown.playerId;
-      targetOutcome.loyalty = worldData.world.initialLoyalty;
-      targetOutcome.units = Town.getInitialUnits();
+    const conquered = loyalty <= 0;
+    if (conquered) {
       attackResult.unitChange = true;
-    }
-
-    if (attackResult.unitChange && isConquered) {
       originOutcome.movement.units.noble -= 1;
     }
 
@@ -291,8 +310,8 @@ export class MovementResolver {
           losses: attackResult.losses,
         },
         target: {
-          units: defenseResult.combatUnits,
-          losses: defenseResult.combatUnits,
+          units: reportDefense,
+          losses: reportDefense,
         },
         haul: {
           maxHaul: attackResult.maxHaul,
@@ -300,6 +319,7 @@ export class MovementResolver {
         },
         loyaltyChange: [targetLoyalty, loyalty],
       },
+      conquered,
     });
   }
 
@@ -324,23 +344,35 @@ export class MovementResolver {
       losses: Dict<number>;
       hasLosses: boolean;
     });
-    const supportChanges: SupportChange[] = targetTown.targetSupport.reduce((result, item) => {
+    const { supportChanges, reportDefense } = targetTown.targetSupport.reduce((result, item) => {
       const { alive, units, changed } = Object.entries(item.units).reduce((r, [key, val]) => {
         const count = Math.round(val * winnerSurvival);
+        const unitsChanged = count !== val;
+        const losses = +unitsChanged * (val - count);
+
+        result.reportDefense.units[key] = result.reportDefense.units[key] + count || count;
+        result.reportDefense.losses[key] = result.reportDefense.units[key] + losses || losses;
+
         r.alive = r.alive || !!count;
-        r.changed =  r.changed || count !== val;
+        r.changed =  r.changed || unitsChanged;
         r.units[key] = count;
         return r;
       }, { alive: false, units: {}, changed: false });
       if (changed) {
-        result.push({
+        result.supportChanges.push({
           changed,
           id: item.id,
           units: !alive ? null : units,
         });
       }
       return result;
-    }, []);
+    }, {
+      supportChanges: [],
+      reportDefense: {
+        units: { ...defenseResult.defendingUnits },
+        losses: { ...defenseResult.losses },
+      },
+    });
 
     const attackResult = unitArrays.attack.reduce((result, [key, val]) => {
       result.combatUnits[key] = val;
@@ -366,10 +398,7 @@ export class MovementResolver {
             units: attackResult.combatUnits,
             losses: attackResult.combatUnits,
           },
-          target: {
-            units: defenseResult.defendingUnits,
-            losses: defenseResult.losses,
-          },
+          target: reportDefense,
         },
       },
       supportChanges,
@@ -392,16 +421,18 @@ export class MovementResolver {
       const report = await createReport({
         ...attackOutcome.report,
         originTownId: originTown.id,
+        originTown: { id: originTown.id, location: originTown.location },
         originPlayerId: originTown.playerId,
         targetTownId: targetTown.id,
+        targetTown: { id: targetTown.id, location: targetTown.location },
         targetPlayerId: targetTown.playerId,
       }, trx);
 
       // Victorious return movement
       if (attackOutcome.origin.movement) {
         const query = await createMovement(
-          originTown,
           targetTown,
+          originTown,
           {
             ...attackOutcome.origin.movement,
             endsAt,
@@ -413,16 +444,25 @@ export class MovementResolver {
         originTown.targetMovements.push(newMovement);
       }
 
-      // Target losses
+      // If target has any losses
       if (attackOutcome.target) {
         // Remove all support if target lost
         if (report.outcome === CombatOutcome.attack) {
-          await deleteAllTownSupport(targetTown, trx);
+          await deleteAllStationedSupport(targetTown, trx);
+
+          if (attackOutcome.conquered) {
+            attackOutcome.target.playerId = originTown.playerId;
+            attackOutcome.target.loyalty = worldData.world.initialLoyalty;
+            attackOutcome.target.units = Town.getInitialUnits();
+
+            await deleteAllSentSupport(targetTown, trx);
+          }
+        } else {
+          await Promise.all(support.map((item) => item.units ?
+            updateStationedSupport(targetTown, item.id, { units: item.units }, trx) :
+            deleteStationedSupport(targetTown, item.id, trx),
+          ));
         }
-        await Promise.all(support.map((item) => item.units ?
-          updateTownSupport(targetTown, item.id, { units: item.units }, trx) :
-          deleteTownSupport(targetTown, item.id, trx),
-        ));
         await updateTown(
           targetTown,
           {

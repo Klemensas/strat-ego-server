@@ -675,3 +675,26 @@ describe('removeAvatar', () => {
     });
   });
 });
+
+describe('cleanSocketAlliance', () => {
+  const socketData = {
+    allianceId: 5,
+    allianceName: 'test',
+    allianceRoleId: 1,
+    alliancePermissions: { 1: true },
+  } as any;
+  const nulledData = Object.keys(socketData).reduce((result, key) => ({ ...result, [key]: null }), {});
+
+  it('should return nullified alliance data', () => {
+    expect(AllianceSocket.cleanSocketAlliance(socketData)).toEqual(nulledData);
+  });
+
+  it('should preserve other data', () => {
+    const additionalData = {
+      name: 'test',
+      userId: 1,
+      date: Date.now(),
+    };
+    expect(AllianceSocket.cleanSocketAlliance({ ...socketData, ...additionalData })).toEqual({ ...nulledData, ...additionalData });
+  });
+});

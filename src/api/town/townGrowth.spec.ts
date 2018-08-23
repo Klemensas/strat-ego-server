@@ -167,7 +167,7 @@ describe('generateRingTowns', () => {
     jest.spyOn(worldData.mapManager, 'getAvailableCoords').mockImplementationOnce(() => (availableCoords));
   });
 
-  it('should catch errors and retry', async () => {
+  it('should catch errors and return refreshed coords', async () => {
     const errorMessage = 'fatal error';
     let shouldThrow = true;
     upsertTownsSpy.mockImplementation(() => {
@@ -179,9 +179,12 @@ describe('generateRingTowns', () => {
     });
     jest.spyOn(townGrowth, 'generateRingTowns');
 
-    await townGrowth.generateRingTowns(townCoords, seedBase);
+    const result = await townGrowth.generateRingTowns(townCoords, seedBase);
+    expect(result).toEqual({
+      towns: [],
+      coords: availableCoords,
+    });
     expect(worldData.mapManager.getAvailableCoords).toHaveBeenCalled();
-    expect(townGrowth.generateRingTowns).toHaveBeenLastCalledWith(availableCoords, seedBase);
   });
 
   it('should not upsert if no towns picked', async () => {

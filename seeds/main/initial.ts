@@ -1,7 +1,7 @@
 import { User } from '../../src/api/user/user';
 import { World } from '../../src/api/world/world';
 
-export const seed = (knex, speed = 1, demoUserCount = 100, expansionRate = 172800000, expansionGrowth = 1.1) => Promise.all([
+export const seed = (knex, speed = 1, demoUserCount = 100, expansionRate = 129000000, expansionGrowth = 1.1) => Promise.all([
   User.query(knex).del().then(() => {
     const demoUsers = [];
     for (let i = 0; i < demoUserCount; i++) {
@@ -43,10 +43,10 @@ export const seed = (knex, speed = 1, demoUserCount = 100, expansionRate = 17280
     regionSize: 27,
     fillTime: (90 * 24 * 60 * 60 * 1000),
     fillPercent: 0.8,
-    barbPercent: 0.6,
+    barbPercent: 0.2,
     timeQouta: 0.4,
     generationArea: 9,
-    currentRing: 1,
+    currentRing: 5,
     initialLoyalty: 30,
     loyaltyRegeneration: 1,
     loyaltyReductionRange: [100, 105],

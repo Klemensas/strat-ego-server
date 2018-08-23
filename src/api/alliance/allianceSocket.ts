@@ -13,7 +13,7 @@ import {
 } from 'strat-ego-common';
 
 import { knexDb } from '../../sqldb';
-import { io, UserSocket, AuthenticatedSocket, ErrorMessage } from '../../config/socket';
+import { io, UserSocket, AuthenticatedSocket, ErrorMessage, SocketUserData } from '../../config/socket';
 import { transaction } from 'objection';
 import { AllianceRole } from './allianceRole';
 import * as allianceQueries from './allianceQueries';
@@ -73,8 +73,11 @@ export class AllianceSocket {
   }
 
   static updateMemberPermission(roles: AllianceRole[], room: string) {
+    const socketRoom = io.sockets.adapter.rooms[room];
+    if (!socketRoom) { return; }
+
     const updatedRoleIds = roles.map(({ id }) => id);
-    Object.keys(io.sockets.adapter.rooms[room].sockets).forEach((socketId: string) => {
+    Object.keys(socketRoom.sockets).forEach((socketId: string) => {
       const client = io.sockets.connected[socketId] as UserSocket;
       if (updatedRoleIds.includes(client.userData.allianceRoleId)) {
         client.userData = {
@@ -86,7 +89,10 @@ export class AllianceSocket {
   }
 
   static resetMemberRole(roleId: number, defaultRole: Partial<AllianceRole>, room: string) {
-    Object.keys(io.sockets.adapter.rooms[room].sockets).forEach((socketId: string) => {
+    const socketRoom = io.sockets.adapter.rooms[room];
+    if (!socketRoom) { return; }
+
+    Object.keys(socketRoom.sockets).forEach((socketId: string) => {
       const client = io.sockets.connected[socketId] as UserSocket;
       if (client.userData.allianceRoleId === roleId) {
         client.userData = {
@@ -109,8 +115,11 @@ export class AllianceSocket {
   }
 
   static destroyAllianceNotify(room: string) {
+    const socketRoom = io.sockets.adapter.rooms[room];
+    if (!socketRoom) { return; }
+
     io.sockets.in(room).emit('alliance:destroySuccess');
-    this.resetRoomSocketAlliance(io.sockets.adapter.rooms[room].sockets, (client) => client.leave(room));
+    this.resetRoomSocketAlliance(socketRoom.sockets, (client) => client.leave(room));
   }
 
   static leaveAllianceRoom(socket: AuthenticatedSocket, allianceId: number) {
@@ -130,7 +139,7 @@ export class AllianceSocket {
         name: socket.userData.playerName,
         allianceRole: alliance.masterRole,
       }];
-      alliance.eventOrigin[0].originPlayer = {
+      alliance.events[0].originPlayer = {
         id: socket.userData.playerId,
         name: socket.userData.playerName,
       };
@@ -183,12 +192,10 @@ export class AllianceSocket {
       socket.to(`alliance.${alliance.id}`).emit('alliance:event', { event, data: playerProfile });
       socket.emit(`alliance:createInviteSuccess`, { event, data: playerProfile });
 
-      if (io.sockets.adapter.rooms[playerRoom]) {
-        io.sockets.in(playerRoom).emit('alliance:invited', {
-          id: alliance.id,
-          name: alliance.name,
-        });
-      }
+      io.sockets.in(playerRoom).emit('alliance:invited', {
+        id: alliance.id,
+        name: alliance.name,
+      });
     } catch (err) {
       await trx.rollback();
       socket.handleError(err, 'createInvite', 'alliance:createInviteFail', targetName);
@@ -227,9 +234,7 @@ export class AllianceSocket {
       socket.emit(`alliance:cancelInviteSuccess`, { event, data: playerId });
 
       const playerRoom = `player.${playerId}`;
-      if (io.sockets.adapter.rooms[playerRoom]) {
-        io.sockets.in(playerRoom).emit('alliance:inviteCanceled', alliance.id);
-      }
+      io.sockets.in(playerRoom).emit('alliance:inviteCanceled', alliance.id);
     } catch (err) {
       await trx.rollback();
       socket.handleError(err, 'cancelInvite', 'alliance:cancelInviteFail', playerId);
@@ -863,10 +868,10 @@ export class AllianceSocket {
     });
   }
 
-  static cleanSocketAlliance(data) {
+  static cleanSocketAlliance(data: SocketUserData): SocketUserData {
     return {
       ...data,
-      allinaceId: null,
+      allianceId: null,
       allianceName: null,
       allianceRoleId: null,
       alliancePermissions: null,

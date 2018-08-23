@@ -3,7 +3,7 @@ import { ProfileUpdate } from 'strat-ego-common';
 
 import { knexDb } from '../../sqldb';
 import { TownSocket } from '../town/townSocket';
-import { UserSocket, ErrorMessage } from '../../config/socket';
+import { UserSocket, ErrorMessage, io } from '../../config/socket';
 import { scoreTracker } from './playerScore';
 import { getFullPlayer, createPlayer, createPlayerTown, getPlayerProfile, getPlayer, updatePlayer, progressTutorial } from './playerQueries';
 import { isCloudinaryImage, cloudinaryDelete } from '../../cloudinary';
@@ -31,6 +31,10 @@ export class PlayerSocket {
     socket.on('player:updateProfile', (payload: ProfileUpdate) => this.updateProfile(socket, payload));
     socket.on('player:removeAvatar', () => this.removeAvatar(socket));
     socket.on('player:progressTutorial', () => this.progressTutorial(socket));
+  }
+
+  static emitToPlayer(playerId: number, payload: any, topic: string = 'player') {
+    io.sockets.in(`player.${playerId}`).emit(topic, payload);
   }
 
   static async getOrCreatePlayer(socket) {

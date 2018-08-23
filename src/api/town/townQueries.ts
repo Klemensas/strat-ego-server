@@ -1,6 +1,6 @@
-import { Transaction, QueryContext, QueryBuilder } from 'objection';
+import { Transaction, raw } from 'objection';
 import * as Knex from 'knex';
-import { MovementType, MovementPayload, Coords, Dict } from 'strat-ego-common';
+import { MovementType, Coords } from 'strat-ego-common';
 
 import { knexDb } from '../../sqldb';
 import { Town } from './town';
@@ -29,15 +29,14 @@ export function getTownSupport(id: number, connection: Transaction | Knex = knex
   return TownSupport
     .query(connection)
     .findById(id)
-    .eager('[originTown(selectTownProfile), targetTown(selectTownProfile)');
+    .eager('[originTown(selectTownProfile), targetTown(selectTownProfile)]');
 }
 
 export function getTownLocationsByCoords(coords: Coords[], connection: Transaction | Knex = knexDb.world) {
-  // knex requires wrapping in an array http://knexjs.org/#Raw-Bindings
   return Town
     .query(connection)
     .select('location')
-    .whereIn('location', coords.map((item) => ([item])) as any);
+    .innerJoin(raw(`(VALUES ${coords.map((coord) => `(array[${coord.join(', ')}])`).join(', ')}) location(l)`), 'l', 'Town.location');
 }
 
 export function getTownsMapProfile(connection: Transaction | Knex = knexDb.world) {
@@ -156,18 +155,24 @@ export async function deleteSupport(support: TownSupport, endsAt: number, connec
   return movement;
 }
 
-export function deleteAllTownSupport(town: Town, connection: Transaction | Knex = knexDb.world) {
+export function deleteAllSentSupport(town: Town, connection: Transaction | Knex = knexDb.world) {
+  return town
+    .$relatedQuery('originSupport', connection)
+    .del();
+}
+
+export function deleteAllStationedSupport(town: Town, connection: Transaction | Knex = knexDb.world) {
   return town
     .$relatedQuery('targetSupport', connection)
     .del();
 }
 
-export function deleteTownSupport(town: Town, targetId: number, connection: Transaction | Knex = knexDb.world) {
-  return deleteAllTownSupport(town, connection)
+export function deleteStationedSupport(town: Town, targetId: number, connection: Transaction | Knex = knexDb.world) {
+  return deleteAllStationedSupport(town, connection)
     .where('id', targetId);
 }
 
-export function updateTownSupport(town: Town, targetId: number, payload: Partial<TownSupport>, connection: Transaction | Knex = knexDb.world) {
+export function updateStationedSupport(town: Town, targetId: number, payload: Partial<TownSupport>, connection: Transaction | Knex = knexDb.world) {
   return town
     .$relatedQuery<TownSupport>('targetSupport', connection)
     .patch(payload)
