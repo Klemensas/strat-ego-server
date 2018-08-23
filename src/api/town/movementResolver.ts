@@ -20,6 +20,8 @@ import {
   deleteStationedSupport,
   updateStationedSupport,
 } from './townQueries';
+import { PlayerSocket } from '../player/playerSocket';
+import { scoreTracker } from '../player/playerScore';
 
 const defaultStrength: CombatStrength = { general: 0, cavalry: 0, archer: 0 };
 const combatTypes = ['general', 'cavalry', 'archer'];
@@ -98,6 +100,16 @@ export class MovementResolver {
     // Use report playerIds since towns might be updated already
     PlayerSocket.emitToPlayer(result.report.originPlayerId, { side: 'origin', report: result.report }, 'player:addReport');
     PlayerSocket.emitToPlayer(result.report.targetPlayerId, { side: 'target', report: result.report }, 'player:addReport');
+    // Town was conquered
+    if (result.originTown.playerId === result.targetTown.playerId) {
+      TownSocket.townConquered(result.targetTown);
+      worldData.mapManager.townConquered(result.targetTown, result.originTown.location);
+      scoreTracker.updateScore(result.report.originPlayerId, result.targetTown.score);
+      scoreTracker.updateScore(result.report.targetPlayerId, -result.targetTown.score);
+    } else {
+      TownSocket.emitToTownRoom(result[emittedTown].id, result[emittedTown], 'town:update');
+    }
+
     return result[returnedTown];
   }
 
