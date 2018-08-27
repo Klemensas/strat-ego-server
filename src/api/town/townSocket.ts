@@ -16,6 +16,7 @@ import { Movement } from './movement';
 import { townQueue } from '../townQueue';
 import { createBuildingQueue, getTownSupport, getFullTown, cancelSupport } from './townQueries';
 import { createUnitQueue, createMovement, renameTown } from './townQueries';
+import { InvolvedTownChanges } from './movementResolver';
 
 export class TownSocket {
   static onConnect(socket: UserSocket) {
@@ -75,6 +76,36 @@ export class TownSocket {
       client.userData.townIds.push(town.id);
     });
     this.emitToTownRoom(town.id, town, 'town:conquered');
+  }
+
+  static notifyInvolvedCombatChanges(notifications: InvolvedTownChanges) {
+    if (notifications.removed) {
+      const { originMovements, targetSupport, originSupport } = notifications.removed;
+      if (originMovements && originMovements.ids.length) {
+        originMovements.ids.forEach((id, i) =>
+          this.emitToTownRoom(originMovements.townIds[i], { id, townId: originMovements.townIds[i] }, 'town:movementDisbanded'));
+      }
+      if (targetSupport && targetSupport.ids.length) {
+        targetSupport.ids.forEach((id, i) =>
+          this.emitToTownRoom(targetSupport.townIds[i], { id, townId: targetSupport.townIds[i] }, 'town:sentSupportDestroyed'));
+      }
+      if (originSupport && originSupport.ids.length) {
+        originSupport.ids.forEach((id, i) =>
+          this.emitToTownRoom(originSupport.townIds[i], { id, townId: originSupport.townIds[i] }, 'town:supportDisbanded'));
+      }
+    }
+
+    if (notifications.updated) {
+      const { targetSupport } = notifications.updated;
+      if (targetSupport && targetSupport.ids.length) {
+        targetSupport.ids.forEach((id, i) =>
+          this.emitToTownRoom(targetSupport.townIds[i], {
+            id,
+            changes: targetSupport.changes[i],
+            townId: targetSupport.townIds[i],
+          }, 'town:sentSupportUpdated'));
+      }
+    }
   }
 
   static async rename(socket: UserSocket, payload: NamePayload) {

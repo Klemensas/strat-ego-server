@@ -134,6 +134,7 @@ export class MovementResolver {
     } else {
       TownSocket.emitToTownRoom(result[emittedTown].id, result[emittedTown], 'town:update');
     }
+    TownSocket.notifyInvolvedCombatChanges(result.notifications);
 
     return result[returnedTown];
   }
