@@ -272,7 +272,7 @@ export class TownSocket {
     const trx = await transaction.start(knexDb.world);
     try {
       const town = await getFullTown({ id }, trx);
-      if (payload.target === town.location) { throw new ErrorMessage('A town can\'t attack itself'); }
+      if (String(payload.target) === String(town.location)) { throw new ErrorMessage('A town can\'t attack itself'); }
 
       const targetTown = await getFullTown({ location: payload.target }, trx);
       if (!targetTown) { throw new ErrorMessage('Invalid target'); }
