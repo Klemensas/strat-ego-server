@@ -208,10 +208,10 @@ describe('cancelSupport', () => {
     },
   };
   let getSupportSpy;
-  let deleteSupportSpy;
+  let cancelSupportSpy;
   beforeEach(() => {
     getSupportSpy = jest.spyOn(townQueries, 'getTownSupport');
-    deleteSupportSpy = jest.spyOn(townQueries, 'deleteSupport');
+    cancelSupportSpy = jest.spyOn(townQueries, 'cancelSupport');
     socket.userData = {
       townIds: [support.originTown.id, support.targetTown.id],
     };
@@ -252,7 +252,7 @@ describe('cancelSupport', () => {
     const queueSpy = jest.spyOn(townQueue, 'addToQueue').mockImplementationOnce(() => null);
     jest.spyOn(Town, 'calculateDistance').mockImplementationOnce(() => 1);
     getSupportSpy.mockImplementationOnce(() => Promise.resolve(support));
-    deleteSupportSpy.mockImplementationOnce(() => Promise.resolve(movement));
+    cancelSupportSpy.mockImplementationOnce(() => Promise.resolve(movement));
     const payload = support.id;
     await TownSocket.cancelSupport(socket, payload, 'origin');
 
@@ -272,7 +272,7 @@ describe('cancelSupport', () => {
     const queueSpy = jest.spyOn(townQueue, 'addToQueue').mockImplementationOnce(() => null);
     jest.spyOn(Town, 'calculateDistance').mockImplementationOnce(() => 1);
     getSupportSpy.mockImplementationOnce(() => Promise.resolve(support));
-    deleteSupportSpy.mockImplementationOnce(() => Promise.resolve(movement));
+    cancelSupportSpy.mockImplementationOnce(() => Promise.resolve(movement));
     const payload = support.id;
     await TownSocket.cancelSupport(socket, payload, 'target');
 
