@@ -305,6 +305,13 @@ export class Town extends BaseModel {
     }, {});
   }
 
+  static resetInsideUnits(townUnits): Dict<TownUnit> {
+    return worldData.units.reduce((result, item) => {
+      result[item.name] = { inside: 0, queued: townUnits[item.name].queued || 0 };
+      return result;
+    }, {});
+  }
+
   static getInitialBuildings(): TownBuildings {
     return worldData.buildings.reduce((result, item) => {
       result[item.name] = { level: item.levels.min, queued: 0 };

@@ -8,15 +8,13 @@ import {
 import { transaction } from 'objection';
 
 import { knexDb } from '../../sqldb';
-import { io, UserSocket, AuthenticatedSocket, ErrorMessage } from '../../config/socket';
+import { io, UserSocket, ErrorMessage } from '../../config/socket';
 import { worldData } from '../world/worldData';
 import { Town } from './town';
-import { BuildingQueue } from '../building/buildingQueue';
 import { UnitQueue } from '../unit/unitQueue';
 import { Movement } from './movement';
 import { townQueue } from '../townQueue';
-import { TownSupport } from './townSupport';
-import { createBuildingQueue, deleteSupport, getTownSupport, getFullTown } from './townQueries';
+import { createBuildingQueue, getTownSupport, getFullTown, cancelSupport } from './townQueries';
 import { createUnitQueue, createMovement, renameTown } from './townQueries';
 
 export class TownSocket {
@@ -149,7 +147,7 @@ export class TownSocket {
       const slowest = Object.entries(support.units).reduce((result, [key, value]) => Math.max(result, worldData.unitMap[key].speed), 0);
       const movementTime = time + slowest * distance;
 
-      const movement = await deleteSupport(support, movementTime, trx);
+      const movement = await cancelSupport(support, movementTime, trx);
 
       await trx.commit();
       townQueue.addToQueue(movement);
