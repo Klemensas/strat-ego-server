@@ -1,5 +1,5 @@
 import { transaction, Transaction } from 'objection';
-import { ProfileUpdate } from 'strat-ego-common';
+import { ProfileUpdate, MovementType } from 'strat-ego-common';
 
 import { knexDb } from '../../sqldb';
 import { TownSocket } from '../town/townSocket';
@@ -39,7 +39,20 @@ export class PlayerSocket {
 
   static async getOrCreatePlayer(socket) {
     const player = await getFullPlayer({ userId: socket.userData.userId });
-    if (player) { return player; }
+    if (player) {
+      // TODO: consider separating data to reduce manual filtering as such
+      // Go through all player town incoming movements and delete units
+      player.towns = player.towns.map((town) => {
+        town.targetMovements = town.targetMovements.map((movement) => {
+          if (movement.type !== MovementType.return) {
+            delete movement.units;
+          }
+          return movement;
+        });
+        return town;
+      });
+      return player;
+    }
 
     try {
       await this.createPlayer(
