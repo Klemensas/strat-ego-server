@@ -78,7 +78,7 @@ describe('resolveSupport', () => {
       targetTownId: movement.targetTownId,
       units,
     });
-    jest.spyOn(townQueries, 'deleteMovement').mockImplementationOnce(() => Promise.resolve());
+    jest.spyOn(townQueries, 'deleteMovementItem').mockImplementationOnce(() => Promise.resolve());
     jest.spyOn(townQueries, 'createSupport').mockImplementationOnce(() => Promise.resolve(support));
   });
 

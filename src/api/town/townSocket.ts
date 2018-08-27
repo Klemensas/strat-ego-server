@@ -8,16 +8,15 @@ import {
 import { transaction } from 'objection';
 
 import { knexDb } from '../../sqldb';
-import { io, UserSocket, AuthenticatedSocket, ErrorMessage } from '../../config/socket';
+import { io, UserSocket, ErrorMessage } from '../../config/socket';
 import { worldData } from '../world/worldData';
 import { Town } from './town';
-import { BuildingQueue } from '../building/buildingQueue';
 import { UnitQueue } from '../unit/unitQueue';
 import { Movement } from './movement';
 import { townQueue } from '../townQueue';
-import { TownSupport } from './townSupport';
-import { createBuildingQueue, deleteSupport, getTownSupport, getFullTown } from './townQueries';
+import { createBuildingQueue, getTownSupport, getFullTown, cancelSupport } from './townQueries';
 import { createUnitQueue, createMovement, renameTown } from './townQueries';
+import { InvolvedTownChanges } from './movementResolver';
 
 export class TownSocket {
   static onConnect(socket: UserSocket) {
@@ -77,6 +76,36 @@ export class TownSocket {
       client.userData.townIds.push(town.id);
     });
     this.emitToTownRoom(town.id, town, 'town:conquered');
+  }
+
+  static notifyInvolvedCombatChanges(notifications: InvolvedTownChanges) {
+    if (notifications.removed) {
+      const { originMovements, targetSupport, originSupport } = notifications.removed;
+      if (originMovements && originMovements.ids.length) {
+        originMovements.ids.forEach((id, i) =>
+          this.emitToTownRoom(originMovements.townIds[i], { id, townId: originMovements.townIds[i] }, 'town:movementDisbanded'));
+      }
+      if (targetSupport && targetSupport.ids.length) {
+        targetSupport.ids.forEach((id, i) =>
+          this.emitToTownRoom(targetSupport.townIds[i], { id, townId: targetSupport.townIds[i] }, 'town:sentSupportDestroyed'));
+      }
+      if (originSupport && originSupport.ids.length) {
+        originSupport.ids.forEach((id, i) =>
+          this.emitToTownRoom(originSupport.townIds[i], { id, townId: originSupport.townIds[i] }, 'town:supportDisbanded'));
+      }
+    }
+
+    if (notifications.updated) {
+      const { targetSupport } = notifications.updated;
+      if (targetSupport && targetSupport.ids.length) {
+        targetSupport.ids.forEach((id, i) =>
+          this.emitToTownRoom(targetSupport.townIds[i], {
+            id,
+            changes: targetSupport.changes[i],
+            townId: targetSupport.townIds[i],
+          }, 'town:sentSupportUpdated'));
+      }
+    }
   }
 
   static async rename(socket: UserSocket, payload: NamePayload) {
@@ -149,7 +178,7 @@ export class TownSocket {
       const slowest = Object.entries(support.units).reduce((result, [key, value]) => Math.max(result, worldData.unitMap[key].speed), 0);
       const movementTime = time + slowest * distance;
 
-      const movement = await deleteSupport(support, movementTime, trx);
+      const movement = await cancelSupport(support, movementTime, trx);
 
       await trx.commit();
       townQueue.addToQueue(movement);
@@ -272,7 +301,7 @@ export class TownSocket {
     const trx = await transaction.start(knexDb.world);
     try {
       const town = await getFullTown({ id }, trx);
-      if (payload.target === town.location) { throw new ErrorMessage('A town can\'t attack itself'); }
+      if (String(payload.target) === String(town.location)) { throw new ErrorMessage('A town can\'t attack itself'); }
 
       const targetTown = await getFullTown({ location: payload.target }, trx);
       if (!targetTown) { throw new ErrorMessage('Invalid target'); }

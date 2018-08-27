@@ -116,10 +116,11 @@ export async function createMovement(
     .$relatedQuery<Movement>('originMovements', connection)
     .insert({
       ...payload,
-      originTown: { id: originTown.id, name: originTown.name, location: originTown.location },
+      originTownId: originTown.id,
       targetTownId: targetTown.id,
-      targetTown: { id: targetTown.id, name: targetTown.name, location: targetTown.location },
     });
+  movement.originTown = { id: originTown.id, name: originTown.name, location: originTown.location };
+  movement.targetTown = { id: targetTown.id, name: targetTown.name, location: targetTown.location };
 
   if (patchOrigin) {
     await originTown
@@ -137,7 +138,7 @@ export function createSupport(payload: Partial<TownSupport>, connection: Transac
     .insert(payload);
 }
 
-export async function deleteSupport(support: TownSupport, endsAt: number, connection: Transaction | Knex = knexDb.world) {
+export async function cancelSupport(support: TownSupport, endsAt: number, connection: Transaction | Knex = knexDb.world) {
   const unitQueue = await support
     .$query(connection)
     .del();
@@ -145,31 +146,14 @@ export async function deleteSupport(support: TownSupport, endsAt: number, connec
   const movement = await Movement.query(connection).insert({
     units: support.units,
     originTownId: support.targetTownId,
-    originTown: support.targetTown,
     targetTownId: support.originTownId,
-    targetTown: support.originTown,
     type: MovementType.return,
     endsAt,
     haul: null,
   });
+  movement.originTown = support.targetTown;
+  movement.targetTown = support.originTown;
   return movement;
-}
-
-export function deleteAllSentSupport(town: Town, connection: Transaction | Knex = knexDb.world) {
-  return town
-    .$relatedQuery('originSupport', connection)
-    .del();
-}
-
-export function deleteAllStationedSupport(town: Town, connection: Transaction | Knex = knexDb.world) {
-  return town
-    .$relatedQuery('targetSupport', connection)
-    .del();
-}
-
-export function deleteStationedSupport(town: Town, targetId: number, connection: Transaction | Knex = knexDb.world) {
-  return deleteAllStationedSupport(town, connection)
-    .where('id', targetId);
 }
 
 export function updateStationedSupport(town: Town, targetId: number, payload: Partial<TownSupport>, connection: Transaction | Knex = knexDb.world) {
@@ -179,7 +163,25 @@ export function updateStationedSupport(town: Town, targetId: number, payload: Pa
     .where('id', targetId);
 }
 
-export function deleteMovement(movement: Movement, connection: Transaction | Knex = knexDb.world) {
+export function deleteSupport(id: number[], connection: Transaction | Knex = knexDb.world) {
+  if (!id.length) { return; }
+
+  return TownSupport
+    .query(connection)
+    .whereIn('id', id)
+    .del();
+}
+
+export function deleteMovement(id: number[], connection: Transaction | Knex = knexDb.world) {
+  if (!id.length) { return; }
+
+  return Movement
+    .query(connection)
+    .whereIn('id', id)
+    .del();
+}
+
+export function deleteMovementItem(movement: Movement, connection: Transaction | Knex = knexDb.world) {
   return movement
     .$query(connection)
     .del();

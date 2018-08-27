@@ -31,7 +31,7 @@ export async function getFullPlayer(where: Partial<Player>, connection: Transact
       invitations(selectAllianceProfile)
     ]`, Town.townRelationFilters)
     .modifyEager(`[
-      originReports.[originTown,targetTown],
+      originReports.[originTown, targetTown],
       targetReports.[originTown, targetTown]
     ]`, (builder) => builder.select('id', 'name', 'location'));
   if (player && player.allianceId !== null) {

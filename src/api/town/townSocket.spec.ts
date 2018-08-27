@@ -10,6 +10,7 @@ import { UserSocket, ErrorMessage, setupIo } from '../../config/socket';
 import { townQueue } from '../townQueue';
 import * as townQueries from './townQueries';
 import { NamePayload, BuildPayload, RecruitPayload, TroopMovementPayload, MovementType } from 'strat-ego-common';
+import { InvolvedTownChanges } from './movementResolver';
 
 let socket: UserSocket;
 let emitSpy;
@@ -208,10 +209,10 @@ describe('cancelSupport', () => {
     },
   };
   let getSupportSpy;
-  let deleteSupportSpy;
+  let cancelSupportSpy;
   beforeEach(() => {
     getSupportSpy = jest.spyOn(townQueries, 'getTownSupport');
-    deleteSupportSpy = jest.spyOn(townQueries, 'deleteSupport');
+    cancelSupportSpy = jest.spyOn(townQueries, 'cancelSupport');
     socket.userData = {
       townIds: [support.originTown.id, support.targetTown.id],
     };
@@ -252,7 +253,7 @@ describe('cancelSupport', () => {
     const queueSpy = jest.spyOn(townQueue, 'addToQueue').mockImplementationOnce(() => null);
     jest.spyOn(Town, 'calculateDistance').mockImplementationOnce(() => 1);
     getSupportSpy.mockImplementationOnce(() => Promise.resolve(support));
-    deleteSupportSpy.mockImplementationOnce(() => Promise.resolve(movement));
+    cancelSupportSpy.mockImplementationOnce(() => Promise.resolve(movement));
     const payload = support.id;
     await TownSocket.cancelSupport(socket, payload, 'origin');
 
@@ -272,7 +273,7 @@ describe('cancelSupport', () => {
     const queueSpy = jest.spyOn(townQueue, 'addToQueue').mockImplementationOnce(() => null);
     jest.spyOn(Town, 'calculateDistance').mockImplementationOnce(() => 1);
     getSupportSpy.mockImplementationOnce(() => Promise.resolve(support));
-    deleteSupportSpy.mockImplementationOnce(() => Promise.resolve(movement));
+    cancelSupportSpy.mockImplementationOnce(() => Promise.resolve(movement));
     const payload = support.id;
     await TownSocket.cancelSupport(socket, payload, 'target');
 
@@ -282,5 +283,64 @@ describe('cancelSupport', () => {
     expect(emitSpy).toHaveBeenCalledTimes(2);
     expect(emitSpy.mock.calls[0]).toEqual([support.targetTown.id, payload, 'town:sendBackSupportSuccess']);
     expect(emitSpy.mock.calls[1]).toEqual([support.originTown.id, { support: payload, movement }, 'town:supportSentBack']);
+  });
+});
+
+describe('notifyInvolvedCombatChanges', () => {
+  beforeEach(() => {
+    emitSpy = jest.spyOn(TownSocket, 'emitToTownRoom').mockImplementation(() => null);
+  });
+
+  it('should call notify for all removed data', () => {
+    const notifications: InvolvedTownChanges = {
+      removed: {
+        originMovements: { ids: [1], townIds: [101] },
+        targetSupport: { ids: [2, 3, 4], townIds: [102, 103, 104] },
+        originSupport: { ids: [5, 6], townIds: [105, 106] },
+      },
+      updated: {},
+    };
+    TownSocket.notifyInvolvedCombatChanges(notifications);
+
+    const totalCalls = notifications.removed.originMovements.ids.length +
+      notifications.removed.targetSupport.ids.length +
+      notifications.removed.originSupport.ids.length;
+
+    expect(emitSpy).toHaveBeenCalledTimes(totalCalls);
+    notifications.removed.originMovements.ids.forEach((id, i) => {
+      const townId = notifications.removed.originMovements.townIds[i];
+      expect(emitSpy).toHaveBeenCalledWith(townId, { id, townId }, 'town:movementDisbanded');
+    });
+    notifications.removed.targetSupport.ids.forEach((id, i) => {
+      const townId = notifications.removed.targetSupport.townIds[i];
+      expect(emitSpy).toHaveBeenCalledWith(townId, { id, townId }, 'town:sentSupportDestroyed');
+    });
+    notifications.removed.originSupport.ids.forEach((id, i) => {
+      const townId = notifications.removed.originSupport.townIds[i];
+      expect(emitSpy).toHaveBeenCalledWith(townId, { id, townId }, 'town:supportDisbanded');
+    });
+  });
+
+  it('should call notify for all updated data', () => {
+    const notifications: InvolvedTownChanges = {
+      removed: {},
+      updated: {
+        targetSupport: {
+          ids: [1, 2],
+          townIds: [101, 102],
+          changes: [{ units: { axe: 10 } }, { test: true }],
+        },
+      },
+    };
+    TownSocket.notifyInvolvedCombatChanges(notifications);
+
+    const totalCalls = notifications.updated.targetSupport.ids.length;
+
+    expect(emitSpy).toHaveBeenCalledTimes(totalCalls);
+    notifications.updated.targetSupport.ids.forEach((id, i) => {
+      const townId = notifications.updated.targetSupport.townIds[i];
+      const changes = notifications.updated.targetSupport.changes[i];
+      expect(emitSpy).toHaveBeenCalledWith(townId, { id, townId, changes }, 'town:sentSupportUpdated');
+    });
   });
 });

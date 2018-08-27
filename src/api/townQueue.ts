@@ -78,7 +78,7 @@ export class TownEventQueue {
       }
       i++;
     }
-    logger.info('[queue] removed items', items);
+    logger.info('[queue] removed items', i);
 
     // If removed item is earliest set new earliest item
     this.setEarliestItem();

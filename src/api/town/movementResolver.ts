@@ -10,14 +10,13 @@ import { townQueue } from '../townQueue';
 import { TownSocket } from './townSocket';
 import { TownSupport } from './townSupport';
 import {
-  deleteMovement,
   updateTown,
   createSupport,
   createMovement,
   createReport,
-  deleteAllStationedSupport,
-  deleteAllSentSupport,
-  deleteStationedSupport,
+  deleteSupport,
+  deleteMovementItem,
+  deleteMovement,
   updateStationedSupport,
 } from './townQueries';
 import { PlayerSocket } from '../player/playerSocket';
@@ -44,15 +43,41 @@ export interface AttackOutcome {
   conquered?: boolean;
 }
 
+export interface RemovedItems {
+  ids: number[];
+  townIds: number[];
+}
+
+export interface UpdatedItems extends RemovedItems {
+  changes: any;
+}
+
+export interface RemovedTownItems {
+  originSupport?: RemovedItems;
+  targetSupport?: RemovedItems;
+  originMovements?: RemovedItems;
+}
+
+export interface UpdatedTownItems {
+  targetSupport?: UpdatedItems;
+}
+
+export interface InvolvedTownChanges {
+  removed: RemovedTownItems;
+  updated: UpdatedTownItems;
+}
+
 export interface ResolvedAttack {
   originTown: Town;
   targetTown: Town;
   report: Report;
   movement?: Movement;
+  notifications: InvolvedTownChanges;
 }
 
 export interface SupportChange {
   id: number;
+  originTownId: number;
   initialUnits: Dict<number>;
   units: Dict<number>;
 }
@@ -109,6 +134,7 @@ export class MovementResolver {
     } else {
       TownSocket.emitToTownRoom(result[emittedTown].id, result[emittedTown], 'town:update');
     }
+    TownSocket.notifyInvolvedCombatChanges(result.notifications);
 
     return result[returnedTown];
   }
@@ -174,7 +200,7 @@ export class MovementResolver {
 
     const trx = await transaction.start(knexDb.world);
     try {
-      await deleteMovement(movement, trx);
+      await deleteMovementItem(movement, trx);
       await updateTown(
         town,
         {
@@ -209,7 +235,7 @@ export class MovementResolver {
       const targetProfile = movement.targetTown ||
         !isOrigin ? { id: town.id, name: town.name, location: town.location } : { id: otherTown.id, name: otherTown.name, location: otherTown.location };
 
-      await deleteMovement(movement, trx);
+      await deleteMovementItem(movement, trx);
       const townSupport = await createSupport({
         units: movement.units,
         originTownId: movement.originTownId,
@@ -351,7 +377,7 @@ export class MovementResolver {
         const losses = +unitsChanged * (val - count);
 
         result.reportDefense.units[key] = result.reportDefense.units[key] + count || count;
-        result.reportDefense.losses[key] = result.reportDefense.units[key] + losses || losses;
+        result.reportDefense.losses[key] = result.reportDefense.losses[key] + losses || losses;
 
         r.alive = r.alive || !!count;
         r.changed =  r.changed || unitsChanged;
@@ -362,6 +388,7 @@ export class MovementResolver {
         result.supportChanges.push({
           changed,
           id: item.id,
+          originTownId: item.originTownId,
           units: !alive ? null : units,
         });
       }
@@ -415,18 +442,20 @@ export class MovementResolver {
     const endsAt = +movement.endsAt + (+movement.endsAt - +movement.createdAt);
     const trx = await transaction.start(knexDb.world);
     let newMovement: Movement = null;
+    const removedTownItems: RemovedTownItems = {};
+    const updatedTownItems: UpdatedTownItems = {};
     try {
-      await deleteMovement(movement, trx);
+      await deleteMovementItem(movement, trx);
 
       const report = await createReport({
         ...attackOutcome.report,
         originTownId: originTown.id,
-        originTown: { id: originTown.id, location: originTown.location },
         originPlayerId: originTown.playerId,
         targetTownId: targetTown.id,
-        targetTown: { id: targetTown.id, location: targetTown.location },
         targetPlayerId: targetTown.playerId,
       }, trx);
+      report.originTown = { id: originTown.id, location: originTown.location, name: originTown.name };
+      report.targetTown = { id: targetTown.id, location: targetTown.location, name: targetTown.name };
 
       // Victorious return movement
       if (attackOutcome.origin.movement) {
@@ -444,25 +473,72 @@ export class MovementResolver {
         originTown.targetMovements.push(newMovement);
       }
 
+      const promises = [];
+      const deletedSupport = [];
       // If target has any losses
       if (attackOutcome.target) {
         // Remove all support if target lost
         if (report.outcome === CombatOutcome.attack) {
-          await deleteAllStationedSupport(targetTown, trx);
+          removedTownItems.targetSupport = targetTown.targetSupport.reduce((result, { id, originTownId }) => {
+            result.ids.push(id);
+            result.townIds.push(originTownId);
+            return result;
+          }, { ids: [], townIds: [] });
+          deletedSupport.push(...removedTownItems.targetSupport.ids);
+          targetTown.targetSupport = [];
 
           if (attackOutcome.conquered) {
             attackOutcome.target.playerId = originTown.playerId;
             attackOutcome.target.loyalty = worldData.world.initialLoyalty;
-            attackOutcome.target.units = Town.getInitialUnits();
+            attackOutcome.target.units = Town.resetInsideUnits(targetTown.units);
 
-            await deleteAllSentSupport(targetTown, trx);
+            removedTownItems.originSupport = targetTown.originSupport.reduce((result, { id, targetTownId }) => {
+              result.ids.push(id);
+              result.townIds.push(targetTownId);
+              return result;
+            }, { ids: [], townIds: [] });
+            deletedSupport.push(...removedTownItems.originSupport.ids);
+            targetTown.originSupport = [];
+
+            removedTownItems.originMovements = targetTown.originMovements.reduce((result, { id, type, targetTownId }) => {
+              if (type === MovementType.return) { return result; }
+
+              result.ids.push(id);
+              result.townIds.push(targetTownId);
+              return result;
+            }, { ids: [], townIds: [] });
+            targetTown.originMovements = [];
+
+            promises.push(deleteMovement(removedTownItems.originMovements.ids, trx));
           }
+          promises.push(deleteSupport(deletedSupport, trx));
         } else {
-          await Promise.all(support.map((item) => item.units ?
-            updateStationedSupport(targetTown, item.id, { units: item.units }, trx) :
-            deleteStationedSupport(targetTown, item.id, trx),
-          ));
+          const supportChanges = support.reduce((result, { id, units, originTownId }) => {
+            if (units) {
+              result.updatedSupport.ids.push(id);
+              result.updatedSupport.changes.push({ units });
+              result.updatedSupport.townIds.push(originTownId);
+              result.updates.push(updateStationedSupport(targetTown, id, { units }, trx));
+            } else {
+              result.deletedSupport.ids.push(id);
+              result.deletedSupport.townIds.push(originTownId);
+            }
+            return result;
+          }, {
+            deletedSupport: { ids: [], townIds: [] },
+            updatedSupport: { ids: [], townIds: [], changes: [] },
+            updates: [],
+          });
+
+          updatedTownItems.targetSupport = supportChanges.updatedSupport;
+          removedTownItems.targetSupport = supportChanges.deletedSupport;
+
+          await Promise.all(supportChanges.updates);
+          targetTown.targetSupport = targetTown.targetSupport.filter(({ id }) => !supportChanges.deletedSupport.ids.includes(id));
+          promises.push(deleteSupport(supportChanges.deletedSupport.ids, trx));
         }
+
+        await Promise.all(promises);
         await updateTown(
           targetTown,
           {
@@ -482,7 +558,16 @@ export class MovementResolver {
       originTown.originMovements = originTown.originMovements.filter(({ id }) => id !== movement.id);
       targetTown.targetMovements = targetTown.targetMovements.filter(({ id }) => id !== movement.id);
 
-      return { originTown, targetTown, report, movement: newMovement };
+      return {
+        originTown,
+        targetTown,
+        report,
+        movement: newMovement,
+        notifications: {
+          removed: removedTownItems,
+          updated: updatedTownItems,
+        },
+      };
     } catch (err) {
       await trx.rollback();
       throw err;
