@@ -286,7 +286,7 @@ export class AllianceSocket {
 
       const member = { ...event.originPlayer, allianceRole: alliance.defaultRole };
       alliance.members.push(member);
-      alliance.eventOrigin.unshift(event);
+      alliance.events.unshift(event);
       alliance.invitations = alliance.invitations.filter((id) => id !== player.id);
 
       io.sockets.in(`alliance.${alliance.id}`).emit('alliance:event', { event, data: member });
