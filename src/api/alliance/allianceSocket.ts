@@ -19,7 +19,7 @@ import { AllianceRole } from './allianceRole';
 import * as allianceQueries from './allianceQueries';
 import { getPlayerWithInvites, getPlayerByName } from '../player/playerQueries';
 import { cloudinaryDelete, isCloudinaryImage } from '../../cloudinary';
-import { worldData } from '../world/worldData';
+import { ProfileService } from '../profile/profileService';
 
 export interface RoleUpdatePayload {
   roles: Array<Partial<AllianceRole>>;
@@ -150,7 +150,14 @@ export class AllianceSocket {
       socket.userData.allianceName = alliance.name;
       socket.userData.allianceRoleId = alliance.masterRole.id;
       socket.userData.alliancePermissions = alliance.masterRole.permissions;
-      worldData.mapManager.setTownAlliance({ id: alliance.id, name: alliance.name }, socket.userData.townIds);
+      ProfileService.updateAllianceProfile(alliance.id, {
+        id: alliance.id,
+        name: alliance.name,
+        members: [socket.userData.playerId],
+        description: alliance.description,
+        avatarUrl: alliance.avatarUrl,
+        createdAt: alliance.createdAt,
+      });
 
       this.joinAllianceRoom(socket);
       socket.emit('alliance:createSuccess', alliance);
@@ -289,8 +296,11 @@ export class AllianceSocket {
       alliance.events.unshift(event);
       alliance.invitations = alliance.invitations.filter((id) => id !== player.id);
 
+      ProfileService.updatePlayerProfile(socket.userData.playerId, {
+        allianceId: alliance.id,
+      });
+
       io.sockets.in(`alliance.${alliance.id}`).emit('alliance:event', { event, data: member });
-      worldData.mapManager.setTownAlliance({ id: alliance.id, name: alliance.name }, socket.userData.townIds);
       socket.emit('alliance:acceptInviteSuccess', alliance);
       socket.userData = {
         ...socket.userData,
@@ -403,6 +413,10 @@ export class AllianceSocket {
 
       await trx.commit();
 
+      ProfileService.updatePlayerProfile(playerId, {
+        allianceId: null,
+      });
+
       this.removeMemberNotify(player.id, alliance.id);
 
       event.originPlayer = {
@@ -433,6 +447,7 @@ export class AllianceSocket {
 
       await trx.commit();
 
+      ProfileService.deleteAllianceProfile(allianceId);
       this.destroyAllianceNotify(`alliance.${allianceId}`);
     } catch (err) {
       await trx.rollback();
@@ -483,6 +498,7 @@ export class AllianceSocket {
         await cloudinaryDelete(avatarToDelete);
       }
       await trx.commit();
+      ProfileService.updateAllianceProfile(alliance.id, updatePayload);
 
       const eventPayload = { event, data: payload };
       socket.emit('alliance:updateProfileSuccess', eventPayload);
@@ -514,6 +530,7 @@ export class AllianceSocket {
       event.originPlayer = { id: socket.userData.playerId, name: socket.userData.playerName };
 
       await trx.commit();
+      ProfileService.updateAllianceProfile(alliance.id, { avatarUrl: null });
 
       const eventPayload = { event, data: { avatarUrl: null } };
       socket.emit('alliance:removeAvatarSuccess', eventPayload);
@@ -832,13 +849,16 @@ export class AllianceSocket {
 
       await trx.commit();
 
+      ProfileService.updatePlayerProfile(socket.userData.playerId, {
+        allianceId: null,
+      });
+
       event.originPlayer = {
         id: socket.userData.playerId,
         name: socket.userData.playerName,
       };
       socket.userData = this.cleanSocketAlliance(socket.userData);
       this.leaveAllianceRoom(socket, allianceId);
-      worldData.mapManager.setTownAlliance(null, socket.userData.townIds);
 
       socket.emit('alliance:leaveAllianceSuccess');
       io.sockets.in(`alliance.${allianceId}`).emit('alliance:event', { event, data: socket.userData.playerId });
@@ -863,7 +883,6 @@ export class AllianceSocket {
     Object.keys(room).forEach((socketId: string) => {
       const client = io.sockets.connected[socketId] as UserSocket;
       client.userData = this.cleanSocketAlliance(client.userData);
-      worldData.mapManager.setTownAlliance(null, client.userData.townIds);
       clientAction(client);
     });
   }

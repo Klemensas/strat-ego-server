@@ -11,9 +11,9 @@ import { UnitQueue } from '../unit/unitQueue';
 import { logger } from '../../logger';
 import { Movement } from './movement';
 import { MovementResolver } from './movementResolver';
-import { scoreTracker } from '../player/playerScore';
 import { TownSupport } from './townSupport';
 import { getFullTown } from './townQueries';
+import { ProfileService } from '../profile/profileService';
 
 export interface ProcessingResult {
   town: Town;
@@ -207,8 +207,7 @@ export class Town extends BaseModel {
         .context({ resourcesUpdated: true, updateScore: true });
       await trx.commit();
 
-      scoreTracker.updateScore(this.score - originalScore, this.playerId);
-      worldData.mapManager.setTownScore(this.score, this.location);
+      ProfileService.updateTownProfile(this.id, { score: this.score });
       this.buildingQueues = this.buildingQueues.filter(({ id }) => id !== item.id);
       return this;
     } catch (err) {

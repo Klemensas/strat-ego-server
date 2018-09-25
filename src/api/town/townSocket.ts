@@ -14,9 +14,10 @@ import { Town } from './town';
 import { UnitQueue } from '../unit/unitQueue';
 import { Movement } from './movement';
 import { townQueue } from '../townQueue';
-import { createBuildingQueue, getTownSupport, getFullTown, cancelSupport } from './townQueries';
+import { createBuildingQueue, getTownSupport, getFullTown, cancelSupport, getTowns } from './townQueries';
 import { createUnitQueue, createMovement, renameTown } from './townQueries';
 import { InvolvedTownChanges } from './movementResolver';
+import { ProfileService } from '../profile/profileService';
 
 export class TownSocket {
   static onConnect(socket: UserSocket) {
@@ -113,10 +114,10 @@ export class TownSocket {
       if (!payload.name || !payload.town) { throw new ErrorMessage('Missing required data'); }
       if (!socket.userData.townIds.includes(payload.town)) { throw new ErrorMessage('No town found'); }
 
-      const town = await renameTown(payload.name, payload.town);
-      if (!town) { throw new Error('Couldn\'t find specified player town'); }
+      const renamedRows = await renameTown(payload.name, payload.town);
+      if (!renamedRows) { throw new Error('Couldn\'t find specified player town'); }
 
-      worldData.mapManager.setTownName(payload.name, payload.town);
+      await ProfileService.updateTownProfile(payload.town, { name: payload.name });
       this.emitToTownRoom(payload.town, payload.name, 'town:renameSuccess');
     } catch (err) {
       socket.handleError(err, 'name', 'town:renameFail', payload);

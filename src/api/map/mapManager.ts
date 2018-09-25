@@ -1,16 +1,14 @@
 import * as Knex from 'knex';
 import { Transaction } from 'objection';
-import { MapTown, Coords, Profile, Dict } from 'strat-ego-common';
+import { Coords, Dict, TownProfile } from 'strat-ego-common';
 
-import { Town } from '../town/town';
-import { Player } from '../player/player';
 import { WorldData } from '../world/worldData';
 import { knexDb } from '../../sqldb';
-import { getTownLocationsByCoords, getTownsMapProfile } from '../town/townQueries';
-import { logger } from '../../logger';
+import { getTownLocationsByCoords } from '../town/townQueries';
+import { ProfileService } from '../profile/profileService';
 
 export class MapManager {
-  public mapData: Dict<MapTown> = {};
+  public mapData: Dict<number> = {};
   public world: string;
   public lastExpansion: number;
   public expansionRate: number;
@@ -21,107 +19,20 @@ export class MapManager {
   constructor(private worldData: WorldData) {}
 
   public async initialize() {
+    ProfileService.townChanges.on('add', (payload) => this.addTown(payload));
+
     this.lastExpansion = +this.worldData.world.lastExpansion;
     this.expansionRate = +this.worldData.world.expansionRate;
     this.expansionGrowth = +this.worldData.world.expansionGrowth;
     await this.scheduleExpansion();
 
-    const towns = await getTownsMapProfile();
-    this.addTown(...towns);
+    const towns = await ProfileService.getTownProfile();
+    this.addTown(...Object.values(towns));
   }
 
-  public addPlayerTowns(player: Partial<Player>) {
-    const owner = {
-      id: player.id,
-      name: player.name,
-    };
-    const alliance = player.alliance ? {
-      id: player.alliance.id,
-      name: player.alliance.name,
-    } : null;
-    player.towns.forEach((town) => {
-      this.mapData[town.location.join(',')] = {
-        owner,
-        alliance,
-        id: town.id,
-        name: town.name,
-        location: town.location,
-        score: town.score,
-      };
-    });
-  }
-
-  public addTown(...towns: Array<Partial<Town>>) {
-     towns.forEach((town) => {
-      let owner = null;
-      let alliance = null;
-
-      if (town.player) {
-        owner = {
-          id: town.player.id,
-          name: town.player.name,
-        };
-        alliance = town.player.alliance ? {
-          id: town.player.alliance.id,
-          name: town.player.alliance.name,
-        } : null;
-      }
-      this.mapData[town.location.join(',')] = {
-        owner,
-        alliance,
-        id: town.id,
-        name: town.name,
-        location: town.location,
-        score: town.score,
-      };
-     });
+  public addTown(...towns: Array<Partial<TownProfile>>) {
+    towns.forEach(({ id, location }) => this.mapData[location.toString()] = id);
    }
-
-  //  TODO: finding might be painful here, consider a different approach
-  public setTownAlliance(alliance: Profile, townIds: number[]) {
-    const townList = Object.entries(this.mapData);
-    townIds.forEach((id) => {
-      const target = townList.find(([key, data]) => data.id === id);
-      if (target) {
-        this.mapData[target[0]].alliance = alliance;
-      }
-    });
-   }
-
-  public setTownScore(score: number, coords: Coords) {
-    const target = this.mapData[coords.join(',')];
-    if (target) {
-      target.score = score;
-    }
-  }
-
-  public setTownName(name: string, townId: number) {
-    const townList = Object.entries(this.mapData);
-    const target = townList.find(([key, data]) => data.id === townId);
-    if (target) {
-      this.mapData[target[0]].name = name;
-    }
-  }
-
-  public townConquered(town: Partial<Town>, originCoords: Coords) {
-    const { name, score, id, location } = town;
-    const originTown = this.mapData[originCoords.join(',')];
-    // Throw on missing origin town in map data
-    if (!originTown) {
-      logger.error('Conquering town missing in map data', originCoords, this.mapData);
-      throw new Error('Missing town data');
-    }
-
-    this.mapData[town.location.join(',')] = {
-      ...this.mapData[town.location.join(',')],
-      id,
-      name,
-      location,
-      owner: originTown.owner,
-      alliance: originTown.alliance,
-      score,
-    };
-  }
 
   public getRingCoords(size: number, ring: number) {
     const min = size - ring;
@@ -218,6 +129,7 @@ export class MapManager {
     const ringCoords = this.getRingCoords(Math.ceil(this.worldData.world.size / 2), this.worldData.world.currentRing);
     const newCoords = [...ringCoords.top, ...ringCoords.right, ...ringCoords.bottom, ...ringCoords.left];
     const { coords, towns } = await this.worldData.townGrowth.generateRingTowns(newCoords, this.lastExpansion);
+    ProfileService.addNpcTowns(towns);
     this.addTown(...towns);
     this.availableCoords = [...this.availableCoords, ...coords];
   }
