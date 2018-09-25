@@ -192,3 +192,15 @@ export function createReport(payload: Partial<Report>, connection: Transaction |
     .query(connection)
     .insert(payload);
 }
+
+export function getTownProfiles(ids: number[] = [], connection: Transaction | Knex = knexDb.world) {
+  const query = Town
+    .query(connection)
+    .select(['id', 'name', 'location', 'score', 'playerId', 'createdAt']);
+
+  // Filter by ids if any present
+  if (ids.length) {
+    query.whereIn('id', ids);
+  }
+  return query;
+}

@@ -459,6 +459,7 @@ export class Town extends BaseModel {
 
   static get namedFilters() {
     return {
+      selectId: (builder) => builder.select('id'),
       selectTownProfile: (builder) => builder.select('id', 'name', 'location', 'score'),
     };
   }
