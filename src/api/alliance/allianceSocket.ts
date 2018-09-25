@@ -33,9 +33,7 @@ export interface RoleUpdatePayload {
 // TODO: chat messages need better handling
 
 export class AllianceSocket {
-  static onConnect(socket: UserSocket) {
-    this.joinAllianceRoom(socket);
-
+  static async onConnect(socket: UserSocket) {
     socket.on('alliance:create', (name: string) => this.createAlliance(socket, name));
     socket.on('alliance:createInvite', (name: string) => this.createInvite(socket, name));
     socket.on('alliance:cancelInvite', (playerId: number) => this.cancelInvite(socket, playerId));
@@ -48,7 +46,6 @@ export class AllianceSocket {
     socket.on('alliance:leave', () => this.leaveAlliance(socket));
     socket.on('alliance:destroy', () => this.destroyAlliance(socket));
 
-    socket.on('alliance:loadProfile', (id: number) => this.loadProfile(socket, id));
     socket.on('alliance:updateProfile', (payload: ProfileUpdate) => this.updateProfile(socket, payload));
     socket.on('alliance:removeAvatar', () => this.removeAvatar(socket));
 
@@ -66,6 +63,14 @@ export class AllianceSocket {
 
     socket.on('chat:postMessage', (payload: MessagePayload) => this.postMessage(socket, payload));
     // socket.on('alliance:createForumCategory', (payload: ForumCategoryPayload) => this.createForumCategory(socket, payload));
+
+    this.joinAllianceRoom(socket);
+    const alliance = await this.getPlayerAlliance(socket.userData.allianceId);
+    if (alliance) {
+      const playerRole = alliance.roles.find(({ id }) => id === socket.userData.allianceRoleId) || {};
+      socket.userData.alliancePermissions = playerRole.permissions;
+    }
+    return alliance;
   }
 
   static joinAllianceRoom(socket: UserSocket) {
@@ -120,6 +125,11 @@ export class AllianceSocket {
 
     io.sockets.in(room).emit('alliance:destroySuccess');
     this.resetRoomSocketAlliance(socketRoom.sockets, (client) => client.leave(room));
+  }
+
+  static getPlayerAlliance(allianceId: number) {
+    if (allianceId === null) { return null; }
+    return allianceQueries.getPlayerAlliance(allianceId);
   }
 
   static leaveAllianceRoom(socket: AuthenticatedSocket, allianceId: number) {
@@ -401,10 +411,12 @@ export class AllianceSocket {
       const alliance = await allianceQueries.getAllianceWithMembers({ id: socket.userData.allianceId }, trx);
 
       if (!alliance) { throw new ErrorMessage('Wrong alliance'); }
-      const targetMember = alliance.members.find(({ id }) => id === playerId);
+      const targetIndex = alliance.members.findIndex(({ id }) => id === playerId);
 
-      if (!targetMember) { throw new ErrorMessage('Target player doesn\'t belong to alliance'); }
+      if (!targetIndex) { throw new ErrorMessage('Target player doesn\'t belong to alliance'); }
       if (playerId === socket.userData.playerId) { throw new ErrorMessage('Can\'t remove self, leave or destroy alliance instead'); }
+
+      const targetMember = alliance.members.splice(targetIndex, 1)[0];
       if (targetMember.allianceRoleId === alliance.masterRoleId) { throw new ErrorMessage('Can\'t remove members with master role'); }
 
       const query = await allianceQueries.removeMember(playerId, socket.userData.playerId, alliance.id, trx);
@@ -452,17 +464,6 @@ export class AllianceSocket {
     } catch (err) {
       await trx.rollback();
       socket.handleError(err, 'destroyAlliance', 'alliance:destroyFail');
-    }
-  }
-
-  static async loadProfile(socket: UserSocket, id: number) {
-    try {
-      const alliance = await allianceQueries.getAllianceProfile({ id });
-      if (!alliance) { throw new ErrorMessage('Wrong alliance'); }
-
-      socket.emit('alliance:loadProfileSuccess', alliance);
-    } catch (err) {
-      socket.handleError(err, 'loadProfile', 'alliance:loadProfileFail');
     }
   }
 

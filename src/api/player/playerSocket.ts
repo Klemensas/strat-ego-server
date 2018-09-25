@@ -12,48 +12,43 @@ import { Player } from './player';
 
 export class PlayerSocket {
   static async onConnect(socket: UserSocket) {
+    socket.on('player:restart', () => this.restart(socket));
+    socket.on('player:updateProfile', (payload: ProfileUpdate) => this.updateProfile(socket, payload));
+    socket.on('player:removeAvatar', () => this.removeAvatar(socket));
+    socket.on('player:progressTutorial', () => this.progressTutorial(socket));
+
     const player = await this.getOrCreatePlayer(socket);
     socket.userData = {
       ...socket.userData,
       playerId: player.id,
       playerName: player.name,
-      townIds: player.towns.map(({ id }) => id),
-      allianceName: player.alliance ? player.alliance.name : null,
       allianceId: player.allianceId,
       allianceRoleId: player.allianceRoleId,
-      alliancePermissions: player.allianceRole ? player.allianceRole.permissions : null,
-      updatedAt: player.updatedAt,
     };
     socket.join(`player.${player.id}`);
-    socket.emit('player', player);
+    return player;
 
-    socket.on('player:restart', () => this.restart(socket));
-    socket.on('player:loadProfile', (id: number) => this.loadProfile(socket, id));
-    socket.on('player:updateProfile', (payload: ProfileUpdate) => this.updateProfile(socket, payload));
-    socket.on('player:removeAvatar', () => this.removeAvatar(socket));
-    socket.on('player:progressTutorial', () => this.progressTutorial(socket));
+    // socket.userData = {
+    //   ...socket.userData,
+    //   playerId: player.id,
+    //   playerName: player.name,
+    //   townIds: player.towns.map(({ id }) => id),
+    //   allianceName: player.alliance ? player.alliance.name : null,
+    //   allianceId: player.allianceId,
+    //   allianceRoleId: player.allianceRoleId,
+    //   alliancePermissions: player.allianceRole ? player.allianceRole.permissions : null,
+    //   updatedAt: player.updatedAt,
+    // };
+    // socket.emit('player', player);
   }
 
   static emitToPlayer(playerId: number, payload: any, topic: string = 'player') {
     io.sockets.in(`player.${playerId}`).emit(topic, payload);
   }
 
-  static async getOrCreatePlayer(socket) {
-    const player = await getFullPlayer({ userId: socket.userData.userId });
-    if (player) {
-      // TODO: consider separating data to reduce manual filtering as such
-      // Go through all player town incoming movements and delete units
-      player.towns = player.towns.map((town) => {
-        town.targetMovements = town.targetMovements.map((movement) => {
-          if (movement.type !== MovementType.return) {
-            delete movement.units;
-          }
-          return movement;
-        });
-        return town;
-      });
-      return player;
-    }
+  static async getOrCreatePlayer(socket): Promise<Player> {
+    const player = await getPlayer({ userId: socket.userData.userId });
+    if (player) { return player; }
 
     try {
       await this.createPlayer(
@@ -155,17 +150,6 @@ export class PlayerSocket {
       await trxWorld.rollback();
 
       socket.handleError(err, 'rest', 'player:restartFail');
-    }
-  }
-
-  static async loadProfile(socket: UserSocket, id: number) {
-    try {
-      const player = await getPlayerProfile({ id });
-      if (!player) { throw new ErrorMessage('Wrong player'); }
-
-      socket.emit('player:loadProfileSuccess', player);
-    } catch (err) {
-      socket.handleError(err, 'loadProfile', 'player:loadProfileFail');
     }
   }
 

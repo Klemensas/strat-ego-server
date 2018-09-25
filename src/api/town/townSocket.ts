@@ -20,16 +20,19 @@ import { InvolvedTownChanges } from './movementResolver';
 import { ProfileService } from '../profile/profileService';
 
 export class TownSocket {
-  static onConnect(socket: UserSocket) {
-    this.joinTownRoom(socket);
-
+  static async onConnect(socket: UserSocket) {
     socket.on('town:rename', (payload: NamePayload) => this.rename(socket, payload));
     socket.on('town:build', (payload: BuildPayload) => this.build(socket, payload));
     socket.on('town:recruit', (payload: RecruitPayload) => this.recruit(socket, payload));
     socket.on('town:moveTroops', (payload: TroopMovementPayload) => this.moveTroops(socket, payload));
     socket.on('town:recallSupport', (payload: number) => this.cancelSupport(socket, payload, 'origin'));
     socket.on('town:sendBackSupport', (payload: number) => this.cancelSupport(socket, payload, 'target'));
-    // socket.on('town:update', (payload: SocketPayload) => this.update(socket, payload));
+
+    const towns = await this.getPlayerTowns(socket.userData.playerId);
+    socket.userData.townIds = towns.map(({ id }) => id);
+    this.joinTownRoom(socket);
+
+    return towns;
   }
 
   static joinTownRoom(socket: UserSocket) {
@@ -61,6 +64,10 @@ export class TownSocket {
       client.join(townRoom);
       if (clientAction) { clientAction(client); }
     });
+  }
+
+  static getPlayerTowns(playerId: number): Promise<Town[]> {
+    return getTowns({ playerId });
   }
 
   static townConquered(town: Town) {

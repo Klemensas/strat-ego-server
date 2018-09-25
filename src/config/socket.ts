@@ -11,7 +11,8 @@ import { TownSocket } from '../api/town/townSocket';
 import { MapSocket } from '../api/map/mapSocket';
 import { logger } from '../logger';
 import { serializeError } from '../errorSerializer';
-import { RankingsSocket } from '../api/player/rankingsSocket';
+import { RankingsSocket } from '../api/ranking/rankingsSocket';
+import { ProfileSocket } from '../api/profile/profileSocket';
 
 export interface AuthenticatedSocket extends SocketIO.Socket {
   decoded_token: {
@@ -72,7 +73,7 @@ export function initializeSocket(socketio: SocketIO.Server) {
     socketio.on('connection', setupUserSocket);
 }
 
-export function setupUserSocket(client: UserSocket) {
+export async function setupUserSocket(client: UserSocket) {
   client.address = `${client.request.connection.remoteAddress}:${client.request.connection.remotePort}`;
   client.userData = {
     worldName: client.handshake.query.world,
@@ -98,10 +99,15 @@ export function setupUserSocket(client: UserSocket) {
     client.log(`${client.userData.username} disconnected`);
   });
 
-  return PlayerSocket.onConnect(client)
-    .then(() => TownSocket.onConnect(client))
-    .then(() => MapSocket.onConnect(client))
-    .then(() => AllianceSocket.onConnect(client))
-    .then(() => RankingsSocket.onConnect(client))
-    .then(() => client.log(`${client.userData.username} connected`));
+  const player = await PlayerSocket.onConnect(client);
+  const [towns, alliance] = await Promise.all([
+    TownSocket.onConnect(client),
+    AllianceSocket.onConnect(client),
+    MapSocket.onConnect(client),
+    RankingsSocket.onConnect(client),
+    ProfileSocket.onConnect(client),
+  ]);
+
+  client.emit('initialize', { player, towns, alliance });
+  client.log(`${client.userData.username} connected`);
 }
