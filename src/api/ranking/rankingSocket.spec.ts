@@ -1,7 +1,7 @@
 import { RankingsSocket } from './rankingsSocket';
 import { EventEmitter } from 'events';
 import { UserSocket } from '../../config/socket';
-import { scoreTracker } from './playerScore';
+import { rankingService } from './rankingService';
 
 let socket: UserSocket;
 beforeEach(() => {
@@ -37,7 +37,7 @@ describe('onConnect', () => {
 describe('load', () => {
   const lastUpdate = 2;
   beforeEach(() => {
-    scoreTracker.lastUpdate = lastUpdate;
+    rankingService.lastUpdate = lastUpdate;
   });
 
   it('should emit loadSuccess if lastUpdate missing', () => {
