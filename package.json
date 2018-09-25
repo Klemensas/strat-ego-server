@@ -50,6 +50,7 @@
     "express": "^4.16.2",
     "express-jwt": "^5.3.0",
     "express-session": "^1.15.6",
+    "ioredis": "^4.0.0",
     "jsonwebtoken": "^8.1.0",
     "knex": "^0.14.6",
     "method-override": "^2.3.10",
@@ -68,6 +69,7 @@
   },
   "devDependencies": {
     "@types/express": "^4.0.39",
+    "@types/ioredis": "^3.2.15",
     "@types/jest": "^22.2.3",
     "@types/knex": "^0.14.10",
     "@types/lolex": "^2.1.2",
