@@ -14,8 +14,9 @@ import routing from './routes';
 import { initializeSocket, io, setupIo } from './config/socket';
 import { worldData } from './api/world/worldData';
 import { logger } from './logger';
-import { scoreTracker } from './api/player/playerScore';
+import { rankingService } from './api/ranking/rankingService';
 import { townQueue } from './api/townQueue';
+import { ProfileService } from './api/profile/profileService';
 
 const app = express();
 const env = app.get('env');
@@ -34,8 +35,10 @@ app.use(morgan('dev'));
 app.use(cors());
 routing(app);
 
-worldData.initialize(worldName)
-  .then(() => scoreTracker.readScores())
+ProfileService.initialize()
+  .then(() => ProfileService.getPlayerProfile())
+  .then(() => worldData.initialize(worldName))
+  .then(() => rankingService.initialize())
   .then(() => townQueue.loadQueues())
   .then(() => initializeSocket(io))
   .then(() => {
