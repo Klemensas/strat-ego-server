@@ -10,7 +10,7 @@ import { TownSupport } from './townSupport';
 import { Movement } from './movement';
 import { Player } from '../player/player';
 import { Alliance } from '../alliance/alliance';
-import { Report } from './report';
+import { Report } from '../report/report';
 
 export function getTowns(where: Partial<Town>, connection: Transaction | Knex = knexDb.world) {
   return Town

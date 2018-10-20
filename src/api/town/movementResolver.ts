@@ -5,8 +5,8 @@ import { knexDb } from '../../sqldb';
 import { worldData } from '../world/worldData';
 import { Town } from './town';
 import { Movement } from './movement';
-import { Report } from './report';
 import { townQueue } from '../townQueue';
+import { Report } from '../report/report';
 import { TownSocket } from './townSocket';
 import { TownSupport } from './townSupport';
 import {

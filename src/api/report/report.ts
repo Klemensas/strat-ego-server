@@ -1,7 +1,7 @@
 import { Resources, CombatCasualties, Haul, CombatOutcome } from 'strat-ego-common';
 
 import { BaseModel } from '../../sqldb/baseModel';
-import { Town } from './town';
+import { Town } from '../town/town';
 import { Player } from '../player/player';
 
 export class Report extends BaseModel {
