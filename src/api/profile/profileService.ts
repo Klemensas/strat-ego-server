@@ -61,12 +61,13 @@ class ProfileService {
     const prevProfile = { ...this.playerProfiles[playerId] };
     const newProfile = { ...prevProfile, ...profile };
 
-    const changeType = prevProfile.hasOwnProperty(playerId) ? 'update' : 'add';
+    const changeType = this.playerProfiles[playerId] ? 'update' : 'add';
+    this.playerProfiles[playerId] = newProfile;
     this.playerChanges.emit(changeType, { prev: prevProfile, current: newProfile, changes: profile });
     if (!propagateChanges) { return newProfile; }
 
-    if (profile.allianceId !== null) {
-      if (prevProfile !== null) {
+    if (profile.hasOwnProperty('allianceId')) {
+      if (prevProfile.allianceId !== null) {
         const allianceProfile = this.allianceProfiles[prevProfile.allianceId];
         const members = allianceProfile.members.slice();
         const targetMember = members.findIndex(({ id }) => id === newProfile.id);
@@ -86,9 +87,9 @@ class ProfileService {
   static updateTownProfile(townId: string | number, profile: Partial<TownProfile>, propagateChanges = true) {
     const prevProfile = { ...this.townProfiles[townId] };
     const newProfile = { ...prevProfile, ...profile };
-    this.townProfiles[townId] = newProfile;
 
-    const changeType = prevProfile.hasOwnProperty(townId) ? 'update' : 'add';
+    const changeType = this.townProfiles[townId] ? 'update' : 'add';
+    this.townProfiles[townId] = newProfile;
     this.townChanges.emit(changeType, { prev: prevProfile, current: newProfile, changes: profile });
     if (!propagateChanges) { return newProfile; }
 
@@ -111,17 +112,17 @@ class ProfileService {
     }
   }
 
-  static updateAllianceProfile(id: string | number, profile: Partial<AllianceProfile>, propagateChanges = true) {
-    const prevProfile = { ...this.allianceProfiles[id] };
+  static updateAllianceProfile(allianceId: string | number, profile: Partial<AllianceProfile>, propagateChanges = true) {
+    const prevProfile = { ...this.allianceProfiles[allianceId] };
     const newProfile = { ...prevProfile, ...profile };
-    this.allianceProfiles[id] = newProfile;
 
-    const changeType = prevProfile.hasOwnProperty(id) ? 'update' : 'add';
+    const changeType = this.allianceProfiles[allianceId] ? 'update' : 'add';
+    this.allianceProfiles[allianceId] = newProfile;
     this.allianceChanges.emit(changeType, { prev: prevProfile, current: newProfile, changes: profile });
     if (!propagateChanges) { return newProfile; }
 
     if (profile.members) {
-      const change = this.compareChanges(newProfile.members, prevProfile.members);
+      const change = this.compareChanges(newProfile.members, prevProfile.members || []);
 
       if (change.added.length) {
         const playerProfiles = this.getPlayerProfile(change.added);
@@ -154,7 +155,7 @@ class ProfileService {
         name: town.name,
         location: town.location,
         score: town.score,
-        playerId: town.playerId,
+        playerId: null,
         createdAt: town.createdAt,
       };
       return result;
@@ -220,7 +221,6 @@ class ProfileService {
   }
 
   private static allianceProfileReducer(result: Dict<AllianceProfile>, alliance: Alliance): Dict<AllianceProfile> {
-    console.log('see', alliance.members);
     const { members, score } = alliance.members.reduce((items: { score: number, members: Array<Partial<PlayerProfile>> }, player) => {
       items.score += player.score;
       items.members.push({ id: player.id });
@@ -240,15 +240,14 @@ class ProfileService {
 
   private static compareChanges(newList: Array<{ id: number & any}>, prevList: Array<{ id: number & any}> = []): { added: number[], removed: number[] } {
     const newIdArray = newList.map(({ id }) => id);
-    return newList.reduce((result, { id }) => {
+    return newIdArray.reduce((result, id) => {
       const townIndex = prevList.findIndex((prevItem) => prevItem.id === id);
       if (townIndex === -1) {
         result.added.push(id);
-      } else {
-        result.removed.splice(townIndex, 1);
       }
+      result.removed.splice(townIndex, 1);
       return result;
-    }, { added: [], removed: [...newIdArray] });
+    }, { added: [], removed: prevList.length ? [...newIdArray] : [] });
   }
 }
 

@@ -163,7 +163,7 @@ export class AllianceSocket {
       ProfileService.updateAllianceProfile(alliance.id, {
         id: alliance.id,
         name: alliance.name,
-        members: [socket.userData.playerId],
+        members: [{ id: socket.userData.playerId }],
         description: alliance.description,
         avatarUrl: alliance.avatarUrl,
         createdAt: alliance.createdAt,

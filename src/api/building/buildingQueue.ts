@@ -1,5 +1,3 @@
-import { Requirements, Resources } from 'strat-ego-common';
-
 import { BaseModel } from '../../sqldb/baseModel';
 import { Town } from '../town/town';
 

@@ -6,6 +6,7 @@ import { WorldData } from '../world/worldData';
 import { knexDb } from '../../sqldb';
 import { getTownLocationsByCoords } from '../town/townQueries';
 import { ProfileService } from '../profile/profileService';
+import { Town } from '../town/town';
 
 export class MapManager {
   public mapData: Dict<number> = {};
@@ -19,7 +20,7 @@ export class MapManager {
   constructor(private worldData: WorldData) {}
 
   public async initialize() {
-    ProfileService.townChanges.on('add', (payload) => this.addTown(payload));
+    ProfileService.townChanges.on('add', ({ current }) => this.addTown(current));
 
     this.lastExpansion = +this.worldData.world.lastExpansion;
     this.expansionRate = +this.worldData.world.expansionRate;
@@ -30,7 +31,7 @@ export class MapManager {
     this.addTown(...Object.values(towns));
   }
 
-  public addTown(...towns: Array<Partial<TownProfile>>) {
+  public addTown(...towns: Array<Partial<TownProfile | Town>>) {
     towns.forEach(({ id, location }) => this.mapData[location.toString()] = id);
    }
 

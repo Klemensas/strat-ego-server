@@ -79,18 +79,18 @@ export class PlayerSocket {
       ProfileService.addPlayerProfile({
         id: player.id,
         name: player.name,
-        towns: [playerTown.id],
+        towns: [{ id: playerTown.id }],
         score: playerTown.score,
-        allianceId: player.allianceId,
-        description: player.description,
-        avatarUrl: player.avatarUrl,
+        allianceId: null,
+        description: null,
+        avatarUrl: null,
         createdAt: player.createdAt,
       }, {
         id: playerTown.id,
         name: playerTown.name,
         location: playerTown.location,
         score: playerTown.score,
-        playerId: playerTown.id,
+        playerId: player.id,
         createdAt: playerTown.createdAt,
       });
 
