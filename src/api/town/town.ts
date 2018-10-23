@@ -194,7 +194,6 @@ export class Town extends BaseModel {
       update.production = this.getProduction(update.buildings);
     }
     try {
-      const originalScore = this.score;
       await item.$query(trx).delete();
       await this.$query<Town>(trx)
         .patch(update)
@@ -323,6 +322,7 @@ export class Town extends BaseModel {
     this.units = this.units || Town.getInitialUnits();
     this.buildings = this.buildings || Town.getInitialBuildings();
     this.score = this.score || Town.calculateScore(this.buildings);
+    this.playerId = this.playerId || null;
 
     // Set for consistent model values
     this.buildingQueues = [];
