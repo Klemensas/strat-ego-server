@@ -14,6 +14,7 @@ import { MovementResolver } from './movementResolver';
 import { TownSupport } from './townSupport';
 import { getTownWithItems } from './townQueries';
 import { ProfileService } from '../profile/profileService';
+import { TownSocket } from './townSocket';
 
 export interface ProcessingResult {
   town: Town;
@@ -202,6 +203,18 @@ export class Town extends BaseModel {
 
       ProfileService.updateTownProfile(this.id, { score: this.score });
       this.buildingQueues = this.buildingQueues.filter(({ id }) => id !== item.id);
+      TownSocket.emitToTownRoom(this.id, {
+        town: {
+          id: this.id,
+          resources: this.resources,
+          buildings: this.buildings,
+          loyalty: this.loyalty,
+          production: this.production,
+          score: this.score,
+          updatedAt: this.updatedAt,
+        },
+        item: item.id,
+      }, 'town:buildingCompleted');
       return this;
     } catch (err) {
       await trx.rollback();
@@ -231,6 +244,17 @@ export class Town extends BaseModel {
       await trx.commit();
 
       this.unitQueues = this.unitQueues.filter(({ id }) => id !== item.id);
+      TownSocket.emitToTownRoom(this.id, {
+        town: {
+          id: this.id,
+          units: this.units,
+          resources: this.resources,
+          loyalty: this.loyalty,
+          updatedAt: this.updatedAt,
+        },
+        item: item.id,
+      }, 'town:recruitmentCompleted');
+
       return this;
     } catch (err) {
       await trx.rollback();
