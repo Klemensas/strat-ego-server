@@ -30,7 +30,8 @@ export class TownEventQueue {
   // TODO: might want to improve this part
   // Sort provided items, then loop through current items to find earlier item and insert there
   public addToQueue(item: TownQueue | TownQueue[]) {
-    const target = item instanceof Array ? item.shift() : item;
+    item = item instanceof Array ? item.slice() : [item];
+    const target = item.shift();
     // Enforce number type to prevent string and number comparison
     target.endsAt = +target.endsAt;
 
