@@ -21,6 +21,9 @@ export class Player extends BaseModel {
   allianceRole?: Partial<AllianceRole>;
   invitations?: Array<Partial<Alliance[]>>;
 
+  // Additionally computed field
+  score?: number;
+
   static tableName = 'Player';
 
   static relationMappings = {
