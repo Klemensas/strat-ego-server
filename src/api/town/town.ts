@@ -12,7 +12,7 @@ import { logger } from '../../logger';
 import { Movement } from './movement';
 import { MovementResolver } from './movementResolver';
 import { TownSupport } from './townSupport';
-import { getFullTown } from './townQueries';
+import { getTownWithItems } from './townQueries';
 import { ProfileService } from '../profile/profileService';
 
 export interface ProcessingResult {
@@ -158,12 +158,6 @@ export class Town extends BaseModel {
 
   hasEnoughResources(target: Resources) {
     return this.resources.wood >= target.wood && this.resources.clay >= target.clay && this.resources.iron >= target.iron;
-  }
-  // TODO: figure how to specify queueType here without ts complaining
-  getLastQueue(queueType: string) {
-    const queue: Array<BuildingQueue | UnitQueue> = this[queueType];
-
-    return queue && queue.length ? queue[queue.length - 1] : null;
   }
 
   async processQueues(queues: TownQueue[], processed: TownQueue[] = []): Promise<ProcessingResult> {
@@ -446,10 +440,18 @@ export class Town extends BaseModel {
   static townRelationsFiltered = `[
     buildingQueues(orderByEnd),
     unitQueues(orderByEnd),
-    originMovements(selectNonReturn, orderByEnd).[targetTown(selectTownProfile)],
-    targetMovements(orderByEnd).[originTown(selectTownProfile)],
-    originSupport(orderByCreated).[targetTown(selectTownProfile)],
-    targetSupport(orderByCreated).[originTown(selectTownProfile)],
+    originMovements(selectNonReturn, orderByEnd),
+    targetMovements(orderByEnd),
+    originSupport(orderByCreated),
+    targetSupport(orderByCreated),
+  ]`;
+  static townRelationsFilteredNoMovementUnits = `[
+    buildingQueues(orderByEnd),
+    unitQueues(orderByEnd),
+    originMovements(selectNonReturn, orderByEnd),
+    targetMovements(orderByEnd),
+    originSupport(orderByCreated),
+    targetSupport(orderByCreated),
   ]`;
   static townRelationFilters = {
     orderByEnd: (builder) => builder.orderBy('endsAt', 'asc'),
@@ -467,7 +469,7 @@ export class Town extends BaseModel {
   static async processTownQueues(item: number | Town, time?: number, processed = []): Promise<ProcessingResult> {
     const queueTime = time || Date.now();
     try {
-      const town = typeof item === 'number' ? await getFullTown({ id: item }, knexDb.world) : item;
+      const town = typeof item === 'number' ? await getTownWithItems({ id: item }, knexDb.world) : item;
 
       const queues = [
         ...town.buildingQueues,
