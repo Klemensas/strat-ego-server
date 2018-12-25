@@ -475,8 +475,8 @@ export class Town extends BaseModel {
   static townRelationsFilteredNoMovementUnits = `[
     buildingQueues(orderByEnd),
     unitQueues(orderByEnd),
-    originMovements(selectNonReturn, orderByEnd),
-    targetMovements(orderByEnd),
+    originMovements(orderByEnd),
+    targetMovements(selectNonReturn, orderByEnd),
     originSupport(orderByCreated),
     targetSupport(orderByCreated),
   ]`;
