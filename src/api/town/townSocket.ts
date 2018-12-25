@@ -269,7 +269,7 @@ export class TownSocket {
         const targetUnit = unitData[unit.type];
         if (!town.units.hasOwnProperty(unit.type) || +unit.amount <= 0) { throw new ErrorMessage('Wrong unit'); }
         if (!town.doesMeetRequirements(targetUnit.requirements, 'buildings')) { throw new ErrorMessage('Requirements not met'); }
-        usedPop += unit.amount;
+        usedPop += targetUnit.farmSpace * unit.amount;
 
         town.resources.wood -= targetUnit.costs.wood * unit.amount;
         town.resources.clay -= targetUnit.costs.clay * unit.amount;

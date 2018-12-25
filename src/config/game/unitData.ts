@@ -1,29 +1,6 @@
-interface IUnit {
-  name: string;
-  costs: {
-    wood: number;
-    clay: number;
-    iron: number;
-  };
-  attackType: string;
-  speed: number;
-  recruitTime: number;
-  haul: number;
-  combat: {
-    attack: number;
-    defense: {
-      general: number;
-      cavalry: number;
-      archer: number;
-    }
-  };
-  requirements?: [{
-    item: string;
-    level: number;
-  }];
-}
+import { Unit } from '../../api/unit/unit';
 
-const unitList: IUnit[] = [
+export const unitList: Array<Partial<Unit>> = [
   {
     name: 'axe',
     costs: {
@@ -35,6 +12,7 @@ const unitList: IUnit[] = [
     speed: 1080,
     recruitTime: 1020,
     haul: 25,
+    farmSpace: 1,
     combat: {
       attack: 10,
       defense: {
@@ -54,6 +32,7 @@ const unitList: IUnit[] = [
     speed: 1320,
     recruitTime: 1500,
     haul: 15,
+    farmSpace: 1,
     combat: {
       attack: 25,
       defense: {
@@ -77,6 +56,7 @@ const unitList: IUnit[] = [
     speed: 1080,
     recruitTime: 1320,
     haul: 10,
+    farmSpace: 1,
     combat: {
       attack: 40,
       defense: {
@@ -100,6 +80,7 @@ const unitList: IUnit[] = [
     speed: 1080,
     recruitTime: 1800,
     haul: 10,
+    farmSpace: 1,
     combat: {
       attack: 15,
       defense: {
@@ -124,6 +105,7 @@ const unitList: IUnit[] = [
   //   speed: 540,
   //   recruitTime: 900,
   //   haul: 0,
+  // farmSpace: 4,
   //   combat: {
   //     attack: 0,
   //     defense: {
@@ -144,6 +126,7 @@ const unitList: IUnit[] = [
     speed: 600,
     recruitTime: 1800,
     haul: 80,
+    farmSpace: 5,
     combat: {
       attack: 130,
       defense: {
@@ -167,6 +150,7 @@ const unitList: IUnit[] = [
     speed: 600,
     recruitTime: 2700,
     haul: 50,
+    farmSpace: 6,
     combat: {
       attack: 120,
       defense: {
@@ -190,6 +174,7 @@ const unitList: IUnit[] = [
     speed: 660,
     recruitTime: 3600,
     haul: 50,
+    farmSpace: 8,
     combat: {
       attack: 150,
       defense: {
@@ -213,6 +198,7 @@ const unitList: IUnit[] = [
     speed: 1800,
     recruitTime: 4800,
     haul: 0,
+    farmSpace: 15,
     combat: {
       attack: 200,
       defense: {
@@ -236,6 +222,7 @@ const unitList: IUnit[] = [
   //   speed: 1800,
   //   recruitTime: 7200,
   //   haul: 0,
+  // farmSpace: 20,
   //   combat: {
   //     attack: 100,
   //     defense: {
@@ -255,6 +242,7 @@ const unitList: IUnit[] = [
     speed: 2100,
     recruitTime: 18000,
     haul: 0,
+    farmSpace: 100,
     combat: {
       attack: 30,
       defense: {
@@ -278,6 +266,7 @@ const unitList: IUnit[] = [
     speed: 600,
     recruitTime: 18000,
     haul: 100,
+    farmSpace: 50,
     combat: {
       attack: 200,
       defense: {
@@ -292,8 +281,13 @@ const unitList: IUnit[] = [
     }],
   },
 ];
-export default (speed = 1, units = unitList) => units.map((unit) => {
-  unit.speed /= speed / 1000;
-  unit.recruitTime /= speed / 1000;
-  return unit;
-});
+
+export function unitData(speed = 1, date = Date.now(), units = unitList) {
+  return units.map((unit) => {
+    unit.speed /= speed / 1000;
+    unit.recruitTime /= speed / 1000;
+    unit.createdAt = date;
+    unit.updatedAt = date;
+    return unit;
+  });
+}

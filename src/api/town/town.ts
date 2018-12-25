@@ -267,12 +267,15 @@ export class Town extends BaseModel {
   }
 
   getAvailablePopulation(): number {
-    const supportPop = this.originSupport.reduce((result, { units }) => result + Object.values(units).reduce((a, b) => a + b, 0), 0);
-    const attackPop = this.originMovements.reduce((result, { units }) => result + Object.values(units).reduce((a, b) => a + b, 0), 0);
+    const supportPop = this.originSupport.reduce((result, { units }) => result + Object.entries(units).reduce((a, b) => a + worldData.unitMap
+    [b[0]].farmSpace * b[1], 0), 0);
+    const attackPop = this.originMovements.reduce((result, { units }) => result + Object.entries(units).reduce((a, b) => a + worldData.unitMap
+    [b[0]].farmSpace * b[1], 0), 0);
     const returnPop = this.targetMovements.reduce((result, { units, type }) =>
-      result + type === MovementType.return ? Object.values(units).reduce((a, b) => a + b, 0) : 0, 0);
+      result + type === MovementType.return ? Object.entries(units).reduce((a, b) => a + worldData.unitMap
+      [b[0]].farmSpace * b[1], 0) : 0, 0);
 
-    const townPop = worldData.units.reduce((result, unit) => result + Object.values(this.units[unit.name]).reduce((a, b) => a + b), 0);
+    const townPop = worldData.units.reduce((result, unit) => result + Object.values(this.units[unit.name]).reduce((a, b) => a + b) * unit.farmSpace, 0);
     const total = worldData.buildingMap.farm.data[this.buildings.farm.level].population;
     return total - townPop - supportPop - attackPop - returnPop;
   }
