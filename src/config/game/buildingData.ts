@@ -1,4 +1,7 @@
-interface IBuilding {
+import { Building } from '../../api/building/building';
+import { BuildingLevelData } from 'strat-ego-common';
+
+interface BuildingMetaData {
   name: string;
   levels: number;
   min: number;
@@ -19,9 +22,12 @@ interface IBuilding {
     item: string;
     level: number;
   }];
+  baseScore: number;
+  initialScore: number;
+  scoreFactor: number;
 }
 
-const buildingList: IBuilding[] = [
+const buildingList: BuildingMetaData[] = [
   {
     name: 'headquarters',
     levels: 15,
@@ -42,6 +48,9 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 20,
     timeFactor: 1.4,
+    baseScore: 3,
+    initialScore: 20,
+    scoreFactor: 1.75,
   }, {
     name: 'barracks',
     levels: 20,
@@ -62,6 +71,9 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 30,
     timeFactor: 1.2,
+    baseScore: 5,
+    initialScore: 18,
+    scoreFactor: 1.6,
     additional: {
       recruitment: {
         base: 1,
@@ -92,6 +104,9 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 15,
     timeFactor: 1.2,
+    baseScore: 2,
+    initialScore: 8,
+    scoreFactor: 1.4,
     additional: {
       production: {
         base: 30,
@@ -118,6 +133,9 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 15,
     timeFactor: 1.2,
+    baseScore: 2,
+    initialScore: 8,
+    scoreFactor: 1.4,
     additional: {
       production: {
         base: 30,
@@ -144,6 +162,9 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 18,
     timeFactor: 1.2,
+    baseScore: 2,
+    initialScore: 8,
+    scoreFactor: 1.4,
     additional: {
       production: {
         base: 30,
@@ -170,6 +191,9 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 60,
     timeFactor: 1.2,
+    baseScore: 3,
+    initialScore: 11,
+    scoreFactor: 1.5,
     additional: {
       defense: {
         base: 1.04,
@@ -196,6 +220,9 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 17,
     timeFactor: 1.2,
+    baseScore: 2,
+    initialScore: 6,
+    scoreFactor: 1.44,
     additional: {
       storage: {
         base: 1000,
@@ -222,6 +249,9 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 20,
     timeFactor: 1.2,
+    baseScore: 2,
+    initialScore: 5,
+    scoreFactor: 1.38,
     additional: {
       population: {
         base: 240,
@@ -245,6 +275,9 @@ const buildingList: IBuilding[] = [
     },
     baseTime: 14400,
     timeFactor: 1,
+    baseScore: 50,
+    initialScore: 300,
+    scoreFactor: 2,
     requirements: [{
       item: 'headquarters',
       level: 15,
@@ -252,35 +285,40 @@ const buildingList: IBuilding[] = [
   },
 ];
 
-export default (speed = 1, buildings = buildingList) => buildings.map((building) => {
-  const item = {
-    name: building.name,
-    levels: { max: building.levels, min: building.min },
-    requirements: building.requirements,
-    data: [],
-  };
-
-  for (let i = 0; i <= item.levels.max; i++) {
-    const data = {
-      buildTime: Math.ceil((building.baseTime * (building.timeFactor ** i)) / speed) * 1000,
-      costs: {
-        wood: Math.ceil(building.costs.wood.base * (building.costs.wood.factor ** i)),
-        clay: Math.ceil(building.costs.clay.base * (building.costs.clay.factor ** i)),
-        iron: Math.ceil(building.costs.iron.base * (building.costs.iron.factor ** i)),
-      },
+export function buildingData(speed = 1, date = Date.now(), buildings = buildingList) {
+  return buildings.map((building): Partial<Building> => {
+    const item = {
+      name: building.name,
+      levels: { max: building.levels, min: building.min },
+      requirements: building.requirements,
+      data: [],
+      createdAt: date,
+      updatedAt: date,
     };
-    if (building.additional) {
-      Object.entries(building.additional).forEach(([key, value]) => {
-        const factor = i ? value.factor ** (i - 1) : 0;
-        let base = value.base;
-        data[key] = +(base * factor).toPrecision(3);
-        if (key === 'production') {
-          base *= speed;
-          data[key] = Math.ceil(data[key]);
-        }
-      });
+
+    for (let i = 0; i <= item.levels.max; i++) {
+      const data: BuildingLevelData = {
+        buildTime: Math.ceil((building.baseTime * (building.timeFactor ** i)) / speed) * 1000,
+        costs: {
+          wood: Math.ceil(building.costs.wood.base * (building.costs.wood.factor ** i)),
+          clay: Math.ceil(building.costs.clay.base * (building.costs.clay.factor ** i)),
+          iron: Math.ceil(building.costs.iron.base * (building.costs.iron.factor ** i)),
+        },
+        score: i < 2 ? i * building.initialScore : Math.ceil(building.baseScore * (building.scoreFactor ** i)),
+      };
+      if (building.additional) {
+        Object.entries(building.additional).forEach(([key, value]) => {
+          const factor = i ? value.factor ** (i - 1) : 0;
+          let base = value.base;
+          data[key] = +(base * factor).toPrecision(3);
+          if (key === 'production') {
+            base *= speed;
+            data[key] = Math.ceil(data[key]);
+          }
+        });
+      }
+      item.data.push(data);
     }
-    item.data.push(data);
-  }
-  return item;
-});
+    return item;
+  });
+}

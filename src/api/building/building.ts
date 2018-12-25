@@ -10,7 +10,7 @@ export class Building extends BaseModel {
     min: number;
   };
   requirements?: Requirements[];
-  data: BuildingLevelData;
+  data: BuildingLevelData[];
 
   static tableName = 'Building';
 
