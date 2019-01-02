@@ -4,7 +4,7 @@ import { Transaction } from 'objection';
 import { knexDb } from '../../sqldb';
 import { Player } from './player';
 import { Town } from '../town/town';
-import { Coords } from 'strat-ego-common';
+import { Coords, PlayerProfile } from 'strat-ego-common';
 import { UserWorld } from '../user/userWorld';
 import { getFullAlliance } from '../alliance/allianceQueries';
 
@@ -58,10 +58,43 @@ export function getPlayerRankings(connection: Transaction | Knex = knexDb.world)
     .orderBy('score', 'desc');
 }
 
-export function getPlayerProfile(where: Partial<Player>, connection: Transaction | Knex = knexDb.world) {
-  return getPlayer(where, connection)
-    .eager('[alliance(selectProfile), towns(selectTownProfile)]')
-    .select(['id', 'name', 'description', 'avatarUrl', 'createdAt']);
+export async function getPlayerProfile(where: Partial<Player>, connection: Transaction | Knex = knexDb.world): Promise<Player> {
+  const player = await getPlayer(where, connection)
+    .eager('towns(selectId)]')
+    .select(
+      'id',
+      'name',
+      'description',
+      'avatarUrl',
+      'createdAt',
+    );
+  return player;
+}
+
+export function getPlayerProfiles(ids: number[] = [], connection: Transaction | Knex = knexDb.world) {
+  const query = Player
+    .query(connection)
+    .eager('towns(selectId)')
+    .select(
+      'id',
+      'name',
+      Player.relatedQuery('towns')
+        .sum('score')
+        .as('score'),
+      'description',
+      'avatarUrl',
+      'createdAt',
+      'description',
+      'avatarUrl',
+      'allianceId',
+      'createdAt',
+    );
+
+  // Filter by ids if any present
+  if (ids.length) {
+    query.whereIn('id', ids);
+  }
+  return query;
 }
 
 export async function createPlayer(

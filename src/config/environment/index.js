@@ -30,6 +30,7 @@ module.exports = {
     main: process.env.DB_MAIN || 'postgres://stratego:supasecretpassword@localhost:5433/stratego',
     world: process.env.DB_WORLD || 'postgres://stratego:supasecretpassword@localhost:5433/strategoWorld'
   },
+  redisPort: process.env.REDIS_PORT || 6379,
   cloudinary: {
     name: process.env.CLOUDINARY_NAME,
     apiKey: process.env.CLOUDINARY_API,

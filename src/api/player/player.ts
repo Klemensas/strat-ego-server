@@ -21,6 +21,9 @@ export class Player extends BaseModel {
   allianceRole?: Partial<AllianceRole>;
   invitations?: Array<Partial<Alliance[]>>;
 
+  // Additionally computed field
+  score?: number;
+
   static tableName = 'Player';
 
   static relationMappings = {
@@ -92,6 +95,15 @@ export class Player extends BaseModel {
 
   static get namedFilters() {
     return {
+      selectId: (builder) => builder.select('id'),
+      selectPlayerId: (builder) => builder.select('Player.id'),
+      selectIdAndScore: (builder) => builder.select(
+        'id',
+        Player.relatedQuery('towns')
+          .sum('score')
+          .as('score'),
+      ),
+      selectIdAndRole: (builder) => builder.select('id', 'allianceRoleId'),
       selectProfile: (builder) => builder.select('id', 'name'),
       selectPlayerProfile: (builder) => builder.select('Player.id', 'name'),
       selectProfileRole: (builder) => builder.select('id', 'name').eager('allianceRole'),

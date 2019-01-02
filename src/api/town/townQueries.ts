@@ -1,5 +1,5 @@
-import { Transaction, raw } from 'objection';
 import * as Knex from 'knex';
+import { Transaction, raw, Model } from 'objection';
 import { MovementType, Coords } from 'strat-ego-common';
 
 import { knexDb } from '../../sqldb';
@@ -10,7 +10,7 @@ import { TownSupport } from './townSupport';
 import { Movement } from './movement';
 import { Player } from '../player/player';
 import { Alliance } from '../alliance/alliance';
-import { Report } from './report';
+import { Report } from '../report/report';
 
 export function getTowns(where: Partial<Town>, connection: Transaction | Knex = knexDb.world) {
   return Town
@@ -18,11 +18,19 @@ export function getTowns(where: Partial<Town>, connection: Transaction | Knex = 
     .where(where);
 }
 
-export function getFullTown(where: Partial<Town>, connection: Transaction | Knex = knexDb.world) {
+export function getTown(where: Partial<Town>, connection: Transaction | Knex = knexDb.world) {
   return getTowns(where, connection)
-    .limit(1)
-    .first()
-    .eager(Town.townRelationsFiltered, Town.townRelationFilters);
+    .first();
+}
+
+export function getTownsWithItems(where: Partial<Town>, connection: Transaction | Knex = knexDb.world) {
+  return getTowns(where, connection)
+    .eager(Town.townRelationsFilteredNoMovementUnits, Town.townRelationFilters);
+}
+
+export function getTownWithItems(where: Partial<Town>, connection: Transaction | Knex = knexDb.world) {
+  return getTownsWithItems(where, connection)
+    .first();
 }
 
 export function getTownSupport(id: number, connection: Transaction | Knex = knexDb.world) {
@@ -70,16 +78,18 @@ export function upsertTowns(payload: Array<Partial<Town>>, context: object, conn
 }
 
 export async function createBuildingQueue(town: Town, payload: Partial<BuildingQueue>, connection: Transaction | Knex = knexDb.world) {
-  const buildingQueue = await town
-    .$relatedQuery<BuildingQueue>('buildingQueues', connection)
-    .insert(payload);
-  await town
-    .$query(connection)
-    .patch({
-      resources: town.resources,
-      buildings: town.buildings,
-    })
-    .context({ resourcesUpdated: true });
+  const [newTown, buildingQueue ] = await Promise.all([
+    town
+      .$query(connection)
+      .patch({
+        resources: town.resources,
+        buildings: town.buildings,
+      })
+      .context({ resourcesUpdated: true }),
+    BuildingQueue
+      .query(connection)
+      .insert(payload),
+  ]);
 
   return { town, buildingQueue };
 }
@@ -90,17 +100,19 @@ export async function createUnitQueue(
   updatedAt: number = Date.now(),
   connection: Transaction | Knex = knexDb.world,
 ) {
-  const unitQueue = await town
-    .$relatedQuery<UnitQueue>('unitQueues', connection)
-    .insert(payload);
-  await town
-    .$query(connection)
-    .patch({
-      resources: town.resources,
-      units: town.units,
-      updatedAt,
-    })
-    .context({ resourcesUpdated: true });
+  const [newTown, unitQueue] = await Promise.all([
+    town
+      .$query(connection)
+      .patch({
+        resources: town.resources,
+        units: town.units,
+        updatedAt,
+      })
+      .context({ resourcesUpdated: true }),
+    UnitQueue
+      .query(connection)
+      .insert(payload),
+  ]);
 
   return { town, unitQueue };
 }
@@ -139,20 +151,21 @@ export function createSupport(payload: Partial<TownSupport>, connection: Transac
 }
 
 export async function cancelSupport(support: TownSupport, endsAt: number, connection: Transaction | Knex = knexDb.world) {
-  const unitQueue = await support
-    .$query(connection)
-    .del();
-
-  const movement = await Movement.query(connection).insert({
-    units: support.units,
-    originTownId: support.targetTownId,
-    targetTownId: support.originTownId,
-    type: MovementType.return,
-    endsAt,
-    haul: null,
-  });
-  movement.originTown = support.targetTown;
-  movement.targetTown = support.originTown;
+  const [movement] = await Promise.all([
+    Movement
+      .query(connection)
+      .insert({
+        units: support.units,
+        originTownId: support.targetTownId,
+        targetTownId: support.originTownId,
+        type: MovementType.return,
+        endsAt,
+        haul: null,
+      }),
+    support
+      .$query(connection)
+      .del(),
+  ]);
   return movement;
 }
 
@@ -191,4 +204,30 @@ export function createReport(payload: Partial<Report>, connection: Transaction |
   return Report
     .query(connection)
     .insert(payload);
+}
+
+export function getTownProfiles(ids: number[] = [], connection: Transaction | Knex = knexDb.world) {
+  const query = Town
+    .query(connection)
+    .select(['id', 'name', 'location', 'score', 'playerId', 'createdAt']);
+
+  // Filter by ids if any present
+  if (ids.length) {
+    query.whereIn('id', ids);
+  }
+  return query;
+}
+
+export function getLastTownBuildingQueue(townId: number, connection: Transaction | Knex = knexDb.world) {
+  return BuildingQueue
+    .query(connection)
+    .orderBy('id', 'DESC')
+    .findOne({ townId });
+}
+
+export function getLastTownUnitQueue(townId: number, connection: Transaction | Knex = knexDb.world) {
+  return UnitQueue
+    .query(connection)
+    .orderBy('id', 'DESC')
+    .findOne({ townId });
 }

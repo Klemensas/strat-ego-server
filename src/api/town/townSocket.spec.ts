@@ -19,7 +19,7 @@ beforeEach(() => {
   socket.handleError = jest.fn().mockImplementation(() => null);
   socket.join = jest.fn().mockImplementation(() => null);
   socket.userData = {};
-  emitSpy = jest.spyOn(TownSocket, 'emitToTownRoom').mockImplementationOnce(() => null);
+  emitSpy = jest.spyOn(TownSocket, 'emitToTownRoom').mockImplementation(() => null);
   emitSpy.mockReset();
   worldData.unitMap = {
     sword: { speed: 1 },
@@ -32,6 +32,13 @@ beforeEach(() => {
 });
 
 describe('onConnect', () => {
+  const testTowns = [{
+    id: 11,
+    name: 'town',
+  }, {
+    id: 1234,
+    name: 'not a town',
+  }];
   const socketEvents = [
     'town:rename',
     'town:build',
@@ -41,12 +48,22 @@ describe('onConnect', () => {
     'town:sendBackSupport',
   ];
 
-  it('should register events', () => {
+  beforeEach(() => {
+    jest.spyOn(TownSocket, 'getPlayerTowns').mockImplementation(() => testTowns);
     jest.spyOn(TownSocket, 'joinTownRoom').mockImplementationOnce(() => null);
+  });
+
+  it('should register events', async () => {
     expect(socket.eventNames()).toHaveLength(0);
-    TownSocket.onConnect(socket);
+    await TownSocket.onConnect(socket);
     expect(TownSocket.joinTownRoom).toHaveBeenCalledWith(socket);
     expect(socket.eventNames()).toEqual(socketEvents);
+  });
+
+  it ('should set user data and return towns', async () => {
+    const result = await TownSocket.onConnect(socket);
+    expect(socket.userData.townIds).toEqual(testTowns.map(({ id }) => id));
+    expect(result).toEqual(testTowns);
   });
 
   describe('events', () => {
@@ -210,39 +227,43 @@ describe('cancelSupport', () => {
   };
   let getSupportSpy;
   let cancelSupportSpy;
+  const rollbackSpy = jest.fn();
+  const commitSpy = jest.fn();
   beforeEach(() => {
     getSupportSpy = jest.spyOn(townQueries, 'getTownSupport');
     cancelSupportSpy = jest.spyOn(townQueries, 'cancelSupport');
     socket.userData = {
       townIds: [support.originTown.id, support.targetTown.id],
     };
+    rollbackSpy.mockClear();
+    jest.spyOn(transaction, 'start').mockImplementationOnce(() => ({ rollback: rollbackSpy, commit: commitSpy }));
   });
 
   it('should rollback transaction and call socket error handler', async () => {
     const type = 'origin';
-    const payload = 1;
-    const transactionSpy = jest.fn();
+    const payload = { town: 1 };
     const error = 'dead';
-    jest.spyOn(transaction, 'start').mockImplementationOnce(() => ({ rollback: transactionSpy }));
     getSupportSpy.mockImplementationOnce(() => { throw error; });
 
     await TownSocket.cancelSupport(socket, payload, type);
-    expect(transactionSpy).toHaveBeenCalled();
+    expect(rollbackSpy).toHaveBeenCalled();
     expect(socket.handleError).toHaveBeenCalledWith(error, 'support', `town:recallSupportFail`, payload);
   });
 
   it('should throw on missing support', async () => {
     getSupportSpy.mockImplementationOnce(() => Promise.resolve(null));
 
-    await TownSocket.cancelSupport(socket, support.id + 1, 'origin');
-    expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Invalid support item'), 'support', `town:recallSupportFail`, support.id + 1);
+    const payload = { support: support.id + 1 };
+    await TownSocket.cancelSupport(socket, payload, 'origin');
+    expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Invalid support item'), 'support', `town:recallSupportFail`, payload);
   });
 
   it('should throw on missing socket town', async () => {
     getSupportSpy.mockImplementationOnce(() => Promise.resolve({}));
     socket.userData.townIds = [];
-    await TownSocket.cancelSupport(socket, support.id, 'origin');
-    expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Invalid support item'), 'support', `town:recallSupportFail`, support.id);
+    const payload = { support: support.id };
+    await TownSocket.cancelSupport(socket, payload, 'origin');
+    expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Invalid support item'), 'support', `town:recallSupportFail`, payload);
   });
 
   it('should handle origin canceling support', async () => {
@@ -255,13 +276,13 @@ describe('cancelSupport', () => {
     getSupportSpy.mockImplementationOnce(() => Promise.resolve(support));
     cancelSupportSpy.mockImplementationOnce(() => Promise.resolve(movement));
     const payload = support.id;
-    await TownSocket.cancelSupport(socket, payload, 'origin');
+    await TownSocket.cancelSupport(socket, { town: support.targetTown.id, support: payload }, 'origin');
 
     expect(socket.handleError).not.toHaveBeenCalled();
     expect(queueSpy).toHaveBeenCalled();
     expect(emitSpy).toHaveBeenCalledTimes(2);
     expect(emitSpy).toHaveBeenCalledTimes(2);
-    expect(emitSpy.mock.calls[0]).toEqual([support.originTown.id, { support: payload, movement}, 'town:recallSupportSuccess']);
+    expect(emitSpy.mock.calls[0]).toEqual([support.originTown.id, { support: payload, movement, town: support.targetTown.id }, 'town:recallSupportSuccess']);
     expect(emitSpy.mock.calls[1]).toEqual([support.targetTown.id, { support: payload, town: support.targetTown.id }, 'town:supportRecalled']);
   });
 
@@ -274,15 +295,14 @@ describe('cancelSupport', () => {
     jest.spyOn(Town, 'calculateDistance').mockImplementationOnce(() => 1);
     getSupportSpy.mockImplementationOnce(() => Promise.resolve(support));
     cancelSupportSpy.mockImplementationOnce(() => Promise.resolve(movement));
-    const payload = support.id;
+    const payload = { town: support.targetTown.id, support: support.id};
     await TownSocket.cancelSupport(socket, payload, 'target');
 
     expect(socket.handleError).not.toHaveBeenCalled();
     expect(queueSpy).toHaveBeenCalled();
     expect(emitSpy).toHaveBeenCalledTimes(2);
-    expect(emitSpy).toHaveBeenCalledTimes(2);
     expect(emitSpy.mock.calls[0]).toEqual([support.targetTown.id, payload, 'town:sendBackSupportSuccess']);
-    expect(emitSpy.mock.calls[1]).toEqual([support.originTown.id, { support: payload, movement }, 'town:supportSentBack']);
+    expect(emitSpy.mock.calls[1]).toEqual([support.originTown.id, { support: payload.support, movement }, 'town:supportSentBack']);
   });
 });
 

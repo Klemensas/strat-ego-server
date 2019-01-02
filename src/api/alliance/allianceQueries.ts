@@ -17,18 +17,57 @@ export function getAlliance(where: Partial<Alliance>, connection: Transaction | 
     .query(connection)
     .findOne(where);
 }
-export function getAllianceEvents(id: number, connection: Transaction | Knex = knexDb.world) {
+
+export async function getPlayerAlliance(allianceId: number, connection: Transaction | Knex = knexDb.world) {
+  const [alliance, events, messages, [diplomacyOrigin, diplomacyTarget]] = await Promise.all([
+    getAlliance({ id: allianceId }, connection).modify('selectBase'),
+    getAllianceEvents(allianceId, connection),
+    getAllianceMessages(allianceId, connection),
+    getAllianceDiplomacy(allianceId, connection),
+  ]);
+  alliance.events = events;
+  alliance.messages = messages;
+  alliance.diplomacyOrigin = diplomacyOrigin;
+  alliance.diplomacyTarget = diplomacyTarget;
+  return alliance;
+}
+
+export function getAllianceEvents(allianceId: number, connection: Transaction | Knex = knexDb.world) {
   return AllianceEvent
     .query(connection)
-    .where('originAllianceId', id)
-    .eager(`[originPlayer(selectProfile), targetPlayer(selectProfile), originAlliance(selectProfile), targetAlliance(selectProfile)]`)
+    .where('originAllianceId', allianceId)
     .unionAll(function() {
       this
         .from('AllianceEvent')
-        .where('targetAllianceId', id);
+        .where('targetAllianceId', allianceId);
     })
     .orderBy('createdAt', 'DESC')
     .limit(20);
+}
+
+export function getAllianceMessages(allianceId: number, connection: Transaction | Knex = knexDb.world) {
+  return AllianceMessage
+    .query(connection)
+    .where({ allianceId })
+    .orderBy('createdAt', 'DESC')
+    .limit(20);
+}
+
+export function getAllianceRoles(allianceId: number, connection: Transaction | Knex = knexDb.world) {
+  return AllianceRole
+    .query(connection)
+    .where({ allianceId });
+}
+
+export function getAllianceDiplomacy(allianceId: number, connection: Transaction | Knex = knexDb.world) {
+  return Promise.all([
+    AllianceDiplomacy
+      .query(connection)
+      .where({ originAllianceId: allianceId }),
+    AllianceDiplomacy
+      .query(connection)
+      .where({ targetAllianceId: allianceId }),
+  ]);
 }
 
 export function getAllianceWithTarget(where: Partial<Alliance>, target: string, connection: Transaction | Knex = knexDb.world) {
@@ -76,6 +115,25 @@ export function getAllianceProfile(where: Partial<Alliance>, connection: Transac
   return getAllianceWithMembers(where, connection)
     .modifyEager('members', (builder) => builder.select('id'))
     .select(['id', 'name', 'description', 'avatarUrl', 'createdAt']);
+}
+
+export function getAllianceProfiles(ids: number[] = [], connection: Transaction | Knex = knexDb.world) {
+  const query = Alliance
+    .query(connection)
+    .eager('members(selectIdAndScore)')
+    .select(
+      'id',
+      'name',
+      'description',
+      'avatarUrl',
+      'createdAt',
+    );
+
+  // Filter by ids if any present
+  if (ids.length) {
+    query.whereIn('id', ids);
+  }
+  return query;
 }
 
 export async function updateAlliance(alliance: Alliance, payload: Partial<Alliance>, connection: Transaction | Knex = knexDb.world) {

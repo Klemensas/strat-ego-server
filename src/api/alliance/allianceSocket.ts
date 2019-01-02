@@ -19,7 +19,7 @@ import { AllianceRole } from './allianceRole';
 import * as allianceQueries from './allianceQueries';
 import { getPlayerWithInvites, getPlayerByName } from '../player/playerQueries';
 import { cloudinaryDelete, isCloudinaryImage } from '../../cloudinary';
-import { worldData } from '../world/worldData';
+import { ProfileService } from '../profile/profileService';
 
 export interface RoleUpdatePayload {
   roles: Array<Partial<AllianceRole>>;
@@ -33,9 +33,7 @@ export interface RoleUpdatePayload {
 // TODO: chat messages need better handling
 
 export class AllianceSocket {
-  static onConnect(socket: UserSocket) {
-    this.joinAllianceRoom(socket);
-
+  static async onConnect(socket: UserSocket) {
     socket.on('alliance:create', (name: string) => this.createAlliance(socket, name));
     socket.on('alliance:createInvite', (name: string) => this.createInvite(socket, name));
     socket.on('alliance:cancelInvite', (playerId: number) => this.cancelInvite(socket, playerId));
@@ -48,7 +46,6 @@ export class AllianceSocket {
     socket.on('alliance:leave', () => this.leaveAlliance(socket));
     socket.on('alliance:destroy', () => this.destroyAlliance(socket));
 
-    socket.on('alliance:loadProfile', (id: number) => this.loadProfile(socket, id));
     socket.on('alliance:updateProfile', (payload: ProfileUpdate) => this.updateProfile(socket, payload));
     socket.on('alliance:removeAvatar', () => this.removeAvatar(socket));
 
@@ -66,6 +63,14 @@ export class AllianceSocket {
 
     socket.on('chat:postMessage', (payload: MessagePayload) => this.postMessage(socket, payload));
     // socket.on('alliance:createForumCategory', (payload: ForumCategoryPayload) => this.createForumCategory(socket, payload));
+
+    this.joinAllianceRoom(socket);
+    const alliance = await this.getPlayerAlliance(socket.userData.allianceId);
+    if (alliance) {
+      const playerRole = alliance.roles.find(({ id }) => id === socket.userData.allianceRoleId) || {};
+      socket.userData.alliancePermissions = playerRole.permissions;
+    }
+    return alliance;
   }
 
   static joinAllianceRoom(socket: UserSocket) {
@@ -122,6 +127,11 @@ export class AllianceSocket {
     this.resetRoomSocketAlliance(socketRoom.sockets, (client) => client.leave(room));
   }
 
+  static getPlayerAlliance(allianceId: number) {
+    if (allianceId === null) { return null; }
+    return allianceQueries.getPlayerAlliance(allianceId);
+  }
+
   static leaveAllianceRoom(socket: AuthenticatedSocket, allianceId: number) {
     const room = `alliance.${allianceId}`;
     if (!!socket.rooms[room]) { socket.leave(room); }
@@ -150,7 +160,14 @@ export class AllianceSocket {
       socket.userData.allianceName = alliance.name;
       socket.userData.allianceRoleId = alliance.masterRole.id;
       socket.userData.alliancePermissions = alliance.masterRole.permissions;
-      worldData.mapManager.setTownAlliance({ id: alliance.id, name: alliance.name }, socket.userData.townIds);
+      ProfileService.updateAllianceProfile(alliance.id, {
+        id: alliance.id,
+        name: alliance.name,
+        members: [{ id: socket.userData.playerId }],
+        description: alliance.description,
+        avatarUrl: alliance.avatarUrl,
+        createdAt: alliance.createdAt,
+      });
 
       this.joinAllianceRoom(socket);
       socket.emit('alliance:createSuccess', alliance);
@@ -289,8 +306,11 @@ export class AllianceSocket {
       alliance.events.unshift(event);
       alliance.invitations = alliance.invitations.filter((id) => id !== player.id);
 
+      ProfileService.updatePlayerProfile(socket.userData.playerId, {
+        allianceId: alliance.id,
+      });
+
       io.sockets.in(`alliance.${alliance.id}`).emit('alliance:event', { event, data: member });
-      worldData.mapManager.setTownAlliance({ id: alliance.id, name: alliance.name }, socket.userData.townIds);
       socket.emit('alliance:acceptInviteSuccess', alliance);
       socket.userData = {
         ...socket.userData,
@@ -391,10 +411,12 @@ export class AllianceSocket {
       const alliance = await allianceQueries.getAllianceWithMembers({ id: socket.userData.allianceId }, trx);
 
       if (!alliance) { throw new ErrorMessage('Wrong alliance'); }
-      const targetMember = alliance.members.find(({ id }) => id === playerId);
+      const targetIndex = alliance.members.findIndex(({ id }) => id === playerId);
 
-      if (!targetMember) { throw new ErrorMessage('Target player doesn\'t belong to alliance'); }
+      if (!targetIndex) { throw new ErrorMessage('Target player doesn\'t belong to alliance'); }
       if (playerId === socket.userData.playerId) { throw new ErrorMessage('Can\'t remove self, leave or destroy alliance instead'); }
+
+      const targetMember = alliance.members.splice(targetIndex, 1)[0];
       if (targetMember.allianceRoleId === alliance.masterRoleId) { throw new ErrorMessage('Can\'t remove members with master role'); }
 
       const query = await allianceQueries.removeMember(playerId, socket.userData.playerId, alliance.id, trx);
@@ -402,6 +424,10 @@ export class AllianceSocket {
       const event = query.event;
 
       await trx.commit();
+
+      ProfileService.updatePlayerProfile(playerId, {
+        allianceId: null,
+      });
 
       this.removeMemberNotify(player.id, alliance.id);
 
@@ -433,21 +459,11 @@ export class AllianceSocket {
 
       await trx.commit();
 
+      ProfileService.deleteAllianceProfile(allianceId);
       this.destroyAllianceNotify(`alliance.${allianceId}`);
     } catch (err) {
       await trx.rollback();
       socket.handleError(err, 'destroyAlliance', 'alliance:destroyFail');
-    }
-  }
-
-  static async loadProfile(socket: UserSocket, id: number) {
-    try {
-      const alliance = await allianceQueries.getAllianceProfile({ id });
-      if (!alliance) { throw new ErrorMessage('Wrong alliance'); }
-
-      socket.emit('alliance:loadProfileSuccess', alliance);
-    } catch (err) {
-      socket.handleError(err, 'loadProfile', 'alliance:loadProfileFail');
     }
   }
 
@@ -483,6 +499,7 @@ export class AllianceSocket {
         await cloudinaryDelete(avatarToDelete);
       }
       await trx.commit();
+      ProfileService.updateAllianceProfile(alliance.id, updatePayload);
 
       const eventPayload = { event, data: payload };
       socket.emit('alliance:updateProfileSuccess', eventPayload);
@@ -514,6 +531,7 @@ export class AllianceSocket {
       event.originPlayer = { id: socket.userData.playerId, name: socket.userData.playerName };
 
       await trx.commit();
+      ProfileService.updateAllianceProfile(alliance.id, { avatarUrl: null });
 
       const eventPayload = { event, data: { avatarUrl: null } };
       socket.emit('alliance:removeAvatarSuccess', eventPayload);
@@ -832,13 +850,16 @@ export class AllianceSocket {
 
       await trx.commit();
 
+      ProfileService.updatePlayerProfile(socket.userData.playerId, {
+        allianceId: null,
+      });
+
       event.originPlayer = {
         id: socket.userData.playerId,
         name: socket.userData.playerName,
       };
       socket.userData = this.cleanSocketAlliance(socket.userData);
       this.leaveAllianceRoom(socket, allianceId);
-      worldData.mapManager.setTownAlliance(null, socket.userData.townIds);
 
       socket.emit('alliance:leaveAllianceSuccess');
       io.sockets.in(`alliance.${allianceId}`).emit('alliance:event', { event, data: socket.userData.playerId });
@@ -863,7 +884,6 @@ export class AllianceSocket {
     Object.keys(room).forEach((socketId: string) => {
       const client = io.sockets.connected[socketId] as UserSocket;
       client.userData = this.cleanSocketAlliance(client.userData);
-      worldData.mapManager.setTownAlliance(null, client.userData.townIds);
       clientAction(client);
     });
   }

@@ -1,7 +1,7 @@
 import { worldData } from './worldData';
 
 function worlds(req, res) {
-  res.status(200).json(worldData.fullWorld);
+  res.status(200).json([worldData.fullWorld]);
 }
 
 // function playerData(world, player, targetPlayer) {

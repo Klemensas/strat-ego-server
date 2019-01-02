@@ -30,7 +30,8 @@ export class TownEventQueue {
   // TODO: might want to improve this part
   // Sort provided items, then loop through current items to find earlier item and insert there
   public addToQueue(item: TownQueue | TownQueue[]) {
-    const target = item instanceof Array ? item.shift() : item;
+    item = item instanceof Array ? item.slice() : [item];
+    const target = item.shift();
     // Enforce number type to prevent string and number comparison
     target.endsAt = +target.endsAt;
 
@@ -101,9 +102,7 @@ export class TownEventQueue {
     const targetTown = !(this.earliestItem instanceof Movement) ? (this.earliestItem as UnitQueue | BuildingQueue).townId : this.earliestItem.targetTownId;
     try {
       logger.info('[queue] processing item', this.earliestItem);
-      const { town } = await Town.processTownQueues(targetTown, +this.earliestItem.endsAt);
-      TownSocket.emitToTownRoom(town.id, town, 'town:update');
-
+      await Town.processTownQueues(targetTown, +this.earliestItem.endsAt);
       this.inProgress = false;
       this.removeFromQueue(this.earliestItem);
     } catch (err) {

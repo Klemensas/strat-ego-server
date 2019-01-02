@@ -1,5 +1,5 @@
 import { UserSocket } from '../../config/socket';
-import { scoreTracker } from './playerScore';
+import { rankingService } from './rankingService';
 
 export class RankingsSocket {
   static async onConnect(socket: UserSocket) {
@@ -7,9 +7,9 @@ export class RankingsSocket {
   }
 
   static load(socket: UserSocket, lastUpdate?: number) {
-    if (lastUpdate && scoreTracker.lastUpdate <= lastUpdate) {
+    if (lastUpdate && rankingService.lastUpdate <= lastUpdate) {
       return socket.emit('rankings:loadStagnated');
     }
-    socket.emit('rankings:loadSuccess', scoreTracker.scores);
+    socket.emit('rankings:loadSuccess', rankingService.playerRankings);
   }
 }

@@ -1,5 +1,5 @@
-import { Dict, MovementType } from 'strat-ego-common';
 import { transaction } from 'objection';
+import { Dict, MovementType } from 'strat-ego-common';
 
 import { MovementResolver } from './movementResolver';
 import { worldData } from '../world/worldData';
@@ -49,8 +49,14 @@ describe('resolveSupport', () => {
     archer: 3,
     sword: 4,
   };
+  let support;
   let movement;
+  let socketSpy: jest.Mock;
+  const rollbackSpy = jest.fn();
+  const commitSpy = jest.fn();
+
   beforeEach(() => {
+    jest.spyOn(transaction, 'start').mockImplementationOnce(() => ({ rollback: rollbackSpy, commit: commitSpy }));
     movement = {
       id: 13,
       type: MovementType.support,
@@ -72,7 +78,7 @@ describe('resolveSupport', () => {
       haul: null,
       endsAt: Date.now(),
     } as any;
-    const support = TownSupport.fromJson({
+    support = TownSupport.fromJson({
       id: 453,
       originTownId: movement.originTownId,
       targetTownId: movement.targetTownId,
@@ -80,12 +86,11 @@ describe('resolveSupport', () => {
     });
     jest.spyOn(townQueries, 'deleteMovementItem').mockImplementationOnce(() => Promise.resolve());
     jest.spyOn(townQueries, 'createSupport').mockImplementationOnce(() => Promise.resolve(support));
+    socketSpy = jest.spyOn(TownSocket, 'emitToTownRoom').mockImplementation(() => null);
   });
 
   it('should rollback transaction and rethrow error', async () => {
     const error = 'test';
-    const transactionSpy = jest.fn();
-    jest.spyOn(transaction, 'start').mockImplementationOnce(() => ({ rollback: transactionSpy }));
     jest.spyOn(MovementResolver, 'updateMissingTown').mockImplementationOnce(() => { throw error; });
 
     let thrownError;
@@ -97,7 +102,7 @@ describe('resolveSupport', () => {
     expect(MovementResolver.updateMissingTown).toHaveBeenCalledWith(movement.targetTownId, +movement.endsAt - 1);
     expect(transaction.start).toHaveBeenCalled();
     expect(thrownError).toEqual(error);
-    expect(transactionSpy).toHaveBeenCalled();
+    expect(rollbackSpy).toHaveBeenCalled();
   });
 
   it('should correctly resolve support for origin towns', async () => {
@@ -110,7 +115,6 @@ describe('resolveSupport', () => {
       targetSupport: [],
       originSupport: [],
     }));
-    const socketSpy = jest.spyOn(TownSocket, 'emitToTownRoom').mockImplementationOnce(() => null);
 
     const resultTown = await MovementResolver.resolveSupport(movement, { ...target, originSupport: [] });
     expect(resultTown.originSupport).toHaveLength(1);
@@ -120,12 +124,27 @@ describe('resolveSupport', () => {
       originMovements: [],
       originSupport: resultTown.originSupport,
     });
-    expect(TownSocket.emitToTownRoom).toHaveBeenCalledWith(missingTown.id, {
-      ...missingTown,
-      originSupport: [],
-      targetMovements: [],
-      targetSupport: resultTown.originSupport,
-    }, 'town:update');
+
+    const prevCall = socketSpy.mock.calls[socketSpy.mock.calls.length - 2];
+    const lastCall = socketSpy.mock.calls[socketSpy.mock.calls.length - 1];
+    expect(prevCall).toEqual([
+      target.id,
+      {
+        town: target.id,
+        movement: movement.id,
+        support,
+      },
+      'town:supportArrived',
+    ]);
+    expect(lastCall).toEqual([
+      missingTown.id,
+      {
+        town: missingTown.id,
+        movement: movement.id,
+        support,
+      },
+      'town:supportStationed',
+    ]);
   });
 
   it('should correctly resolve support for target towns', async () => {
@@ -138,7 +157,6 @@ describe('resolveSupport', () => {
       targetSupport: [],
       originSupport: [],
     }));
-    const socketSpy = jest.spyOn(TownSocket, 'emitToTownRoom').mockImplementationOnce(() => null);
 
     const resultTown = await MovementResolver.resolveSupport(movement, { ...target, targetSupport: [] });
     expect(resultTown.targetSupport).toHaveLength(1);
@@ -148,12 +166,27 @@ describe('resolveSupport', () => {
       targetMovements: [],
       targetSupport: resultTown.targetSupport,
     });
-    expect(TownSocket.emitToTownRoom).toHaveBeenCalledWith(missingTown.id, {
-      ...missingTown,
-      originMovements: [],
-      originSupport: resultTown.targetSupport,
-      targetSupport: [],
-    }, 'town:update');
+
+    const prevCall = socketSpy.mock.calls[socketSpy.mock.calls.length - 2];
+    const lastCall = socketSpy.mock.calls[socketSpy.mock.calls.length - 1];
+    expect(prevCall).toEqual([
+      missingTown.id,
+      {
+        town: missingTown.id,
+        movement: movement.id,
+        support,
+      },
+      'town:supportArrived',
+    ]);
+    expect(lastCall).toEqual([
+      target.id,
+      {
+        town: target.id,
+        movement: movement.id,
+        support,
+      },
+      'town:supportStationed',
+    ]);
   });
 
 });

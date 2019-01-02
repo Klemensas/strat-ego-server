@@ -1,26 +1,25 @@
-import { TownUnit, CombatStrength, Resources, MovementType, CombatOutcome, Haul, Dict, Profile } from 'strat-ego-common';
 import { transaction } from 'objection';
-
+import { CombatOutcome, CombatStrength, Dict, MovementType, Resources, TownUnit } from 'strat-ego-common';
 import { knexDb } from '../../sqldb';
-import { worldData } from '../world/worldData';
-import { Town } from './town';
-import { Movement } from './movement';
-import { Report } from './report';
+import { PlayerSocket } from '../player/playerSocket';
+import { ProfileService } from '../profile/profileService';
 import { townQueue } from '../townQueue';
-import { TownSocket } from './townSocket';
-import { TownSupport } from './townSupport';
+import { worldData } from '../world/worldData';
+import { Movement } from './movement';
+import { Report } from '../report/report';
+import { Town } from './town';
 import {
-  updateTown,
-  createSupport,
   createMovement,
   createReport,
-  deleteSupport,
-  deleteMovementItem,
+  createSupport,
   deleteMovement,
+  deleteMovementItem,
+  deleteSupport,
   updateStationedSupport,
+  updateTown,
 } from './townQueries';
-import { PlayerSocket } from '../player/playerSocket';
-import { scoreTracker } from '../player/playerScore';
+import { TownSocket } from './townSocket';
+import { TownSupport } from './townSupport';
 
 const defaultStrength: CombatStrength = { general: 0, cavalry: 0, archer: 0 };
 const combatTypes = ['general', 'cavalry', 'archer'];
@@ -122,17 +121,29 @@ export class MovementResolver {
     if (result.movement) {
       townQueue.addToQueue(result.movement);
     }
-    // Use report playerIds since towns might be updated already
-    PlayerSocket.emitToPlayer(result.report.originPlayerId, { side: 'origin', report: result.report }, 'player:addReport');
-    PlayerSocket.emitToPlayer(result.report.targetPlayerId, { side: 'target', report: result.report }, 'player:addReport');
+
     // Town was conquered
     if (result.originTown.playerId === result.targetTown.playerId) {
-      TownSocket.townConquered(result.targetTown);
-      worldData.mapManager.townConquered(result.targetTown, result.originTown.location);
-      scoreTracker.updateScore(result.report.originPlayerId, result.targetTown.score);
-      scoreTracker.updateScore(result.report.targetPlayerId, -result.targetTown.score);
+      ProfileService.updateTownProfile(result.targetTown.id, { playerId: result.originTown.playerId });
+      TownSocket.townConquered(result.targetTown, result.report);
     } else {
-      TownSocket.emitToTownRoom(result[emittedTown].id, result[emittedTown], 'town:update');
+      PlayerSocket.emitToPlayer(result.report.originPlayerId, {
+        report: result.report,
+        movement: movement.id,
+        newMovement: result.movement,
+      }, 'town:attackOutcome');
+      PlayerSocket.emitToPlayer(result.report.targetPlayerId, {
+        town: {
+          id: result[emittedTown].id,
+          name: result[emittedTown].name,
+          units: result[emittedTown].units,
+          resources: result[emittedTown].resources,
+          loyalty: result[emittedTown].loyalty,
+          updatedAt: result[emittedTown].updatedAt,
+        },
+        movement: movement.id,
+        report: result.report,
+      }, 'town:attacked');
     }
     TownSocket.notifyInvolvedCombatChanges(result.notifications);
 
@@ -216,6 +227,16 @@ export class MovementResolver {
       await trx.commit();
 
       town.targetMovements = town.targetMovements.filter(({ id }) => id !== movement.id);
+      TownSocket.emitToTownRoom(movement.targetTownId, {
+        town: {
+          id: town.id,
+          resources: town.resources,
+          loyalty: town.loyalty,
+          units: town.units,
+          updatedAt: town.updatedAt,
+        },
+        movement: movement.id,
+      }, 'town:troopsReturned');
       return town;
     } catch (err) {
       await trx.rollback();
@@ -230,18 +251,12 @@ export class MovementResolver {
       const isOrigin = movement.originTownId === town.id;
       const missingTown = isOrigin ? movement.targetTownId : movement.originTownId;
       const otherTown = await MovementResolver.updateMissingTown(missingTown, +movement.endsAt - 1);
-      const originProfile = movement.originTown ||
-        isOrigin ? { id: town.id, name: town.name, location: town.location } : { id: otherTown.id, name: otherTown.name, location: otherTown.location };
-      const targetProfile = movement.targetTown ||
-        !isOrigin ? { id: town.id, name: town.name, location: town.location } : { id: otherTown.id, name: otherTown.name, location: otherTown.location };
 
       await deleteMovementItem(movement, trx);
       const townSupport = await createSupport({
         units: movement.units,
         originTownId: movement.originTownId,
-        originTown: originProfile,
         targetTownId: movement.targetTownId,
-        targetTown: targetProfile,
       }, trx);
 
       await trx.commit();
@@ -258,7 +273,16 @@ export class MovementResolver {
         town.targetSupport.push(townSupport);
       }
 
-      TownSocket.emitToTownRoom(otherTown.id, otherTown, 'town:update');
+      TownSocket.emitToTownRoom(movement.originTownId, {
+        town: movement.originTownId,
+        movement: movement.id,
+        support: townSupport,
+      }, 'town:supportArrived');
+      TownSocket.emitToTownRoom(movement.targetTownId, {
+        town: movement.targetTownId,
+        movement: movement.id,
+        support: townSupport,
+      }, 'town:supportStationed');
       return town;
     } catch (err) {
       await trx.rollback();

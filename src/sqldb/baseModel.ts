@@ -21,6 +21,8 @@ export class BaseModel extends DbErrors {
   createdAt?: number;
   updatedAt?: number;
 
+  static useLimitInFirst = true;
+
   static get modelPaths() {
     const base = path.join(__dirname, '..', 'api');
     return fs.readdirSync(base).map((folder) => path.join(base, folder));

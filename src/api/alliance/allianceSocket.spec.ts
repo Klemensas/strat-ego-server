@@ -8,6 +8,7 @@ import { PlayerRolePayload, RoleUpdatePayload, WarDeclarationPayload, DiplomacyT
 import * as allianceQueries from './allianceQueries';
 import * as cloudinary from '../../cloudinary';
 import { worldData } from '../world/worldData';
+import { ProfileService } from '../profile/profileService';
 
 const transactionRollbackSpy = jest.fn();
 const transactionCommitSpy = jest.fn();
@@ -18,7 +19,9 @@ beforeEach(() => {
   socket = new EventEmitter() as UserSocket;
   socket.handleError = jest.fn().mockImplementation(() => null);
   socket.join = jest.fn().mockImplementation(() => null);
-  socket.userData = {};
+  socket.userData = {
+    allianceRoleId: 3,
+  };
   jest.spyOn(socket, 'emit');
 });
 
@@ -34,9 +37,8 @@ describe('onConnect', () => {
     'alliance:removeRole',
     'alliance:removeMember',
     'alliance:leave',
-
     'alliance:destroy',
-    'alliance:loadProfile',
+
     'alliance:updateProfile',
     'alliance:removeAvatar',
 
@@ -54,13 +56,33 @@ describe('onConnect', () => {
 
     'chat:postMessage',
   ];
+  let allianceData;
 
-  it('should register events', () => {
+  beforeEach(() => {
+    allianceData = {
+      roles: [{
+        id: 1234567,
+        permissions: [],
+      }, {
+        id: socket.userData.allianceRoleId,
+        permissions: { viewInvites: true, editProfile: false, manageForum: true },
+      }],
+    };
     jest.spyOn(AllianceSocket, 'joinAllianceRoom').mockImplementationOnce(() => null);
+    jest.spyOn(AllianceSocket, 'getPlayerAlliance').mockImplementationOnce(() => Promise.resolve(allianceData));
+  });
+
+  it('should register events', async () => {
     expect(socket.eventNames()).toHaveLength(0);
-    AllianceSocket.onConnect(socket);
+    await AllianceSocket.onConnect(socket);
     expect(AllianceSocket.joinAllianceRoom).toHaveBeenCalledWith(socket);
     expect(socket.eventNames()).toEqual(socketEvents);
+  });
+
+  it('should set player permissions and return alliance data', async () => {
+    const result = await AllianceSocket.onConnect(socket);
+    expect(socket.userData.alliancePermissions).toEqual(allianceData.roles.find(({ id }) => id === socket.userData.allianceRoleId).permissions);
+    expect(result).toEqual(allianceData);
   });
 
   describe('events', () => {
@@ -180,6 +202,25 @@ describe('onConnect', () => {
       expect(AllianceSocket.destroyAlliance).toHaveBeenCalledWith(socket);
     });
 
+    it('should call updateProfile on updateProfile emit', () => {
+      jest.spyOn(AllianceSocket, 'updateProfile').mockImplementationOnce(() => null);
+      socket.emit('anything');
+      expect(AllianceSocket.updateProfile).not.toHaveBeenCalled();
+
+      const payload = { description: 'test' };
+      socket.emit('alliance:updateProfile', payload);
+      expect(AllianceSocket.updateProfile).toHaveBeenCalledWith(socket, payload);
+    });
+
+    it('should call removeAvatar on removeAvatar emit', () => {
+      jest.spyOn(AllianceSocket, 'removeAvatar').mockImplementationOnce(() => null);
+      socket.emit('anything');
+      expect(AllianceSocket.removeAvatar).not.toHaveBeenCalled();
+
+      socket.emit('alliance:removeAvatar');
+      expect(AllianceSocket.removeAvatar).toHaveBeenCalledWith(socket);
+    });
+
     it('should call startWar on declareWar emit', () => {
       jest.spyOn(AllianceSocket, 'startWar').mockImplementationOnce(() => null);
       socket.emit('anything');
@@ -290,35 +331,6 @@ describe('onConnect', () => {
       expect(AllianceSocket.endDiplo).toHaveBeenCalledWith(socket, payload, DiplomacyType.nap);
     });
 
-    it('should call loadProfile on loadProfile emit', () => {
-      jest.spyOn(AllianceSocket, 'loadProfile').mockImplementationOnce(() => null);
-      socket.emit('anything');
-      expect(AllianceSocket.loadProfile).not.toHaveBeenCalled();
-
-      const payload = 4;
-      socket.emit('alliance:loadProfile', payload);
-      expect(AllianceSocket.loadProfile).toHaveBeenCalledWith(socket, payload);
-    });
-
-    it('should call updateProfile on updateProfile emit', () => {
-      jest.spyOn(AllianceSocket, 'updateProfile').mockImplementationOnce(() => null);
-      socket.emit('anything');
-      expect(AllianceSocket.updateProfile).not.toHaveBeenCalled();
-
-      const payload = { description: 'test' };
-      socket.emit('alliance:updateProfile', payload);
-      expect(AllianceSocket.updateProfile).toHaveBeenCalledWith(socket, payload);
-    });
-
-    it('should call removeAvatar on removeAvatar emit', () => {
-      jest.spyOn(AllianceSocket, 'removeAvatar').mockImplementationOnce(() => null);
-      socket.emit('anything');
-      expect(AllianceSocket.removeAvatar).not.toHaveBeenCalled();
-
-      socket.emit('alliance:removeAvatar');
-      expect(AllianceSocket.removeAvatar).toHaveBeenCalledWith(socket);
-    });
-
     it('should call postMessage on postMessage emit', () => {
       jest.spyOn(AllianceSocket, 'postMessage').mockImplementationOnce(() => null);
       socket.emit('anything');
@@ -389,7 +401,7 @@ describe('leavAlliance', () => {
         masterRoleId: 13,
       }));
       jest.spyOn(AllianceSocket, 'leaveAllianceRoom').mockImplementationOnce(() => null);
-      jest.spyOn(worldData.mapManager, 'setTownAlliance').mockImplementationOnce(() => null);
+      jest.spyOn(ProfileService, 'updatePlayerProfile').mockImplementationOnce(() => null);
 
       leaveAllianceSpy.mockImplementationOnce(() => Promise.resolve({}));
     });
@@ -398,7 +410,7 @@ describe('leavAlliance', () => {
       await AllianceSocket.leaveAlliance(socket);
       expect(leaveAllianceSpy).toHaveBeenCalledWith(playerId, allianceId, transactionMock);
       expect(AllianceSocket.leaveAllianceRoom).toHaveBeenCalled();
-      expect(worldData.mapManager.setTownAlliance).toHaveBeenCalled();
+      expect(ProfileService.updatePlayerProfile).toHaveBeenCalled();
     });
 
     it('should emit to socket', async () => {
@@ -408,13 +420,6 @@ describe('leavAlliance', () => {
       io.sockets = {
         in: jest.fn().mockImplementationOnce(() => ({ emit: emitSpy })),
       } as any;
-      // Object.assign(io, {
-      //   sockets: {
-      //     in: jest.fn().mockImplementationOnce(() => ({ emit: emitSpy })),
-      //   },
-      // });
-      // io = {
-      // } as any,
       await AllianceSocket.leaveAlliance(socket);
       expect(socket.emit).toHaveBeenCalledWith('alliance:leaveAllianceSuccess');
       expect(emitSpy).toHaveBeenCalledWith('alliance:event', {
@@ -423,47 +428,6 @@ describe('leavAlliance', () => {
         },
         data: socket.userData.playerId,
       });
-    });
-  });
-});
-
-describe('loadProfile', () => {
-  let getAllianceProfileSpy;
-  beforeEach(() => {
-    getAllianceProfileSpy = jest.spyOn(allianceQueries, 'getAllianceProfile');
-    jest.spyOn(transaction, 'start').mockImplementationOnce(() => (transactionMock));
-  });
-
-  describe('on error', () => {
-    it('should rollback transaction and call socket error handler', async () => {
-      const error = 'dead';
-      getAllianceProfileSpy.mockImplementationOnce(() => { throw error; });
-
-      await AllianceSocket.loadProfile(socket, 1);
-      expect(transactionRollbackSpy).toHaveBeenCalled();
-      expect(socket.handleError).toHaveBeenCalledWith(error, 'loadProfile', `alliance:loadProfileFail`);
-    });
-
-    it('should throw on missing alliance', async () => {
-      getAllianceProfileSpy.mockImplementationOnce(() => Promise.resolve(undefined));
-      await AllianceSocket.loadProfile(socket, 1);
-      expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Wrong alliance'), 'loadProfile', `alliance:loadProfileFail`);
-    });
-  });
-
-  describe('on success', () => {
-    const alliance = {
-      id: 1,
-      name: 'tester',
-    };
-
-    beforeEach(() => {
-      getAllianceProfileSpy.mockImplementationOnce(() => Promise.resolve(alliance));
-    });
-
-    it('should emit to socket', async () => {
-      await AllianceSocket.loadProfile(socket, 1);
-      expect(socket.emit).toHaveBeenCalledWith('alliance:loadProfileSuccess', alliance);
     });
   });
 });

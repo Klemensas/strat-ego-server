@@ -178,22 +178,19 @@ describe('processItem', () => {
     jest.spyOn(townQueue, 'processItem');
   });
 
-  it('should notify town and remove process item', async () => {
-    jest.spyOn(TownSocket, 'emitToTownRoom').mockImplementation(() => null);
+  it('should process and remove item', async () => {
     jest.spyOn(townQueue, 'removeFromQueue');
     jest.spyOn(Town, 'processTownQueues').mockImplementation(() => Promise.resolve(processingResult));
 
     const initialEarliest = townQueue.earliestItem;
     await townQueue.processItem();
 
-    expect(TownSocket.emitToTownRoom).toHaveBeenCalled();
     expect(townQueue.removeFromQueue).toHaveBeenCalled();
     expect(townQueue.earliestItem).not.toEqual(initialEarliest);
   });
 
   it('should retry on fail', async () => {
     let firstCall = true;
-    jest.spyOn(TownSocket, 'emitToTownRoom').mockImplementation(() => null);
     jest.spyOn(Town, 'processTownQueues').mockImplementation(() => {
       if (firstCall) {
         firstCall = false;

@@ -11,9 +11,10 @@ import { UnitQueue } from '../unit/unitQueue';
 import { logger } from '../../logger';
 import { Movement } from './movement';
 import { MovementResolver } from './movementResolver';
-import { scoreTracker } from '../player/playerScore';
 import { TownSupport } from './townSupport';
-import { getFullTown } from './townQueries';
+import { getTownWithItems } from './townQueries';
+import { ProfileService } from '../profile/profileService';
+import { TownSocket } from './townSocket';
 
 export interface ProcessingResult {
   town: Town;
@@ -159,12 +160,6 @@ export class Town extends BaseModel {
   hasEnoughResources(target: Resources) {
     return this.resources.wood >= target.wood && this.resources.clay >= target.clay && this.resources.iron >= target.iron;
   }
-  // TODO: figure how to specify queueType here without ts complaining
-  getLastQueue(queueType: string) {
-    const queue: Array<BuildingQueue | UnitQueue> = this[queueType];
-
-    return queue && queue.length ? queue[queue.length - 1] : null;
-  }
 
   async processQueues(queues: TownQueue[], processed: TownQueue[] = []): Promise<ProcessingResult> {
     if (!queues.length) { return { town: this, processed }; }
@@ -200,16 +195,26 @@ export class Town extends BaseModel {
       update.production = this.getProduction(update.buildings);
     }
     try {
-      const originalScore = this.score;
       await item.$query(trx).delete();
       await this.$query<Town>(trx)
         .patch(update)
         .context({ resourcesUpdated: true, updateScore: true });
       await trx.commit();
 
-      scoreTracker.updateScore(this.score - originalScore, this.playerId);
-      worldData.mapManager.setTownScore(this.score, this.location);
+      ProfileService.updateTownProfile(this.id, { score: this.score });
       this.buildingQueues = this.buildingQueues.filter(({ id }) => id !== item.id);
+      TownSocket.emitToTownRoom(this.id, {
+        town: {
+          id: this.id,
+          resources: this.resources,
+          buildings: this.buildings,
+          loyalty: this.loyalty,
+          production: this.production,
+          score: this.score,
+          updatedAt: this.updatedAt,
+        },
+        item: item.id,
+      }, 'town:buildingCompleted');
       return this;
     } catch (err) {
       await trx.rollback();
@@ -239,6 +244,17 @@ export class Town extends BaseModel {
       await trx.commit();
 
       this.unitQueues = this.unitQueues.filter(({ id }) => id !== item.id);
+      TownSocket.emitToTownRoom(this.id, {
+        town: {
+          id: this.id,
+          units: this.units,
+          resources: this.resources,
+          loyalty: this.loyalty,
+          updatedAt: this.updatedAt,
+        },
+        item: item.id,
+      }, 'town:recruitmentCompleted');
+
       return this;
     } catch (err) {
       await trx.rollback();
@@ -251,12 +267,15 @@ export class Town extends BaseModel {
   }
 
   getAvailablePopulation(): number {
-    const supportPop = this.originSupport.reduce((result, { units }) => result + Object.values(units).reduce((a, b) => a + b, 0), 0);
-    const attackPop = this.originMovements.reduce((result, { units }) => result + Object.values(units).reduce((a, b) => a + b, 0), 0);
+    const supportPop = this.originSupport.reduce((result, { units }) => result + Object.entries(units).reduce((a, b) => a + worldData.unitMap
+    [b[0]].farmSpace * b[1], 0), 0);
+    const attackPop = this.originMovements.reduce((result, { units }) => result + Object.entries(units).reduce((a, b) => a + worldData.unitMap
+    [b[0]].farmSpace * b[1], 0), 0);
     const returnPop = this.targetMovements.reduce((result, { units, type }) =>
-      result + type === MovementType.return ? Object.values(units).reduce((a, b) => a + b, 0) : 0, 0);
+      result + type === MovementType.return ? Object.entries(units).reduce((a, b) => a + worldData.unitMap
+      [b[0]].farmSpace * b[1], 0) : 0, 0);
 
-    const townPop = worldData.units.reduce((result, unit) => result + Object.values(this.units[unit.name]).reduce((a, b) => a + b), 0);
+    const townPop = worldData.units.reduce((result, unit) => result + Object.values(this.units[unit.name]).reduce((a, b) => a + b) * unit.farmSpace, 0);
     const total = worldData.buildingMap.farm.data[this.buildings.farm.level].population;
     return total - townPop - supportPop - attackPop - returnPop;
   }
@@ -330,6 +349,7 @@ export class Town extends BaseModel {
     this.units = this.units || Town.getInitialUnits();
     this.buildings = this.buildings || Town.getInitialBuildings();
     this.score = this.score || Town.calculateScore(this.buildings);
+    this.playerId = this.playerId || null;
 
     // Set for consistent model values
     this.buildingQueues = [];
@@ -447,10 +467,18 @@ export class Town extends BaseModel {
   static townRelationsFiltered = `[
     buildingQueues(orderByEnd),
     unitQueues(orderByEnd),
-    originMovements(selectNonReturn, orderByEnd).[targetTown(selectTownProfile)],
-    targetMovements(orderByEnd).[originTown(selectTownProfile)],
-    originSupport(orderByCreated).[targetTown(selectTownProfile)],
-    targetSupport(orderByCreated).[originTown(selectTownProfile)],
+    originMovements(selectNonReturn, orderByEnd),
+    targetMovements(orderByEnd),
+    originSupport(orderByCreated),
+    targetSupport(orderByCreated),
+  ]`;
+  static townRelationsFilteredNoMovementUnits = `[
+    buildingQueues(orderByEnd),
+    unitQueues(orderByEnd),
+    originMovements(orderByEnd),
+    targetMovements(selectNonReturn, orderByEnd),
+    originSupport(orderByCreated),
+    targetSupport(orderByCreated),
   ]`;
   static townRelationFilters = {
     orderByEnd: (builder) => builder.orderBy('endsAt', 'asc'),
@@ -460,6 +488,7 @@ export class Town extends BaseModel {
 
   static get namedFilters() {
     return {
+      selectId: (builder) => builder.select('id'),
       selectTownProfile: (builder) => builder.select('id', 'name', 'location', 'score'),
     };
   }
@@ -467,7 +496,7 @@ export class Town extends BaseModel {
   static async processTownQueues(item: number | Town, time?: number, processed = []): Promise<ProcessingResult> {
     const queueTime = time || Date.now();
     try {
-      const town = typeof item === 'number' ? await getFullTown({ id: item }, knexDb.world) : item;
+      const town = typeof item === 'number' ? await getTownWithItems({ id: item }, knexDb.world) : item;
 
       const queues = [
         ...town.buildingQueues,

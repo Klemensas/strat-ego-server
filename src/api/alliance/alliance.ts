@@ -131,6 +131,7 @@ export class Alliance extends BaseModel {
 
   static get namedFilters() {
     return {
+      selectId: (builder) => builder.select('id'),
       selectProfile: (builder) => builder.select('id', 'name'),
       selectAllianceProfile: (builder) => builder.select('Alliance.id', 'name'),
       fullAlliance: (builder) => builder
@@ -144,6 +145,11 @@ export class Alliance extends BaseModel {
           diplomacyTarget.[originAlliance(selectProfile), targetAlliance(selectProfile), originPlayer(selectProfile), targetPlayer(selectProfile)],
           messages.[player(selectProfile)]
         ]`),
+      selectBase: (builder) => builder.eager(`[
+        roles,
+        invitations(selectPlayerId),
+        members(selectIdAndRole),
+      ]`),
     };
   }
 }
