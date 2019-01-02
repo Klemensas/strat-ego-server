@@ -5,34 +5,61 @@ import { UserSocket, ErrorMessage } from '../../config/socket';
 import { PlayerSocket } from './playerSocket';
 import * as playerQueries from './playerQueries';
 import * as cloudinary from '../../cloudinary';
+import { ProfileService } from '../profile/profileService';
 
 const transactionRollbackSpy = jest.fn();
 const transactionCommitSpy = jest.fn();
 const transactionMock = { rollback: transactionRollbackSpy, commit: transactionCommitSpy };
 let socket: UserSocket;
+const initialSocketData = {
+  playerId: 5,
+  test: true,
+};
 beforeEach(() => {
   socket = new EventEmitter() as UserSocket;
   socket.handleError = jest.fn().mockImplementation(() => null);
   socket.join = jest.fn().mockImplementation(() => null);
-  socket.userData = {};
+  socket.userData = { ...initialSocketData } as any;
   jest.spyOn(socket, 'emit');
 });
 
 describe('onConnect', () => {
-  const socketEvents = [
-    'player:restart',
-    'player:loadProfile',
-    'player:updateProfile',
-    'player:removeAvatar',
-    'player:progressTutorial',
-  ];
+  const playerData = {
+    id: 4,
+    name: 'testerino',
+    allianceId: 12,
+    allianceRoleId: null,
+    towns: [],
+  };
+
+  beforeEach(() => {
+    jest.spyOn(PlayerSocket, 'getOrCreatePlayer').mockImplementationOnce(() => playerData);
+  });
 
   it('should register events', async () => {
-    jest.spyOn(PlayerSocket, 'getOrCreatePlayer').mockImplementationOnce(() => ({ towns: [] }));
+    const socketEvents = [
+      'player:restart',
+      'player:updateProfile',
+      'player:removeAvatar',
+      'player:progressTutorial',
+    ];
     expect(socket.eventNames()).toHaveLength(0);
     await PlayerSocket.onConnect(socket);
-    expect(PlayerSocket.getOrCreatePlayer).toHaveBeenCalledWith(socket);
     expect(socket.eventNames()).toEqual(socketEvents);
+
+  });
+  it('should set player data and return it', async () => {
+    const result = await PlayerSocket.onConnect(socket);
+    expect(PlayerSocket.getOrCreatePlayer).toHaveBeenCalledWith(socket);
+    expect(socket.join).toHaveBeenCalledWith(`player.${playerData.id}`);
+    expect(socket.userData).toEqual({
+      ...initialSocketData,
+      playerId: playerData.id,
+      playerName: playerData.name,
+      allianceId: playerData.allianceId,
+      allianceRoleId: playerData.allianceRoleId,
+    });
+    expect(result).toEqual(playerData);
   });
 
   describe('events', () => {
@@ -59,16 +86,6 @@ describe('onConnect', () => {
       expect(PlayerSocket.restart).toHaveBeenCalledWith(socket);
     });
 
-    it('should call loadProfile on loadProfile emit', () => {
-      jest.spyOn(PlayerSocket, 'loadProfile').mockImplementationOnce(() => null);
-      socket.emit('anything');
-      expect(PlayerSocket.loadProfile).not.toHaveBeenCalled();
-
-      const payload = 2;
-      socket.emit('player:loadProfile', payload);
-      expect(PlayerSocket.loadProfile).toHaveBeenCalledWith(socket, payload);
-    });
-
     it('should call updateProfile on updateProfile emit', () => {
       jest.spyOn(PlayerSocket, 'updateProfile').mockImplementationOnce(() => null);
       socket.emit('anything');
@@ -87,66 +104,36 @@ describe('onConnect', () => {
       socket.emit('player:removeAvatar');
       expect(PlayerSocket.removeAvatar).toHaveBeenCalledWith(socket);
     });
-  });
-});
 
-describe('loadProfile', () => {
-  let getPlayerProfileSpy;
-  beforeEach(() => {
-    getPlayerProfileSpy = jest.spyOn(playerQueries, 'getPlayerProfile');
-    jest.spyOn(transaction, 'start').mockImplementationOnce(() => (transactionMock));
-  });
+    it('should call progressTutorial on progressTutorial emit', () => {
+      jest.spyOn(PlayerSocket, 'progressTutorial').mockImplementationOnce(() => null);
+      socket.emit('anything');
+      expect(PlayerSocket.progressTutorial).not.toHaveBeenCalled();
 
-  describe('on error', () => {
-    it('should call socket error handler', async () => {
-      const error = 'dead';
-      getPlayerProfileSpy.mockImplementationOnce(() => { throw error; });
-
-      await PlayerSocket.loadProfile(socket, 1);
-      expect(socket.handleError).toHaveBeenCalledWith(error, 'loadProfile', `player:loadProfileFail`);
-    });
-
-    it('should throw on missing player', async () => {
-      getPlayerProfileSpy.mockImplementationOnce(() => Promise.resolve(undefined));
-      await PlayerSocket.loadProfile(socket, 1);
-      expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Wrong player'), 'loadProfile', `player:loadProfileFail`);
-    });
-  });
-
-  describe('on success', () => {
-    const alliance = {
-      id: 1,
-      name: 'tester',
-    };
-
-    beforeEach(() => {
-      getPlayerProfileSpy.mockImplementationOnce(() => Promise.resolve(alliance));
-    });
-
-    it('should emit to socket', async () => {
-      await PlayerSocket.loadProfile(socket, 1);
-      expect(socket.emit).toHaveBeenCalledWith('player:loadProfileSuccess', alliance);
+      socket.emit('player:progressTutorial');
+      expect(PlayerSocket.progressTutorial).toHaveBeenCalledWith(socket);
     });
   });
 });
 
 describe('updateProfile', () => {
-  let getPlayerProfileSpy;
+  let getPlayerSpy;
   let updatePlayerSpy;
   let cloudinaryCheckSpy;
   let cloudinaryRemoveSpy;
   beforeEach(() => {
-    getPlayerProfileSpy = jest.spyOn(playerQueries, 'getPlayerProfile');
+    getPlayerSpy = jest.spyOn(playerQueries, 'getPlayer');
     updatePlayerSpy = jest.spyOn(playerQueries, 'updatePlayer');
     cloudinaryCheckSpy = jest.spyOn(cloudinary, 'isCloudinaryImage');
     cloudinaryRemoveSpy = jest.spyOn(cloudinary, 'cloudinaryDelete');
     jest.spyOn(transaction, 'start').mockImplementationOnce(() => (transactionMock));
+    jest.spyOn(ProfileService, 'updatePlayerProfile').mockImplementationOnce(() => null);
   });
 
   describe('on error', () => {
     it('should rollback transaction and call socket error handler', async () => {
       const error = 'dead';
-      getPlayerProfileSpy.mockImplementationOnce(() => { throw error; });
+      getPlayerSpy.mockImplementationOnce(() => { throw error; });
 
       await PlayerSocket.updateProfile(socket, {});
       expect(transactionRollbackSpy).toHaveBeenCalled();
@@ -154,7 +141,7 @@ describe('updateProfile', () => {
     });
 
     it('should throw on invalid avatarUrl', async () => {
-      getPlayerProfileSpy.mockImplementationOnce(() => ({}));
+      getPlayerSpy.mockImplementationOnce(() => ({}));
       cloudinaryCheckSpy.mockImplementationOnce(() => false);
       await PlayerSocket.updateProfile(socket, { avatarUrl: 'yes' });
       expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('Invalid avatar'), 'updateProfile', `player:updateProfileFail`);
@@ -162,7 +149,7 @@ describe('updateProfile', () => {
 
     it('should throw on update player error', async () => {
       const error = 'dead';
-      getPlayerProfileSpy.mockImplementationOnce(() => ({}));
+      getPlayerSpy.mockImplementationOnce(() => ({}));
       cloudinaryCheckSpy.mockImplementationOnce(() => true);
       updatePlayerSpy.mockImplementationOnce(() => { throw error; });
       await PlayerSocket.updateProfile(socket, { avatarUrl: 'yes' });
@@ -171,7 +158,7 @@ describe('updateProfile', () => {
 
     it('should throw on cloudinary delete error', async () => {
       const error = 'dead';
-      getPlayerProfileSpy.mockImplementationOnce(() => ({ avatarUrl: 'old' }));
+      getPlayerSpy.mockImplementationOnce(() => ({ avatarUrl: 'old' }));
       cloudinaryCheckSpy.mockImplementationOnce(() => true);
       updatePlayerSpy.mockImplementationOnce(() => null);
       cloudinaryRemoveSpy.mockImplementationOnce(() => { throw error; });
@@ -191,7 +178,7 @@ describe('updateProfile', () => {
     beforeEach(() => {
       cloudinaryCheckSpy.mockImplementationOnce(() => true);
       cloudinaryRemoveSpy.mockImplementationOnce(() => true);
-      getPlayerProfileSpy.mockImplementationOnce(() => Promise.resolve(player));
+      getPlayerSpy.mockImplementationOnce(() => Promise.resolve(player));
       updatePlayerSpy.mockImplementationOnce(() => Promise.resolve());
     });
 
@@ -205,20 +192,21 @@ describe('updateProfile', () => {
 });
 
 describe('removeAvatar', () => {
-  let getPlayerProfileSpy;
+  let getPlayerSpy;
   let updatePlayerSpy;
   let cloudinaryRemoveSpy;
   beforeEach(() => {
-    getPlayerProfileSpy = jest.spyOn(playerQueries, 'getPlayerProfile');
+    getPlayerSpy = jest.spyOn(playerQueries, 'getPlayer');
     updatePlayerSpy = jest.spyOn(playerQueries, 'updatePlayer');
     cloudinaryRemoveSpy = jest.spyOn(cloudinary, 'cloudinaryDelete');
     jest.spyOn(transaction, 'start').mockImplementationOnce(() => (transactionMock));
+    jest.spyOn(ProfileService, 'updatePlayerProfile').mockImplementationOnce(() => null);
   });
 
   describe('on error', () => {
     it('should rollback transaction and call socket error handler', async () => {
       const error = 'dead';
-      getPlayerProfileSpy.mockImplementationOnce(() => { throw error; });
+      getPlayerSpy.mockImplementationOnce(() => { throw error; });
 
       await PlayerSocket.removeAvatar(socket);
       expect(transactionRollbackSpy).toHaveBeenCalled();
@@ -226,23 +214,23 @@ describe('removeAvatar', () => {
     });
 
     it('should throw on missing avatarUrl', async () => {
-      getPlayerProfileSpy.mockImplementationOnce(() => ({}));
+      getPlayerSpy.mockImplementationOnce(() => ({}));
       await PlayerSocket.removeAvatar(socket);
       expect(socket.handleError).toHaveBeenCalledWith(new ErrorMessage('No avatar present'), 'removeAvatar', `player:removeAvatarFail`);
     });
 
     it('should throw on cloudinary delete error', async () => {
       const error = 'dead';
-      getPlayerProfileSpy.mockImplementationOnce(() => ({ avatarUrl: 'old' }));
+      getPlayerSpy.mockImplementationOnce(() => ({ avatarUrl: 'old' }));
       updatePlayerSpy.mockImplementationOnce(() => null);
       cloudinaryRemoveSpy.mockImplementationOnce(() => { throw error; });
       await PlayerSocket.removeAvatar(socket);
       expect(socket.handleError).toHaveBeenCalledWith(error, 'removeAvatar', `player:removeAvatarFail`);
     });
 
-    it('should throw on update alliance error', async () => {
+    it('should throw on update player error', async () => {
       const error = 'dead';
-      getPlayerProfileSpy.mockImplementationOnce(() => ({ avatarUrl: 'any' }));
+      getPlayerSpy.mockImplementationOnce(() => ({ avatarUrl: 'any' }));
       updatePlayerSpy.mockImplementationOnce(() => { throw error; });
       cloudinaryRemoveSpy.mockImplementationOnce(() => null);
       await PlayerSocket.removeAvatar(socket);
@@ -260,7 +248,7 @@ describe('removeAvatar', () => {
 
     beforeEach(() => {
       cloudinaryRemoveSpy.mockImplementationOnce(() => true);
-      getPlayerProfileSpy.mockImplementationOnce(() => Promise.resolve(player));
+      getPlayerSpy.mockImplementationOnce(() => Promise.resolve(player));
       updatePlayerSpy.mockImplementationOnce(() => Promise.resolve());
     });
 

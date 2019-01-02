@@ -1,5 +1,6 @@
-import { RankingsSocket } from './rankingsSocket';
 import { EventEmitter } from 'events';
+
+import { RankingsSocket } from './rankingsSocket';
 import { UserSocket } from '../../config/socket';
 import { rankingService } from './rankingService';
 

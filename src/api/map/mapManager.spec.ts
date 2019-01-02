@@ -7,6 +7,7 @@ import { Town } from '../town/town';
 import { World } from '../world/world';
 import * as townQueries from '../town/townQueries';
 import { TownGrowth } from '../town/townGrowth';
+import { ProfileService } from '../profile/profileService';
 
 let mapManager: MapManager;
 const plainTowns = [{
@@ -44,8 +45,6 @@ describe('initialize', () => {
   const lastExpansion = Date.now();
   const expansionRate = 1;
   const expansionGrowth = -55;
-  let addSpy;
-  let expandSpy;
 
   beforeEach(() => {
     worldData.world = {
@@ -53,12 +52,12 @@ describe('initialize', () => {
       expansionRate,
       expansionGrowth,
     } as World;
-    addSpy = jest.spyOn(mapManager, 'addTown');
-    expandSpy = jest.spyOn(mapManager, 'scheduleExpansion').mockImplementationOnce(() => Promise.resolve());
-    jest.spyOn(townQueries, 'getTownsMapProfile').mockImplementation(() => Promise.resolve(plainTowns));
+    jest.spyOn(mapManager, 'addTown');
+    jest.spyOn(mapManager, 'scheduleExpansion').mockImplementationOnce(() => Promise.resolve());
+    jest.spyOn(ProfileService, 'getTownProfile').mockImplementation(() => Promise.resolve(plainTowns));
   });
 
-  it('initialize should set variables and load towns', async () => {
+  it('should set variables and load towns', async () => {
     await mapManager.initialize();
     expect(mapManager.lastExpansion).toEqual(lastExpansion);
     expect(mapManager.expansionRate).toEqual(expansionRate);
@@ -69,26 +68,19 @@ describe('initialize', () => {
 });
 
 it('getAllData should return mapData', () => {
-  const mapTown: MapTown = {
-    id: 1,
-    name: 'name',
-    location: [400, 401],
-    owner: { id: 2, name: 'test' },
-    alliance: { id: 3, name: 'test alliance' },
-    score: 5,
+  const mapTown: Dict<number> = {
+    1: 2,
+    3: 4,
   };
-  const testMapData = {
-    test: mapTown,
-  };
-  mapManager.mapData = testMapData;
-  expect(mapManager.getAllData()).toBe(testMapData);
+  mapManager.mapData = mapTown;
+  expect(mapManager.getAllData()).toBe(mapTown);
 });
 
-describe('town editing', () => {
-  const mapData: Dict<MapTown> = {
-    '500,500': { id: 500, name: 'town #500', location: [500, 500], score: 500, owner: null, alliance: null },
-    '501,501': { id: 501, name: 'town #501', location: [501, 501], score: 501, owner: null , alliance: null},
-    '502,502': { id: 502, name: 'town #502', location: [502, 502], score: 502, owner: null , alliance: null},
+it('addTown should add all player towns', () => {
+  const mapData: Dict<number> = {
+    '500,500': 500,
+    '501,501': 501,
+    '502,502': 502,
   };
   const testAlliance = { id: 3, name: 'yes' };
   const testPlayer = {
@@ -98,155 +90,16 @@ describe('town editing', () => {
     towns: [],
   };
   const townsToAdd = plainTowns.map(((town) => ({ ...town, player: testPlayer } as Town)));
-  const mapTowns: Dict<MapTown> = townsToAdd.reduce((result, item) => ({
-    ...result,
-    [item.location.join(',')]: {
-      owner: { id: testPlayer.id, name: testPlayer.name},
-      alliance: testPlayer.alliance,
-      id: item.id,
-      name: item.name,
-      location: item.location,
-      score: item.score,
-    },
-  }), {});
-  beforeEach(() => {
-    mapManager.mapData = { ...mapData };
-  });
+  const addedTowns = plainTowns.reduce((result, { location, id }) => ({ ...result, [location.join(',')]: id }), {});
 
-  it('addPlayerTowns should add all player towns', () => {
-    mapManager.addPlayerTowns(testPlayer);
-    expect(mapManager.mapData).toEqual(mapData);
+  mapManager.mapData = mapData;
 
-    mapManager.addPlayerTowns({
-      ...testPlayer,
-      towns: townsToAdd,
-    });
-    const expected: Dict<MapTown> = { ...mapData, ...mapTowns };
-    expect(mapManager.mapData).toEqual(expected);
-  });
-  it('addTown should add all player towns', () => {
-    mapManager.addTown();
-    expect(mapManager.mapData).toEqual(mapData);
+  mapManager.addTown();
+  expect(mapManager.mapData).toEqual(mapData);
 
-    const expected: Dict<MapTown> = { ...mapData, ...mapTowns };
-    mapManager.addTown(...townsToAdd);
-    expect(mapManager.mapData).toEqual(expected);
-  });
-  describe('setTownAlliance', () => {
-    it('should ignore missing towns', () => {
-      mapManager.setTownAlliance({ id: 123, name: 'notused' }, [-2, 324567]);
-      expect(mapManager.mapData).toEqual(mapData);
-    });
-
-    it('should unset all provided town alliance', () => {
-      mapManager.mapData = { ...mapTowns };
-      const nonAlliedTowns = townsToAdd.slice(0, townsToAdd.length - 1).map(({ id }) => id);
-      const expected = Object.values(mapTowns).reduce((result, town) => ({
-        ...result,
-        [town.location.join(',')]: {
-          ...town,
-          alliance: nonAlliedTowns.includes(town.id) ? null : town.alliance,
-        },
-      }), {});
-
-      mapManager.setTownAlliance(null, nonAlliedTowns);
-      expect(mapManager.mapData).toEqual(expected);
-    });
-
-    it('should set all provided town alliance', () => {
-      const alliedTowns = Object.values(mapData).map(({ id }) => id).slice(1);
-      const expected = Object.values(mapData).reduce((result, town) => ({
-        ...result,
-        [town.location.join(',')]: {
-          ...town,
-          alliance: alliedTowns.includes(town.id) ? testAlliance : null,
-        },
-      }), {});
-      mapManager.setTownAlliance(testAlliance, alliedTowns);
-      expect(mapManager.mapData).toEqual(expected);
-    });
-  });
-
-  describe('setTownScore', () => {
-    it('should ignore missing towns', () => {
-      const target: Coords = [-123, -123];
-      expect(mapManager.mapData).toEqual(mapData);
-      mapManager.setTownScore(-1, target);
-      expect(mapManager.mapData).toEqual(mapData);
-    });
-
-    it('should update target town score', () => {
-      const target = Object.values(mapData)[0].location;
-      const expected = 12343;
-      expect(mapManager.mapData[target.join(',')].score).not.toEqual(expected);
-      mapManager.setTownScore(expected, target);
-      expect(mapManager.mapData[target.join(',')].score).toEqual(expected);
-    });
-  });
-
-  describe('setTownName', () => {
-    it('should ignore missing towns', () => {
-      const target = 10000;
-      expect(mapManager.mapData).toEqual(mapData);
-      mapManager.setTownName('name', target);
-      expect(mapManager.mapData).toEqual(mapData);
-    });
-
-    it('should update target town name', () => {
-      const target = Object.values(mapData)[0];
-      const targetId = target.id;
-      const newName = 'new name';
-      const expectedMapData = {
-        ...mapManager.mapData,
-        [target.location.join(',')]: {
-          ...target,
-          name: newName,
-        },
-      };
-
-      mapManager.setTownName(newName, targetId);
-      expect(mapManager.mapData).toEqual(expectedMapData);
-    });
-  });
-
-  describe('townConquered', () => {
-    it('should throw on missing originTown', () => {
-      expect(() => mapManager.townConquered({}, [1, 1])).toThrow();
-    });
-
-    it('should update mapData', () => {
-      const originTown: MapTown = {
-        id: 1,
-        location: [1, 1],
-        score: 101,
-        name: 'town #1',
-        owner: { id: 11, name: 'player #11' },
-        alliance: { id: 22, name: 'alliance #22' },
-      };
-      const targetTown: MapTown = {
-        id: 2,
-        location: [2, 2],
-        score: 202,
-        name: 'town #2',
-        owner: null,
-        alliance: null,
-      };
-      const data = {
-        [originTown.location.join(',')]: { ...originTown },
-        [targetTown.location.join(',')]: { ...targetTown },
-      };
-      mapManager.mapData = { ...data };
-      mapManager.townConquered(targetTown, originTown.location);
-      expect(mapManager.mapData).toEqual(({
-        ...data,
-        [targetTown.location.join(',')]: {
-          ...targetTown,
-          owner: originTown.owner,
-          alliance: originTown.alliance,
-        },
-      }));
-    });
-  });
+  const expected: Dict<MapTown> = { ...mapData, ...addedTowns };
+  mapManager.addTown(...townsToAdd);
+  expect(mapManager.mapData).toEqual(expected);
 });
 
 describe('map expansion', () => {

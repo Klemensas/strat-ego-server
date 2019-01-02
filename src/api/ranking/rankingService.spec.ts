@@ -1,9 +1,12 @@
+import * as lolex from 'lolex';
+
 import { RankingService } from './rankingService';
 import { logger } from '../../logger';
 import { Player } from '../player/player';
 import { worldData } from '../world/worldData';
 import { World } from '../world/world';
 import * as playerQueries from '../player/playerQueries';
+import { ProfileService } from '../profile/profileService';
 
 const examplePlayers = {
   1: {
@@ -48,6 +51,10 @@ const players = [{
 }] as Player[];
 
 const exampleRankings = Object.values(examplePlayers).map((player) => player.id);
+const exampleScores = Object.entries(examplePlayers).reduce((result, [key, { score }]) => ({
+  ...result,
+  [+key]: score,
+}), {});
 beforeAll(() => {
   worldData.world = {
     baseProduction: 0,
@@ -57,8 +64,54 @@ beforeAll(() => {
 let rankingService: RankingService;
 beforeEach(() => {
   rankingService = new RankingService();
-  rankingService.playerScores = { ...examplePlayers };
-  rankingService.playerRankings = exampleRankings.slice();
+  rankingService.playerScores = { ...exampleScores };
+  rankingService.playerRankings = [...exampleRankings];
+});
+
+describe('initialize', () => {
+  const unsortedPlayerProfiles = {
+    3: { score: 30 },
+    1: { score: 10 },
+    2: { score: 20 },
+  };
+  let localRankings: RankingService;
+
+  beforeEach(() => {
+    jest.spyOn(ProfileService, 'getPlayerProfile').mockImplementationOnce(() => unsortedPlayerProfiles);
+    localRankings = new RankingService();
+  });
+
+  it('should read profiles and set sorted ranking values', async () => {
+    expect(localRankings.playerScores).toEqual({});
+    expect(localRankings.playerRankings).toEqual([]);
+
+    await localRankings.initialize();
+    const idScoreDict = Object.entries(unsortedPlayerProfiles).reduce((result, [key, { score }]) => ({ ...result, [key]: score }), {});
+    const sortedIds = Object.keys(unsortedPlayerProfiles).map((id) => +id);
+    localRankings.sortRankings(sortedIds, idScoreDict);
+
+    expect(localRankings.playerScores).toEqual(idScoreDict);
+    expect(localRankings.playerRankings).toEqual(sortedIds);
+  });
+
+  describe('events', () => {
+    const payload = { current: { id: 1, playerId: 12, score: 5 }, prev: { score: 1 }, changes: {} };
+    beforeEach(async () => {
+      await localRankings.initialize();
+    });
+
+    it('should call addPlayer on profile add', () => {
+      jest.spyOn(localRankings, 'addPlayer');
+      ProfileService.playerChanges.emit('add', payload);
+      expect(localRankings.addPlayer).toHaveBeenCalledWith(payload);
+    });
+
+    it('should call updateTown on town update', () => {
+      jest.spyOn(localRankings, 'updateTown');
+      ProfileService.townChanges.emit('update', payload);
+      expect(localRankings.updateTown).toHaveBeenCalledWith(payload);
+    });
+  });
 });
 
 it('should initially have empty values', () => {
@@ -69,112 +122,108 @@ it('should initially have empty values', () => {
 });
 
 it('scores should return ranking value populated with playerScores in order', () => {
-  expect(rankingService.scores).toEqual(Object.values(examplePlayers));
+  expect(rankingService.scores).toEqual(Object.values(examplePlayers).map(({ score }) => score));
 
-  rankingService.playerRankings.sort((a, b) => rankingService.playerScores[b].score - rankingService.playerScores[a].score);
+  rankingService.playerRankings.sort((a, b) => rankingService.playerScores[b] - rankingService.playerScores[a]);
   expect(rankingService.scores).not.toEqual(Object.values(examplePlayers));
 
   rankingService.playerRankings = [];
   expect(rankingService.scores).toEqual([]);
 });
 
-describe('readScores', () => {
-  const dbPlayers = players.map((player) => ({
-    id: player.id,
-    name: player.name,
-    score: player.towns && player.towns.length ? player.towns.reduce((s, t) => s + t.score, 0) : null,
-  }));
+describe('updateTown', () => {
+  let scoreUpdateSpy: jest.SpyInstance;
+  let payload: any;
   beforeEach(() => {
-    rankingService = new RankingService();
-    jest.spyOn(playerQueries, 'getPlayerRankings').mockImplementation(() => Promise.resolve(dbPlayers));
+    scoreUpdateSpy = jest.spyOn<any, any>(rankingService, 'updatePlayerScore');
   });
 
-  it('should set all player scores', async () => {
-    const sortSpy = jest.spyOn(rankingService, 'sortRankings');
-    await rankingService.readScores();
-    const expectedPlayers = dbPlayers.reduce((result, item) => ({
-      ...result,
-      [item.id]: {
-        ...item,
-        score: item.score || 0,
-      },
-    }), {});
-    expect(rankingService.sortRankings).toHaveBeenCalledTimes(1);
-    expect(rankingService.rankings).toHaveLength(players.length);
-    expect(rankingService.playerScores).toEqual(expectedPlayers);
-  });
-});
+  it('should update time stamp', () => {
+    const clock = lolex.install();
+    const currentTime = Date.now();
+    const tick = 1;
 
-it('readScores on error should log and rethrow', async () => {
-  const expectedError = 'error';
-  const knexSpy = jest.spyOn(playerQueries, 'getPlayerRankings').mockImplementationOnce(() => Promise.reject(expectedError));
-  const loggerSpy = jest.spyOn(logger, 'error');
-  loggerSpy.mockImplementation(() => null);
+    rankingService.lastUpdate = currentTime;
+    clock.tick(tick);
+    rankingService.updateTown({ changes: {}, prev: {}, current: {} } as any);
+    expect(rankingService.lastUpdate).toEqual(currentTime);
+    expect(scoreUpdateSpy).not.toHaveBeenCalled();
 
-  let error;
-  try {
-    await rankingService.readScores();
-  } catch (err) {
-    error = err;
-  }
-  expect(error).toEqual(expectedError);
-  expect(loggerSpy).toHaveBeenCalled();
-});
-
-describe('setScore', () => {
-  it('should set target player score', () => {
-    let targetPlayer = examplePlayers[exampleRankings[0]];
-    let expectedScore = 555;
-
-    rankingService.setScore(expectedScore, targetPlayer.id);
-    expect(rankingService.playerScores[targetPlayer.id].score).toEqual(expectedScore);
-
-    targetPlayer = examplePlayers[exampleRankings[1]];
-    expectedScore = 1;
-
-    rankingService.setScore(expectedScore, targetPlayer.id);
-    expect(rankingService.playerScores[targetPlayer.id].score).toEqual(expectedScore);
+    rankingService.updateTown({ changes: { score: 12 }, prev: { score: 1 }, current: { score: 12, playerId: 1 } } as any);
+    expect(rankingService.lastUpdate).toEqual(currentTime + tick);
+    expect(scoreUpdateSpy).toHaveBeenCalled();
+    clock.uninstall();
   });
 
-  it('should sortRankings on set', () => {
-    const sortSpy = jest.spyOn(rankingService, 'sortRankings');
+  describe('player change', () => {
+    beforeEach(() => {
+      scoreUpdateSpy.mockClear();
+    });
 
-    rankingService.setScore(1, rankingService.rankings[0]);
-    expect(sortSpy).toHaveBeenCalledTimes(1);
+    it('should not update score if neither prev or current town has a player', () => {
+      payload = {
+        current: {},
+        prev: {},
+        changes: { playerId: null },
+      };
+      rankingService.updateTown(payload);
+
+      expect(scoreUpdateSpy).not.toHaveBeenCalled();
+    });
+
+    it('should only update previous player if current town has no player', () => {
+      payload = {
+        current: { playerId: null },
+        prev: { playerId: 1, score: 11 },
+        changes: { playerId: null },
+      };
+      rankingService.updateTown(payload);
+      expect(scoreUpdateSpy).toHaveBeenCalledTimes(1);
+      expect(scoreUpdateSpy).toHaveBeenCalledWith(payload.prev.playerId, -payload.prev.score);
+    });
+
+    it('should only update current player if prev town has no player', () => {
+      payload = {
+        current: { playerId: 1, score: 11 },
+        prev: { playerId: null },
+        changes: { playerId: 1 },
+      };
+      rankingService.updateTown(payload);
+      expect(scoreUpdateSpy).toHaveBeenCalledTimes(1);
+      expect(scoreUpdateSpy).toHaveBeenCalledWith(payload.current.playerId, payload.current.score);
+    });
+
+    it('should update current and prev player', () => {
+      payload = {
+        current: { playerId: 1, score: 101 },
+        prev: { playerId: 44, score: 11 },
+        changes: { playerId: null },
+      };
+      rankingService.updateTown(payload);
+      expect(scoreUpdateSpy).toHaveBeenCalledTimes(2);
+      expect(scoreUpdateSpy).toHaveBeenCalledWith(payload.prev.playerId, -payload.prev.score);
+      expect(scoreUpdateSpy).toHaveBeenCalledWith(payload.current.playerId, payload.current.score);
+    });
   });
-});
 
-describe('updateScore', () => {
-  it('should update target player score', () => {
-    let scoreChange = 10;
-    let targetPlayer = examplePlayers[exampleRankings[0]];
-    let expectedScore = targetPlayer.score + scoreChange;
-
-    rankingService.updateScore(scoreChange, targetPlayer.id);
-    expect(rankingService.playerScores[targetPlayer.id].score).toEqual(expectedScore);
-
-    scoreChange = -10;
-    targetPlayer = examplePlayers[exampleRankings[1]];
-    expectedScore = targetPlayer.score + scoreChange;
-
-    rankingService.updateScore(scoreChange, targetPlayer.id);
-    expect(rankingService.playerScores[targetPlayer.id].score).toEqual(expectedScore);
-  });
-
-  it('should sortRankings on update', () => {
-    const sortSpy = jest.spyOn(rankingService, 'sortRankings');
-
-    rankingService.updateScore(1, rankingService.rankings[0]);
-    expect(sortSpy).toHaveBeenCalledTimes(1);
+  it('should add the score difference to current player', () => {
+    payload = {
+      current: { playerId: 1, score: 101 },
+      prev: { playerId: 44, score: 11 },
+      changes: { score: null },
+    };
+    rankingService.updateTown(payload);
+    expect(scoreUpdateSpy).toHaveBeenCalledTimes(1);
+    expect(scoreUpdateSpy).toHaveBeenCalledWith(payload.current.playerId, payload.current.score - payload.prev.score);
   });
 });
 
 describe('sortRankings', () => {
   it('should sort by score and id', () => {
-    expect(rankingService.rankings).toEqual(exampleRankings);
+    expect(rankingService.playerRankings).toEqual(exampleRankings);
 
     const descendingIds = [44, 4];
-    const playerScores = { ...examplePlayers };
+    const playerScores = { ...exampleScores };
     const matchingScore = 12;
     playerScores[descendingIds[0]] = {
       id: descendingIds[0],
@@ -187,40 +236,40 @@ describe('sortRankings', () => {
       score: matchingScore,
     };
 
-    const rankings = exampleRankings.slice();
+    const rankings = [...exampleRankings];
     rankings.push(...descendingIds);
-    const sortedRankings = Object.values(playerScores).sort((a, b) => b.score - a.score || a.id - b.id).map(({ id }) => id);
+    const sortedRankings = [...rankings].sort((a, b) => playerScores[b] - playerScores[a] || a - b);
 
     rankingService.playerScores = playerScores;
-    rankingService.rankings = rankings;
-    rankingService.sortRankings();
-    expect(rankingService.rankings).toEqual(sortedRankings);
-  });
-
-  it('should set lastUpdate', () => {
-    const lastDate = Date.now() - 1;
-
-    rankingService.sortRankings();
-    expect(rankingService.lastUpdate).toBeGreaterThan(lastDate);
+    rankingService.playerRankings = rankings;
+    rankingService.sortRankings(rankings, playerScores);
+    expect(rankings).toEqual(sortedRankings);
   });
 });
 
 describe('addPlayer', () => {
-  const newPlayer = { id: 12335, name: 'Player #12335', score: 11 };
+  const newPlayer = { id: 12335, name: 'Player #12335', score: 11 } as any;
 
   it('should add target player', () => {
     expect(rankingService.playerScores[newPlayer.id]).toBeFalsy();
-    expect(rankingService.rankings.includes(newPlayer.id)).toBeFalsy();
+    expect(rankingService.playerRankings.includes(newPlayer.id)).toBeFalsy();
 
-    rankingService.addPlayer(newPlayer);
-    expect(rankingService.playerScores[newPlayer.id]).toEqual(newPlayer);
-    expect(rankingService.rankings.includes(newPlayer.id)).toBeTruthy();
+    rankingService.addPlayer({ current: newPlayer, prev: { id: null }, changes: {} });
+    expect(rankingService.playerScores[newPlayer.id]).toEqual(newPlayer.score);
+    expect(rankingService.playerRankings.includes(newPlayer.id)).toBeTruthy();
   });
 
   it('should sortRankings on update', () => {
     const sortSpy = jest.spyOn(rankingService, 'sortRankings');
 
-    rankingService.addPlayer(newPlayer);
+    rankingService.addPlayer({ current: newPlayer, prev: { id: null }, changes: {} });
     expect(sortSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('should set lastUpdate', () => {
+    const lastDate = Date.now() - 1;
+
+    rankingService.addPlayer({ current: { id: 11, score: 111 }, prev: { id: null }, changes: {} });
+    expect(rankingService.lastUpdate).toBeGreaterThan(lastDate);
   });
 });
