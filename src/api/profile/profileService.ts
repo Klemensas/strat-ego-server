@@ -82,6 +82,7 @@ class ProfileService {
         this.updateAllianceProfile(newProfile.allianceId, { members }, false);
       }
     }
+    return newProfile;
   }
 
   static updateTownProfile(townId: string | number, profile: Partial<TownProfile>, propagateChanges = true) {
@@ -110,6 +111,7 @@ class ProfileService {
         this.updatePlayerProfile(newProfile.playerId, { towns }, false);
       }
     }
+    return newProfile;
   }
 
   static updateAllianceProfile(allianceId: string | number, profile: Partial<AllianceProfile>, propagateChanges = true) {
@@ -125,15 +127,14 @@ class ProfileService {
       const change = this.compareChanges(newProfile.members, prevProfile.members || []);
 
       if (change.added.length) {
-        const playerProfiles = this.getPlayerProfile(change.added);
-        Object.keys(playerProfiles).forEach((playerId) => this.updatePlayerProfile(playerId, { allianceId: newProfile.id }, false));
+        change.added.forEach((playerId) => this.updatePlayerProfile(playerId, { allianceId: newProfile.id }, false));
       }
 
       if (change.removed.length) {
-        const playerProfiles = this.getPlayerProfile(change.removed);
-        Object.keys(playerProfiles).forEach((playerId) => this.updatePlayerProfile(playerId, { allianceId: null }, false));
+        change.removed.forEach((playerId) => this.updatePlayerProfile(playerId, { allianceId: null }, false));
       }
     }
+    return newProfile;
   }
 
   static async deleteAllianceProfile(allianceId: number) {
@@ -198,7 +199,7 @@ class ProfileService {
     result[player.id] = {
       id: player.id,
       name: player.name,
-      towns: player.towns,
+      towns: player.towns as TownProfile[],
       score: player.score,
       allianceId: player.allianceId,
       description: player.description,
@@ -240,14 +241,14 @@ class ProfileService {
 
   private static compareChanges(newList: Array<{ id: number & any}>, prevList: Array<{ id: number & any}> = []): { added: number[], removed: number[] } {
     const newIdArray = newList.map(({ id }) => id);
+    const prevIdArray = prevList.map(({ id }) => id);
     return newIdArray.reduce((result, id) => {
-      const townIndex = prevList.findIndex((prevItem) => prevItem.id === id);
-      if (townIndex === -1) {
-        result.added.push(id);
-      }
-      result.removed.splice(townIndex, 1);
+      const isOld = prevIdArray.includes(id);
+
+      if (!isOld) { result.added.push(id); }
+      result.removed = result.removed.filter((item) => item !== id);
       return result;
-    }, { added: [], removed: prevList.length ? [...newIdArray] : [] });
+    }, { added: [], removed: prevList.length ? [...prevIdArray] : [] });
   }
 }
 

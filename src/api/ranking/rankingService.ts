@@ -28,7 +28,7 @@ export class RankingService {
     ProfileService.playerChanges.on('add', (payload) => this.addPlayer(payload));
   }
 
-  private updateTown({ current, prev, changes }: ProfileChanges<TownProfile>) {
+  public updateTown({ current, prev, changes }: ProfileChanges<TownProfile>) {
     const changedPlayer = changes.hasOwnProperty('playerId');
     const changedScore = changes.hasOwnProperty('score');
     const playerOwned = current.hasOwnProperty('playerId') || prev.hasOwnProperty('playerId');

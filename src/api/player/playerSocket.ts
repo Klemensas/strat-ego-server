@@ -160,7 +160,7 @@ export class PlayerSocket {
 
       let avatarToDelete;
       const updatePayload: ProfileUpdate = {};
-      if (!player || payload.avatarUrl) {
+      if (payload.avatarUrl) {
         if (!isCloudinaryImage(payload.avatarUrl)) { throw new ErrorMessage('Invalid avatar'); }
 
         updatePayload.avatarUrl = payload.avatarUrl;
@@ -186,8 +186,7 @@ export class PlayerSocket {
   static async removeAvatar(socket: UserSocket) {
     const trx = await transaction.start(knexDb.world);
     try {
-      const playerDict = await getPlayerProfile({ id: socket.userData.playerId }, trx);
-      const player = playerDict && playerDict[socket.userData.playerId];
+      const player = await getPlayer({ id: socket.userData.playerId }, trx);
       if (!player || !player.avatarUrl) { throw new ErrorMessage('No avatar present'); }
 
       await cloudinaryDelete(player.avatarUrl);

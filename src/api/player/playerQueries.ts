@@ -58,7 +58,7 @@ export function getPlayerRankings(connection: Transaction | Knex = knexDb.world)
     .orderBy('score', 'desc');
 }
 
-export async function getPlayerProfile(where: Partial<Player>, connection: Transaction | Knex = knexDb.world): Promise<PlayerProfile> {
+export async function getPlayerProfile(where: Partial<Player>, connection: Transaction | Knex = knexDb.world): Promise<Player> {
   const player = await getPlayer(where, connection)
     .eager('towns(selectId)]')
     .select(
