@@ -27,6 +27,7 @@
     "transform": {
       "^.+\\.ts?$": "ts-jest"
     },
+    "testURL": "http://localhost:1234",
     "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.ts?$",
     "moduleFileExtensions": [
       "ts",
@@ -65,7 +66,7 @@
     "socket.io": "^2.0.4",
     "socketio-jwt": "^4.5.0",
     "strat-ego-common": "github:klemensas/strat-ego-common",
-    "uws": "^9.14.0"
+    "uws": "^10.148.1"
   },
   "devDependencies": {
     "@types/express": "^4.0.39",
