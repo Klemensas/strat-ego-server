@@ -11,9 +11,11 @@ import { TownSocket } from '../api/town/townSocket';
 import { MapSocket } from '../api/map/mapSocket';
 import { logger } from '../logger';
 import { serializeError } from '../errorSerializer';
-import { RankingsSocket } from '../api/ranking/rankingsSocket';
+import { RankingSocket } from '../api/ranking/rankingSocket';
 import { ProfileSocket } from '../api/profile/profileSocket';
 import { getPlayerReports } from '../api/report/reportQueries';
+import { getPlayerAllianceInvites } from '../api/alliance/allianceQueries';
+import { MessageSocket } from '../api/message/messageSocket';
 
 export interface AuthenticatedSocket extends SocketIO.Socket {
   decoded_token: {
@@ -101,15 +103,17 @@ export async function setupUserSocket(client: UserSocket) {
   });
 
   const player = await PlayerSocket.onConnect(client);
-  const [reports, towns, alliance] = await Promise.all([
+  const [reports, invitations, towns, alliance, messages] = await Promise.all([
     getPlayerReports(player.id),
+    getPlayerAllianceInvites(player),
     TownSocket.onConnect(client),
     AllianceSocket.onConnect(client),
+    MessageSocket.onConnect(client),
     MapSocket.onConnect(client),
-    RankingsSocket.onConnect(client),
+    RankingSocket.onConnect(client),
     ProfileSocket.onConnect(client),
   ]);
 
-  client.emit('initialize', { player, towns, alliance, reports });
+  client.emit('initialize', { player, towns, alliance, invitations, reports, messages });
   client.log(`${client.userData.username} connected`);
 }

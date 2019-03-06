@@ -46,5 +46,6 @@ module.exports = {
     demoUserCount: +(process.env.DEMO_USERS || 10),
     baseProduction: +(process.env.BASE_PRODUCTION || 5000),
   },
+  defaultPageSize: 20,
   ...envVariables[env],
 };

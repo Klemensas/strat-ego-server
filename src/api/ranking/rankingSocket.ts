@@ -1,7 +1,7 @@
 import { UserSocket } from '../../config/socket';
 import { rankingService } from './rankingService';
 
-export class RankingsSocket {
+export class RankingSocket {
   static async onConnect(socket: UserSocket) {
     socket.on('rankings:load', (lastUpdate?: number) => this.load(socket, lastUpdate));
   }

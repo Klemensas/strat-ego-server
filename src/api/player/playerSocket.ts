@@ -27,19 +27,6 @@ export class PlayerSocket {
     };
     socket.join(`player.${player.id}`);
     return player;
-
-    // socket.userData = {
-    //   ...socket.userData,
-    //   playerId: player.id,
-    //   playerName: player.name,
-    //   townIds: player.towns.map(({ id }) => id),
-    //   allianceName: player.alliance ? player.alliance.name : null,
-    //   allianceId: player.allianceId,
-    //   allianceRoleId: player.allianceRoleId,
-    //   alliancePermissions: player.allianceRole ? player.allianceRole.permissions : null,
-    //   updatedAt: player.updatedAt,
-    // };
-    // socket.emit('player', player);
   }
 
   static emitToPlayer(playerId: number, payload: any, topic: string = 'player') {

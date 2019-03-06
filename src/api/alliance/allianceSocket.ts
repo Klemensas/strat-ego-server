@@ -149,10 +149,6 @@ export class AllianceSocket {
         name: socket.userData.playerName,
         allianceRole: alliance.masterRole,
       }];
-      alliance.events[0].originPlayer = {
-        id: socket.userData.playerId,
-        name: socket.userData.playerName,
-      };
 
       await trx.commit();
 
@@ -200,11 +196,6 @@ export class AllianceSocket {
       await trx.commit();
 
       const playerRoom = `player.${player.id}`;
-      event.originPlayer = {
-        id: socket.userData.playerId,
-        name: socket.userData.playerName,
-      };
-      event.targetPlayer = playerProfile;
 
       socket.to(`alliance.${alliance.id}`).emit('alliance:event', { event, data: playerProfile });
       socket.emit(`alliance:createInviteSuccess`, { event, data: playerProfile });
@@ -234,19 +225,6 @@ export class AllianceSocket {
 
       await trx.commit();
 
-      event.originAlliance = {
-          id: alliance.id,
-          name: alliance.name,
-      };
-      event.originPlayer = {
-        id: socket.userData.playerId,
-        name: socket.userData.playerName,
-      };
-      event.targetPlayer = {
-        id: playerId,
-        name: invitation.name,
-      };
-
       socket.to(`alliance.${alliance.id}`).emit('alliance:event', { event, data: playerId });
       socket.emit(`alliance:cancelInviteSuccess`, { event, data: playerId });
 
@@ -271,10 +249,6 @@ export class AllianceSocket {
       await trx.commit();
 
       socket.emit('alliance:rejectInviteSuccess', allianceId);
-      event.originPlayer = {
-        id: socket.userData.playerId,
-        name: socket.userData.playerName,
-      };
       io.sockets.in(`alliance.${allianceId}`).emit('alliance:event', { event, data: socket.userData.playerId  });
     } catch (err) {
       await trx.rollback();
@@ -294,14 +268,9 @@ export class AllianceSocket {
 
       const event = await allianceQueries.acceptInvite(player, alliance.id, alliance.defaultRoleId, trx);
 
-      event.originPlayer = {
-        id: socket.userData.playerId,
-        name: socket.userData.playerName,
-      };
-
       await trx.commit();
 
-      const member = { ...event.originPlayer, allianceRole: alliance.defaultRole };
+      const member = { id: player.id, allianceRoleId: alliance.defaultRole.id };
       alliance.members.push(member);
       alliance.events.unshift(event);
       alliance.invitations = alliance.invitations.filter((id) => id !== player.id);
@@ -357,10 +326,6 @@ export class AllianceSocket {
       this.updateMemberPermission(data.updated, allianceRoom);
 
       const event = updatedAlliance.eventOrigin[0];
-      event.originPlayer = {
-        id: socket.userData.playerId,
-        name: socket.userData.playerName,
-      };
 
       socket.to(allianceRoom).emit('alliance:event', { event, data });
       socket.emit('alliance:updateRolePermissionsSuccess', { event, data });
@@ -387,10 +352,6 @@ export class AllianceSocket {
 
       await trx.commit();
 
-      event.originPlayer = {
-        id: socket.userData.playerId,
-        name: socket.userData.playerName,
-      };
       const data = { removed: [roleId] };
       const allianceRoom = `alliance.${alliance.id}`;
       this.resetMemberRole(roleId, role, allianceRoom);
@@ -431,14 +392,6 @@ export class AllianceSocket {
 
       this.removeMemberNotify(player.id, alliance.id);
 
-      event.originPlayer = {
-        id: socket.userData.playerId,
-        name: socket.userData.playerName,
-      };
-      event.targetPlayer = {
-        id: player.id,
-        name: player.name,
-      };
       socket.emit(`alliance:removeMemberSuccess`, { event, data: playerId });
       socket.to(`alliance.${socket.userData.allianceId}`).emit('alliance:event', { event, data: playerId });
       } catch (err) {
@@ -492,8 +445,6 @@ export class AllianceSocket {
         originAllianceId: alliance.id,
         originPlayerId: socket.userData.playerId,
       }, trx);
-      event.originAlliance = { id: alliance.id, name: alliance.name };
-      event.originPlayer = { id: socket.userData.playerId, name: socket.userData.playerName };
 
       if (avatarToDelete) {
         await cloudinaryDelete(avatarToDelete);
@@ -527,8 +478,6 @@ export class AllianceSocket {
         originAllianceId: alliance.id,
         originPlayerId: socket.userData.playerId,
       }, trx);
-      event.originAlliance = { id: alliance.id, name: alliance.name };
-      event.originPlayer = { id: socket.userData.playerId, name: socket.userData.playerName };
 
       await trx.commit();
       ProfileService.updateAllianceProfile(alliance.id, { avatarUrl: null });
@@ -565,18 +514,6 @@ export class AllianceSocket {
 
       await trx.commit();
 
-      const originPlayerProfile = { id: socket.userData.playerId, name: socket.userData.playerName };
-      const originAllianceProfile = { id: socket.userData.allianceId, name: socket.userData.allianceName };
-      const targetAllianceProfile = { id: targetAlliance.id, name: targetAlliance.name };
-
-      war.originPlayer = originPlayerProfile;
-      war.originAlliance = originAllianceProfile;
-      war.targetAlliance = targetAllianceProfile;
-
-      event.originPlayer = originPlayerProfile;
-      event.targetAlliance = targetAllianceProfile;
-      event.originAlliance = originAllianceProfile;
-
       socket.emit('alliance:declareWarSuccess', { event, data: war });
       socket.to(`alliance.${socket.userData.allianceId}`).emit('alliance:event', { event, data: war });
       socket.to(`alliance.${targetAlliance.id}`).emit('alliance:event', { event, data: war });
@@ -611,18 +548,6 @@ export class AllianceSocket {
 
       await trx.commit();
 
-      const originPlayerProfile = { id: socket.userData.playerId, name: socket.userData.playerName };
-      const originAllianceProfile = { id: socket.userData.allianceId, name: socket.userData.allianceName };
-      const targetAllianceProfile = { id: targetAlliance.id, name: targetAlliance.name };
-
-      diplomacy.originPlayer = originPlayerProfile;
-      diplomacy.originAlliance = originAllianceProfile;
-      diplomacy.targetAlliance = targetAllianceProfile;
-
-      event.originPlayer = originPlayerProfile;
-      event.targetAlliance = targetAllianceProfile;
-      event.originAlliance = originAllianceProfile;
-
       socket.emit(`alliance:propose${typeName}Success`, { event, data: diplomacy });
       socket.to(`alliance.${socket.userData.allianceId}`).emit('alliance:event', { event, data: diplomacy });
       socket.to(`alliance.${targetAlliance.id}`).emit('alliance:event', { event, data: diplomacy });
@@ -654,14 +579,6 @@ export class AllianceSocket {
       );
 
       await trx.commit();
-
-      const originPlayerProfile = { id: socket.userData.playerId, name: socket.userData.playerName };
-      const originAllianceProfile = { id: socket.userData.allianceId, name: socket.userData.allianceName };
-      const targetAllianceProfile = { id: targetAlliance.id, name: targetAlliance.name };
-
-      event.originPlayer = originPlayerProfile;
-      event.targetAlliance = targetAllianceProfile;
-      event.originAlliance = originAllianceProfile;
 
       socket.emit(`alliance:cancel${typeName}Success`, { event, data: targetId });
       socket.to(`alliance.${socket.userData.allianceId}`).emit('alliance:event', { event, data: targetId });
@@ -696,14 +613,6 @@ export class AllianceSocket {
 
       await trx.commit();
 
-      const originPlayerProfile = { id: socket.userData.playerId, name: socket.userData.playerName };
-      const originAllianceProfile = { id: socket.userData.allianceId, name: socket.userData.allianceName };
-      const targetAllianceProfile = { id: targetAlliance.id, name: targetAlliance.name };
-
-      event.originPlayer = originPlayerProfile;
-      event.targetAlliance = targetAllianceProfile;
-      event.originAlliance = originAllianceProfile;
-
       socket.emit(`alliance:reject${typeName}Success`, { event, data: targetId });
       socket.to(`alliance.${socket.userData.allianceId}`).emit('alliance:event', { event, data: targetId });
       socket.to(`alliance.${originAlliance.id}`).emit('alliance:event', { event, data: targetId });
@@ -730,14 +639,6 @@ export class AllianceSocket {
       const event = query.event;
 
       await trx.commit();
-
-      const originPlayerProfile = { id: socket.userData.playerId, name: socket.userData.playerName };
-      const originAllianceProfile = { id: socket.userData.allianceId, name: socket.userData.allianceName };
-      const targetAllianceProfile = { id: targetAlliance.id, name: targetAlliance.name };
-
-      event.originPlayer = originPlayerProfile;
-      event.targetAlliance = targetAllianceProfile;
-      event.originAlliance = originAllianceProfile;
 
       socket.emit(`alliance:accept${typeName}Success`, { event, data: targetId });
       socket.to(`alliance.${socket.userData.allianceId}`).emit('alliance:event', { event, data: targetId });
@@ -772,14 +673,6 @@ export class AllianceSocket {
       );
 
       await trx.commit();
-
-      const originPlayerProfile = { id: socket.userData.playerId, name: socket.userData.playerName };
-      const originAllianceProfile = { id: socket.userData.allianceId, name: socket.userData.allianceName };
-      const targetAllianceProfile = { id: targetAlliance.id, name: targetAlliance.name };
-
-      event.originPlayer = originPlayerProfile;
-      event.targetAlliance = targetAllianceProfile;
-      event.originAlliance = originAllianceProfile;
 
       socket.emit(`alliance:end${typeName}Success`, { event, data: targetId });
       socket.to(`alliance.${socket.userData.allianceId}`).emit('alliance:event', { event, data: targetId });
@@ -817,14 +710,6 @@ export class AllianceSocket {
 
       await trx.commit();
 
-      event.originPlayer = {
-        id: socket.userData.playerId,
-        name: socket.userData.playerName,
-      };
-      event.targetPlayer = {
-        id: player.id,
-        name: player.name,
-      };
       const data = { updatedMember: [{ id: player.id, role }] };
       const allianceRoom = `alliance.${alliance.id}`;
 
@@ -854,10 +739,6 @@ export class AllianceSocket {
         allianceId: null,
       });
 
-      event.originPlayer = {
-        id: socket.userData.playerId,
-        name: socket.userData.playerName,
-      };
       socket.userData = this.cleanSocketAlliance(socket.userData);
       this.leaveAllianceRoom(socket, allianceId);
 

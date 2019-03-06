@@ -91,6 +91,14 @@ export async function getFullAlliance(where: Partial<Alliance>, connection: Tran
   return alliance;
 }
 
+export function getPlayerAllianceInvites(player: Player, connection: Transaction | Knex = knexDb.world) {
+  return Alliance
+    .query(connection)
+    .joinRelation('invitations')
+    .where('invitations.id', player.id)
+    .select('Alliance.id', 'Alliance.name');
+}
+
 export function getAllianceWithMembersInvites(where: Partial<Alliance>, connection: Transaction | Knex = knexDb.world) {
   return getAlliance(where, connection)
     .eager('[members(selectProfile), invitations(selectPlayerProfile)]');

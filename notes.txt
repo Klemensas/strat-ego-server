@@ -1,0 +1,79 @@
+Buildings:
+  Main - all da stuff
+
+  Storage
+  Farm/food - store food initially, switch to 
+
+  wood
+  iron
+  clay
+
+  wall
+  baracks
+
+  market - trade stuff
+  spy - embassy
+  library - culture related
+  
+
+  Chat
+
+Sender
+Topic
+Message
+
+
+
+Models:
+  Thread
+    id
+    topic
+  Receiver
+    id
+    threadId
+    playerId
+    
+  Message
+    id
+    content
+
+9. after conquering support not updated properly
+?+ 10. conquered town sent movements remain
+?+ 11. conquered town units get reset but since unit queues remain queued units get fukt up -- consider removing queued
+
+13. abstract movement unit entry and reuse for recruit
+
+loses exceeding units
+casualties too high?
+
+
+
+Does updateTown remove support and other stuff appropriately?
+------------------
+
+New notes:
+recruitment:
+  clear input on submit?
+  update resources
+
+Town queue changes
+  Building:
+    Buildings
+    Resources
+    Production
+    Modifiers
+    Loyalty
+    Timestamps
+
+  Unit:
+    Units
+    Resources
+    Loyalty
+    Timestamps
+
+  Movement:
+    Defeat:
+    Victory:
+    Conquer:
+
+

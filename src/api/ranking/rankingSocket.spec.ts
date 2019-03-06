@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 
-import { RankingsSocket } from './rankingsSocket';
+import { RankingSocket } from './rankingSocket';
 import { UserSocket } from '../../config/socket';
 import { rankingService } from './rankingService';
 
@@ -14,23 +14,23 @@ describe('onConnect', () => {
 
   it('should register events', () => {
     expect(socket.eventNames()).toHaveLength(0);
-    RankingsSocket.onConnect(socket);
+    RankingSocket.onConnect(socket);
     expect(socket.eventNames()).toEqual(socketEvents);
   });
 
   describe('events', () => {
     beforeEach(() => {
-      RankingsSocket.onConnect(socket);
+      RankingSocket.onConnect(socket);
     });
 
     it('should call load on emit', () => {
-      jest.spyOn(RankingsSocket, 'load').mockImplementationOnce(() => null);
+      jest.spyOn(RankingSocket, 'load').mockImplementationOnce(() => null);
       socket.emit('anything');
-      expect(RankingsSocket.load).not.toHaveBeenCalled();
+      expect(RankingSocket.load).not.toHaveBeenCalled();
 
       const time = Date.now();
       socket.emit('rankings:load', time);
-      expect(RankingsSocket.load).toHaveBeenCalledWith(socket, time);
+      expect(RankingSocket.load).toHaveBeenCalledWith(socket, time);
     });
   });
 });
@@ -42,19 +42,19 @@ describe('load', () => {
   });
 
   it('should emit loadSuccess if lastUpdate missing', () => {
-    RankingsSocket.load(socket);
+    RankingSocket.load(socket);
     expect(socket.emit).toHaveBeenCalledTimes(1);
     expect(socket.emit).toHaveBeenCalledWith('rankings:loadSuccess', []);
   });
 
   it('should emit loadSuccess if scoreTracker updated', () => {
-    RankingsSocket.load(socket, 1);
+    RankingSocket.load(socket, 1);
     expect(socket.emit).toHaveBeenCalledTimes(1);
     expect(socket.emit).toHaveBeenCalledWith('rankings:loadSuccess', []);
   });
 
   it('should emit loadStagnated if scoreTracker not updated', () => {
-    RankingsSocket.load(socket, 3);
+    RankingSocket.load(socket, 3);
     expect(socket.emit).toHaveBeenCalledTimes(1);
     expect(socket.emit).toHaveBeenCalledWith('rankings:loadStagnated');
   });
